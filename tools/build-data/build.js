@@ -26,6 +26,7 @@ import { createMarkupResolver, slugify } from './markup.js';
 import { isCreaturePack, packTier } from './catalog.js';
 import { normalizeCreature } from './normalize/creature.js';
 import { normalizeHazard } from './normalize/hazard.js';
+import { applyPage, loadPageTable } from './pages.js';
 
 const DATA_DIR = resolvePath(PROJECT_ROOT, 'data');
 
@@ -84,7 +85,13 @@ function main() {
     creaturesWithoutType: [],
     superseded: [],
     idCollisions: 0,
+    pages: { applied: 0, unmatched: [] },
   };
+
+  // Page numbers exist nowhere in the upstream data; they come from the
+  // hand-maintained tables in tools/build-data/pages/.
+  const pageTable = loadPageTable(resolvePath(PROJECT_ROOT, 'tools/build-data/pages'));
+  const unusedPageKeys = new Set(pageTable.pages.keys());
 
   /** Assign a stable id; remaster core claims the bare slug, others get suffixed. */
   function assignId(name, pack, kind, remaster) {
@@ -123,6 +130,11 @@ function main() {
         report.superseded.push({ id, supersededBy: claimant.key, name: record.name });
       }
 
+      if (applyPage(record, pageTable.pages)) {
+        report.pages.applied += 1;
+        unusedPageKeys.delete(record.id);
+      }
+
       harvestDiagnostics(record, report);
 
       if (doc.type === 'npc') {
@@ -146,6 +158,7 @@ function main() {
     );
   }
 
+  report.pages.unmatched = [...unusedPageKeys].sort();
   writeOutputs({ creaturesByPack, hazardsByPack, rows, report, started });
 }
 
@@ -235,6 +248,12 @@ function writeOutputs({ creaturesByPack, hazardsByPack, rows, report, started })
   console.log('');
   console.log(`Creatures: ${report.counts.creatures}   Hazards: ${report.counts.hazards}`);
   console.log(`Id collisions: ${report.idCollisions}   Superseded by remaster: ${report.superseded.length}`);
+  console.log(
+    `Page references: ${report.pages.applied} applied` +
+    (report.pages.unmatched.length
+      ? `   ${report.pages.unmatched.length} table entries match no record: ${report.pages.unmatched.slice(0, 5).join(', ')}`
+      : ''),
+  );
   console.log(`Creatures with no type trait: ${report.creaturesWithoutType.length}`);
   console.log(`Unresolved links: ${sumCounts(report.unresolvedLinks)}   Unresolved @Localize: ${sumCounts(report.unresolvedLocalize)}`);
   console.log(`Wrote ${(bytes / 1_000_000).toFixed(1)} MB in ${(report.durationMs / 1000).toFixed(1)}s`);

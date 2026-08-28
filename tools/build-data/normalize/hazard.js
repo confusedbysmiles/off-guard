@@ -54,6 +54,7 @@ export function normalizeHazard(doc, { pack, resolve, localize, id }) {
       remaster: publication.remaster ?? false,
       pack,
       tier: packTier(pack),
+      // See tools/build-data/pages/ — not present upstream.
       page: null,
     },
     stealth: {

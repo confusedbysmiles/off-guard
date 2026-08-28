@@ -235,8 +235,8 @@ export function normalizeCreature(doc, { pack, resolve, localize, id }) {
       remaster: publication.remaster ?? false,
       pack,
       tier: packTier(pack),
-      // Foundry carries no page references. The field exists so a page can be
-      // recorded by hand later without a migration.
+      // Foundry carries no page references. Filled in after normalization from
+      // the hand-maintained tables in tools/build-data/pages/.
       page: null,
     },
     perception: {
