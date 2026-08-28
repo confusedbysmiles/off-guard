@@ -1,0 +1,30 @@
+ORC LICENSE
+===========
+
+*** THIS FILE IS INCOMPLETE AND MUST BE FILLED IN BEFORE DISTRIBUTION ***
+
+The ORC License text is not included in the foundryvtt/pf2e repository, and it
+was deliberately not reconstructed from memory: a legal document reproduced
+approximately is worse than one that is obviously missing.
+
+To complete this file, paste the full, official ORC License text from:
+
+    https://paizo.com/orclicense
+    https://azoralaw.com/orclicense/
+
+The following attribution notice is required for the ORC-licensed material this
+project bundles, and is reproduced here so it is not lost:
+
+  ATTRIBUTION NOTICE
+
+  This product is based on the following Licensed Material:
+
+    Pathfinder Monster Core (2023), Pathfinder Monster Core 2 (2025),
+    Pathfinder NPC Core (2025), Pathfinder Player Core (2023) and
+    Pathfinder GM Core (2023), (c) Paizo Inc., published under the ORC License.
+
+  Reserved Material used under the ORC License is identified in the Licensor's
+  own published notices; no Reserved Material is knowingly reproduced here.
+
+  Expressly Designated Licensed Material of this product: none. Off-Guard is a
+  private, unpublished tool and designates no material for downstream use.

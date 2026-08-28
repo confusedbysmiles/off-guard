@@ -1,0 +1,1164 @@
+{
+  "equipment-srd:olwngGXM3hpgoLEP": {
+    "kind": "equipment",
+    "id": "dogslicer",
+    "name": "Dogslicer",
+    "pack": "equipment",
+    "foundryId": "olwngGXM3hpgoLEP"
+  },
+  "equipment-srd:hIgqLgH3YcLZBeoT": {
+    "kind": "equipment",
+    "id": "shortbow",
+    "name": "Shortbow",
+    "pack": "equipment",
+    "foundryId": "hIgqLgH3YcLZBeoT"
+  },
+  "equipment-srd:4tIVTg9wj56RrveA": {
+    "kind": "equipment",
+    "id": "leather-armor",
+    "name": "Leather Armor",
+    "pack": "equipment",
+    "foundryId": "4tIVTg9wj56RrveA"
+  },
+  "equipment-srd:w2ENw2VMPcsbif8g": {
+    "kind": "equipment",
+    "id": "arrows",
+    "name": "Arrows",
+    "pack": "equipment",
+    "foundryId": "w2ENw2VMPcsbif8g"
+  },
+  "actionspf2e:Step": {
+    "kind": "action",
+    "id": "step",
+    "name": "Step",
+    "pack": "actions",
+    "foundryId": "UHpkTuCtyaPqiCAB"
+  },
+  "spells-srd:4gBIw4IDrSfFHik4": {
+    "kind": "spell",
+    "id": "daze",
+    "name": "Daze",
+    "pack": "spells",
+    "foundryId": "4gBIw4IDrSfFHik4"
+  },
+  "conditionitems:Stunned": {
+    "kind": "condition",
+    "id": "stunned",
+    "name": "Stunned",
+    "pack": "conditions",
+    "foundryId": "dfCMdR4wnpbYNTix"
+  },
+  "spells-srd:gpzpAAAJ1Lza2JVl": {
+    "kind": "spell",
+    "id": "detect-magic",
+    "name": "Detect Magic",
+    "pack": "spells",
+    "foundryId": "gpzpAAAJ1Lza2JVl"
+  },
+  "equipment-srd:Invisibility Potion": {
+    "kind": "equipment",
+    "id": "invisibility-potion",
+    "name": "Invisibility Potion",
+    "pack": "equipment",
+    "foundryId": "bikFUFRLwfdvX2x2"
+  },
+  "spells-srd:UKsIOWmMx4hSpafl": {
+    "kind": "spell",
+    "id": "dizzying-colors",
+    "name": "Dizzying Colors",
+    "pack": "spells",
+    "foundryId": "UKsIOWmMx4hSpafl"
+  },
+  "conditionitems:Dazzled": {
+    "kind": "condition",
+    "id": "dazzled",
+    "name": "Dazzled",
+    "pack": "conditions",
+    "foundryId": "TkIyaNPgTZFBCCuh"
+  },
+  "conditionitems:Blinded": {
+    "kind": "condition",
+    "id": "blinded",
+    "name": "Blinded",
+    "pack": "conditions",
+    "foundryId": "XgEqL1kFApUbl5Z2"
+  },
+  "spells-srd:WBmvzNDfpwka3qT4": {
+    "kind": "spell",
+    "id": "light",
+    "name": "Light",
+    "pack": "spells",
+    "foundryId": "WBmvzNDfpwka3qT4"
+  },
+  "spell-effects:Spell Effect: Light": {
+    "kind": "effect",
+    "id": "spell-effect-light",
+    "name": "Spell Effect: Light",
+    "pack": "spell-effects",
+    "foundryId": "cVVZXNbV0nElVOPZ"
+  },
+  "equipment-srd:tH5GirEy7YB3ZgCk": {
+    "kind": "equipment",
+    "id": "rapier",
+    "name": "Rapier",
+    "pack": "equipment",
+    "foundryId": "tH5GirEy7YB3ZgCk"
+  },
+  "conditionitems:Wounded": {
+    "kind": "condition",
+    "id": "wounded",
+    "name": "Wounded",
+    "pack": "conditions",
+    "foundryId": "Yl48xTdMh3aeQYL2"
+  },
+  "spells-srd:pkcOby5prOausy1k": {
+    "kind": "spell",
+    "id": "read-omens",
+    "name": "Read Omens",
+    "pack": "spells",
+    "foundryId": "pkcOby5prOausy1k"
+  },
+  "spells-srd:aIHY2DArKFweIrpf": {
+    "kind": "spell",
+    "id": "command",
+    "name": "Command",
+    "pack": "spells",
+    "foundryId": "aIHY2DArKFweIrpf"
+  },
+  "conditionitems:Fleeing": {
+    "kind": "condition",
+    "id": "fleeing",
+    "name": "Fleeing",
+    "pack": "conditions",
+    "foundryId": "sDPxOjQ9kx2RZE8D"
+  },
+  "conditionitems:Prone": {
+    "kind": "condition",
+    "id": "prone",
+    "name": "Prone",
+    "pack": "conditions",
+    "foundryId": "j91X7x0XSomq8d60"
+  },
+  "actionspf2e:Delay": {
+    "kind": "action",
+    "id": "delay",
+    "name": "Delay",
+    "pack": "actions",
+    "foundryId": "A72nHGUtNXgY5Ey9"
+  },
+  "spells-srd:dINQzhqGmIsqGMUY": {
+    "kind": "spell",
+    "id": "mending",
+    "name": "Mending",
+    "pack": "spells",
+    "foundryId": "dINQzhqGmIsqGMUY"
+  },
+  "conditionitems:Broken": {
+    "kind": "condition",
+    "id": "broken",
+    "name": "Broken",
+    "pack": "conditions",
+    "foundryId": "6dNUvdb1dhToNDj3"
+  },
+  "spells-srd:8xRzLhwGL7Dgy3EZ": {
+    "kind": "spell",
+    "id": "sanctuary",
+    "name": "Sanctuary",
+    "pack": "spells",
+    "foundryId": "8xRzLhwGL7Dgy3EZ"
+  },
+  "equipment-srd:7tKkkF8eZ4iCLJtp": {
+    "kind": "equipment",
+    "id": "shortsword",
+    "name": "Shortsword",
+    "pack": "equipment",
+    "foundryId": "7tKkkF8eZ4iCLJtp"
+  },
+  "bestiary-ability-glossary-srd:kquBnQ0kObZztnBc": {
+    "kind": "creature-ability",
+    "id": "1-status-to-all-saves-vs-magic",
+    "name": "+1 Status to All Saves vs. Magic",
+    "pack": "bestiary-ability-glossary-srd",
+    "foundryId": "kquBnQ0kObZztnBc"
+  },
+  "equipment-srd:c58wczIzH2gzeXQL": {
+    "kind": "equipment",
+    "id": "club",
+    "name": "Club",
+    "pack": "equipment",
+    "foundryId": "c58wczIzH2gzeXQL"
+  },
+  "equipment-srd:JNt7GmLCCVz5BiEI": {
+    "kind": "equipment",
+    "id": "javelin",
+    "name": "Javelin",
+    "pack": "equipment",
+    "foundryId": "JNt7GmLCCVz5BiEI"
+  },
+  "equipment-srd:ewQZ0VeL38v3qFnN": {
+    "kind": "equipment",
+    "id": "studded-leather-armor",
+    "name": "Studded Leather Armor",
+    "pack": "equipment",
+    "foundryId": "ewQZ0VeL38v3qFnN"
+  },
+  "conditionitems:Frightened": {
+    "kind": "condition",
+    "id": "frightened",
+    "name": "Frightened",
+    "pack": "conditions",
+    "foundryId": "TBSHQspnbcqxsmjL"
+  },
+  "conditionitems:Grabbed": {
+    "kind": "condition",
+    "id": "grabbed",
+    "name": "Grabbed",
+    "pack": "conditions",
+    "foundryId": "kWc1fhmv9LBiTuei"
+  },
+  "conditionitems:Immobilized": {
+    "kind": "condition",
+    "id": "immobilized",
+    "name": "Immobilized",
+    "pack": "conditions",
+    "foundryId": "eIcWbB5o3pP6OIMe"
+  },
+  "conditionitems:Enfeebled": {
+    "kind": "condition",
+    "id": "enfeebled",
+    "name": "Enfeebled",
+    "pack": "conditions",
+    "foundryId": "MIRkyAjyBeXivMa7"
+  },
+  "conditionitems:Slowed": {
+    "kind": "condition",
+    "id": "slowed",
+    "name": "Slowed",
+    "pack": "conditions",
+    "foundryId": "xYTAsEpcJE1Ccni3"
+  },
+  "conditionitems:Paralyzed": {
+    "kind": "condition",
+    "id": "paralyzed",
+    "name": "Paralyzed",
+    "pack": "conditions",
+    "foundryId": "6uEgoh53GbXuHpTF"
+  },
+  "bestiary-ability-glossary-srd:lR9R5Vld8Eu2Dha5": {
+    "kind": "creature-ability",
+    "id": "regeneration",
+    "name": "Regeneration",
+    "pack": "bestiary-ability-glossary-srd",
+    "foundryId": "lR9R5Vld8Eu2Dha5"
+  },
+  "bestiary-ability-glossary-srd:3JOi2cMcGhT3eze1": {
+    "kind": "creature-ability",
+    "id": "rend",
+    "name": "Rend",
+    "pack": "bestiary-ability-glossary-srd",
+    "foundryId": "3JOi2cMcGhT3eze1"
+  },
+  "spells-srd:U58aQWJ47VrI36yP": {
+    "kind": "spell",
+    "id": "hallucination",
+    "name": "Hallucination",
+    "pack": "spells",
+    "foundryId": "U58aQWJ47VrI36yP"
+  },
+  "actionspf2e:Seek": {
+    "kind": "action",
+    "id": "seek",
+    "name": "Seek",
+    "pack": "actions",
+    "foundryId": "BlAOM2X92SI6HMtJ"
+  },
+  "spells-srd:xxWhyl81w3ckslAU": {
+    "kind": "spell",
+    "id": "howling-blizzard",
+    "name": "Howling Blizzard",
+    "pack": "spells",
+    "foundryId": "xxWhyl81w3ckslAU"
+  },
+  "spells-srd:qwlh6aDgi86U3Q7H": {
+    "kind": "spell",
+    "id": "suggestion",
+    "name": "Suggestion",
+    "pack": "spells",
+    "foundryId": "qwlh6aDgi86U3Q7H"
+  },
+  "spells-srd:Jmxru8zMdYMRuO5n": {
+    "kind": "spell",
+    "id": "vision-of-death",
+    "name": "Vision of Death",
+    "pack": "spells",
+    "foundryId": "Jmxru8zMdYMRuO5n"
+  },
+  "spells-srd:VosLNn2M8S7JH67D": {
+    "kind": "spell",
+    "id": "blindness",
+    "name": "Blindness",
+    "pack": "spells",
+    "foundryId": "VosLNn2M8S7JH67D"
+  },
+  "spells-srd:EoKBlgf6Smt8opaU": {
+    "kind": "spell",
+    "id": "veil-of-privacy",
+    "name": "Veil of Privacy",
+    "pack": "spells",
+    "foundryId": "EoKBlgf6Smt8opaU"
+  },
+  "spells-srd:9HpwDN4MYQJnW0LG": {
+    "kind": "spell",
+    "id": "dispel-magic",
+    "name": "Dispel Magic",
+    "pack": "spells",
+    "foundryId": "9HpwDN4MYQJnW0LG"
+  },
+  "spells-srd:mrDi3v933gsmnw25": {
+    "kind": "spell",
+    "id": "telekinetic-maneuver",
+    "name": "Telekinetic Maneuver",
+    "pack": "spells",
+    "foundryId": "mrDi3v933gsmnw25"
+  },
+  "actionspf2e:Disarm": {
+    "kind": "action",
+    "id": "disarm",
+    "name": "Disarm",
+    "pack": "actions",
+    "foundryId": "Dt6B1slsBy8ipJu9"
+  },
+  "actionspf2e:Shove": {
+    "kind": "action",
+    "id": "shove",
+    "name": "Shove",
+    "pack": "actions",
+    "foundryId": "7blmbDrQFNfdT731"
+  },
+  "actionspf2e:Reposition": {
+    "kind": "action",
+    "id": "reposition",
+    "name": "Reposition",
+    "pack": "actions",
+    "foundryId": "lOE4yjUnETTdaf2T"
+  },
+  "actionspf2e:Trip": {
+    "kind": "action",
+    "id": "trip",
+    "name": "Trip",
+    "pack": "actions",
+    "foundryId": "ge56Lu1xXVFYUnLP"
+  },
+  "spells-srd:J7Y7tl0bbdz7TcCc": {
+    "kind": "spell",
+    "id": "enfeeble",
+    "name": "Enfeeble",
+    "pack": "spells",
+    "foundryId": "J7Y7tl0bbdz7TcCc"
+  },
+  "spells-srd:0zU8CPejjQFnhZFI": {
+    "kind": "spell",
+    "id": "figment",
+    "name": "Figment",
+    "pack": "spells",
+    "foundryId": "0zU8CPejjQFnhZFI"
+  },
+  "actionspf2e:Create a Diversion": {
+    "kind": "action",
+    "id": "create-a-diversion",
+    "name": "Create a Diversion",
+    "pack": "actions",
+    "foundryId": "GkmbTGfg8KcgynOA"
+  },
+  "spell-effects:Spell Effect: Figment": {
+    "kind": "effect",
+    "id": "spell-effect-figment",
+    "name": "Spell Effect: Figment",
+    "pack": "spell-effects",
+    "foundryId": "2Hg3a06gZCSnUgSA"
+  },
+  "spells-srd:Qw3fnUlaUbnn7ipC": {
+    "kind": "spell",
+    "id": "prestidigitation",
+    "name": "Prestidigitation",
+    "pack": "spells",
+    "foundryId": "Qw3fnUlaUbnn7ipC"
+  },
+  "spells-srd:OhD2Z6rIGGD5ocZA": {
+    "kind": "spell",
+    "id": "read-aura",
+    "name": "Read Aura",
+    "pack": "spells",
+    "foundryId": "OhD2Z6rIGGD5ocZA"
+  },
+  "actionspf2e:Identify Magic": {
+    "kind": "action",
+    "id": "identify-magic",
+    "name": "Identify Magic",
+    "pack": "actions",
+    "foundryId": "eReSHVEPCsdkSL4G"
+  },
+  "spells-srd:pwzdSlJgYqN7bs2w": {
+    "kind": "spell",
+    "id": "telekinetic-hand",
+    "name": "Telekinetic Hand",
+    "pack": "spells",
+    "foundryId": "pwzdSlJgYqN7bs2w"
+  },
+  "bestiary-family-ability-glossary:BcSlVpaN72LoQ5BV": {
+    "kind": "creature-ability",
+    "id": "ghost-site-bound",
+    "name": "(Ghost) Site Bound",
+    "pack": "bestiary-family-ability-glossary",
+    "foundryId": "BcSlVpaN72LoQ5BV"
+  },
+  "bestiary-family-ability-glossary:unR8VVR4yyRnsmnB": {
+    "kind": "creature-ability",
+    "id": "ghost-rejuvenation",
+    "name": "(Ghost) Rejuvenation",
+    "pack": "bestiary-family-ability-glossary",
+    "foundryId": "unR8VVR4yyRnsmnB"
+  },
+  "bestiary-ability-glossary-srd:TTCw5NusiSSkJU1x": {
+    "kind": "creature-ability",
+    "id": "void-healing",
+    "name": "Void Healing",
+    "pack": "bestiary-ability-glossary-srd",
+    "foundryId": "TTCw5NusiSSkJU1x"
+  },
+  "bestiary-family-ability-glossary:aiwlPSmNY9b6Psvd": {
+    "kind": "creature-ability",
+    "id": "ghost-frightful-moan",
+    "name": "(Ghost) Frightful Moan",
+    "pack": "bestiary-family-ability-glossary",
+    "foundryId": "aiwlPSmNY9b6Psvd"
+  },
+  "bestiary-family-ability-glossary:0K3vhX14UEPftqu8": {
+    "kind": "creature-ability",
+    "id": "ghost-telekinetic-assault",
+    "name": "(Ghost) Telekinetic Assault",
+    "pack": "bestiary-family-ability-glossary",
+    "foundryId": "0K3vhX14UEPftqu8"
+  },
+  "spells-srd:TDNlDWbYb58Y55Da": {
+    "kind": "spell",
+    "id": "chain-lightning",
+    "name": "Chain Lightning",
+    "pack": "spells",
+    "foundryId": "TDNlDWbYb58Y55Da"
+  },
+  "spells-srd:OsOhx3TGIZ7AhD0P": {
+    "kind": "spell",
+    "id": "dominate",
+    "name": "Dominate",
+    "pack": "spells",
+    "foundryId": "OsOhx3TGIZ7AhD0P"
+  },
+  "conditionitems:Controlled": {
+    "kind": "condition",
+    "id": "controlled",
+    "name": "Controlled",
+    "pack": "conditions",
+    "foundryId": "9qGBRpbX9NEwtAAr"
+  },
+  "spells-srd:fd31tAHSSGXyOxW6": {
+    "kind": "spell",
+    "id": "vampiric-exsanguination",
+    "name": "Vampiric Exsanguination",
+    "pack": "spells",
+    "foundryId": "fd31tAHSSGXyOxW6"
+  },
+  "spells-srd:MlpbeZ61Euhl0d60": {
+    "kind": "spell",
+    "id": "toxic-cloud",
+    "name": "Toxic Cloud",
+    "pack": "spells",
+    "foundryId": "MlpbeZ61Euhl0d60"
+  },
+  "spells-srd:Mist": {
+    "kind": "spell",
+    "id": "mist",
+    "name": "Mist",
+    "pack": "spells",
+    "foundryId": "9XHmC2JgTUIQ1CCm"
+  },
+  "spells-srd:R5FHRv7VqyRnxg2t": {
+    "kind": "spell",
+    "id": "wall-of-ice",
+    "name": "Wall of Ice",
+    "pack": "spells",
+    "foundryId": "R5FHRv7VqyRnxg2t"
+  },
+  "spells-srd:YrzBLPLd3r9m6t1p": {
+    "kind": "spell",
+    "id": "fire-shield",
+    "name": "Fire Shield",
+    "pack": "spells",
+    "foundryId": "YrzBLPLd3r9m6t1p"
+  },
+  "spell-effects:Spell Effect: Fire Shield": {
+    "kind": "effect",
+    "id": "spell-effect-fire-shield",
+    "name": "Spell Effect: Fire Shield",
+    "pack": "spell-effects",
+    "foundryId": "1RsScTvNdGD9zGWe"
+  },
+  "spells-srd:A2JfEKe6BZcTG1S8": {
+    "kind": "spell",
+    "id": "fly",
+    "name": "Fly",
+    "pack": "spells",
+    "foundryId": "A2JfEKe6BZcTG1S8"
+  },
+  "spell-effects:Spell Effect: Fly": {
+    "kind": "effect",
+    "id": "spell-effect-fly",
+    "name": "Spell Effect: Fly",
+    "pack": "spell-effects",
+    "foundryId": "MuRBCiZn5IKeaoxi"
+  },
+  "spells-srd:VlNcjmYyu95vOUe8": {
+    "kind": "spell",
+    "id": "translocate",
+    "name": "Translocate",
+    "pack": "spells",
+    "foundryId": "VlNcjmYyu95vOUe8"
+  },
+  "spells-srd:LQzlKbYjZSMFQawP": {
+    "kind": "spell",
+    "id": "locate",
+    "name": "Locate",
+    "pack": "spells",
+    "foundryId": "LQzlKbYjZSMFQawP"
+  },
+  "spells-srd:N1Z1oLPdBxaSgrEE": {
+    "kind": "spell",
+    "id": "vampiric-feast",
+    "name": "Vampiric Feast",
+    "pack": "spells",
+    "foundryId": "N1Z1oLPdBxaSgrEE"
+  },
+  "spells-srd:3JG1t3T4mWn6vTke": {
+    "kind": "spell",
+    "id": "blur",
+    "name": "Blur",
+    "pack": "spells",
+    "foundryId": "3JG1t3T4mWn6vTke"
+  },
+  "conditionitems:Concealed": {
+    "kind": "condition",
+    "id": "concealed",
+    "name": "Concealed",
+    "pack": "conditions",
+    "foundryId": "DmAIPqOBomZ7H95W"
+  },
+  "spells-srd:8ViwItUgwT4lOvvb": {
+    "kind": "spell",
+    "id": "false-vitality",
+    "name": "False Vitality",
+    "pack": "spells",
+    "foundryId": "8ViwItUgwT4lOvvb"
+  },
+  "spell-effects:Spell Effect: False Vitality": {
+    "kind": "effect",
+    "id": "spell-effect-false-vitality",
+    "name": "Spell Effect: False Vitality",
+    "pack": "spell-effects",
+    "foundryId": "PANUWN5xXC20WBg2"
+  },
+  "spells-srd:Fr58LDSrbndgld9n": {
+    "kind": "spell",
+    "id": "resist-energy",
+    "name": "Resist Energy",
+    "pack": "spells",
+    "foundryId": "Fr58LDSrbndgld9n"
+  },
+  "spell-effects:Spell Effect: Resist Energy": {
+    "kind": "effect",
+    "id": "spell-effect-resist-energy",
+    "name": "Spell Effect: Resist Energy",
+    "pack": "spell-effects",
+    "foundryId": "con2Hzt47JjpuUej"
+  },
+  "spells-srd:jwK43yKsHTkJQvQ9": {
+    "kind": "spell",
+    "id": "see-the-unseen",
+    "name": "See the Unseen",
+    "pack": "spells",
+    "foundryId": "jwK43yKsHTkJQvQ9"
+  },
+  "conditionitems:Invisible": {
+    "kind": "condition",
+    "id": "invisible",
+    "name": "Invisible",
+    "pack": "conditions",
+    "foundryId": "zJxUflt9np0q4yML"
+  },
+  "spell-effects:Spell Effect: See the Unseen": {
+    "kind": "effect",
+    "id": "spell-effect-see-the-unseen",
+    "name": "Spell Effect: See the Unseen",
+    "pack": "spell-effects",
+    "foundryId": "T5bk6UH7yuYog1Fp"
+  },
+  "spells-srd:aEM2cttJ2eYcLssW": {
+    "kind": "spell",
+    "id": "fleet-step",
+    "name": "Fleet Step",
+    "pack": "spells",
+    "foundryId": "aEM2cttJ2eYcLssW"
+  },
+  "spell-effects:Spell Effect: Fleet Step": {
+    "kind": "effect",
+    "id": "spell-effect-fleet-step",
+    "name": "Spell Effect: Fleet Step",
+    "pack": "spell-effects",
+    "foundryId": "ThFug45WHkQQXcoF"
+  },
+  "spells-srd:gKKqvLohtrSJj3BM": {
+    "kind": "spell",
+    "id": "force-barrage",
+    "name": "Force Barrage",
+    "pack": "spells",
+    "foundryId": "gKKqvLohtrSJj3BM"
+  },
+  "spells-srd:IxhGEKl63R4QBvkj": {
+    "kind": "spell",
+    "id": "frostbite",
+    "name": "Frostbite",
+    "pack": "spells",
+    "foundryId": "IxhGEKl63R4QBvkj"
+  },
+  "spell-effects:Spell Effect: Frostbite": {
+    "kind": "effect",
+    "id": "spell-effect-frostbite",
+    "name": "Spell Effect: Frostbite",
+    "pack": "spell-effects",
+    "foundryId": "DdqWMj7cuf4S1bgr"
+  },
+  "spells-srd:vLzFcIaSXs7YTIqJ": {
+    "kind": "spell",
+    "id": "message",
+    "name": "Message",
+    "pack": "spells",
+    "foundryId": "vLzFcIaSXs7YTIqJ"
+  },
+  "spells-srd:TVKNbcgTee19PXZR": {
+    "kind": "spell",
+    "id": "shield",
+    "name": "Shield",
+    "pack": "spells",
+    "foundryId": "TVKNbcgTee19PXZR"
+  },
+  "feats-srd:Shield Block": {
+    "kind": "feat",
+    "id": "shield-block",
+    "name": "Shield Block",
+    "pack": "feats",
+    "foundryId": "jM72TjJ965jocBV8"
+  },
+  "spell-effects:Spell Effect: Shield": {
+    "kind": "effect",
+    "id": "spell-effect-shield",
+    "name": "Spell Effect: Shield",
+    "pack": "spell-effects",
+    "foundryId": "Jemq5UknGdMO7b73"
+  },
+  "spell-effects:Effect: Shield Immunity": {
+    "kind": "effect",
+    "id": "effect-shield-immunity",
+    "name": "Effect: Shield Immunity",
+    "pack": "spell-effects",
+    "foundryId": "QF6RDlCoTvkVHRo4"
+  },
+  "spells-srd:Gb7SeieEvd0pL2Eh": {
+    "kind": "spell",
+    "id": "sure-strike",
+    "name": "Sure Strike",
+    "pack": "spells",
+    "foundryId": "Gb7SeieEvd0pL2Eh"
+  },
+  "conditionitems:Hidden": {
+    "kind": "condition",
+    "id": "hidden",
+    "name": "Hidden",
+    "pack": "conditions",
+    "foundryId": "iU0fEDdBp3rXpTMC"
+  },
+  "spell-effects:Spell Effect: Sure Strike": {
+    "kind": "effect",
+    "id": "spell-effect-sure-strike",
+    "name": "Spell Effect: Sure Strike",
+    "pack": "spell-effects",
+    "foundryId": "fpGDAz2v5PG0zUSl"
+  },
+  "equipment-srd:KcjaeMgrsBGgwUWL": {
+    "kind": "equipment",
+    "id": "staff-of-fire-greater",
+    "name": "Staff of Fire (Greater)",
+    "pack": "equipment",
+    "foundryId": "KcjaeMgrsBGgwUWL"
+  },
+  "spells-srd:Ignition": {
+    "kind": "spell",
+    "id": "ignition",
+    "name": "Ignition",
+    "pack": "spells",
+    "foundryId": "6DfLZBl8wKIV03Iq"
+  },
+  "spells-srd:Breathe Fire": {
+    "kind": "spell",
+    "id": "breathe-fire",
+    "name": "Breathe Fire",
+    "pack": "spells",
+    "foundryId": "y6rAdMK6EFlV6U0t"
+  },
+  "spells-srd:Floating Flame": {
+    "kind": "spell",
+    "id": "floating-flame",
+    "name": "Floating Flame",
+    "pack": "spells",
+    "foundryId": "2ZdHjnpEQJuqOYSG"
+  },
+  "spells-srd:Fireball": {
+    "kind": "spell",
+    "id": "fireball",
+    "name": "Fireball",
+    "pack": "spells",
+    "foundryId": "sxQZ6yqTn0czJxVd"
+  },
+  "equipment-srd:bikFUFRLwfdvX2x2": {
+    "kind": "equipment",
+    "id": "invisibility-potion",
+    "name": "Invisibility Potion",
+    "pack": "equipment",
+    "foundryId": "bikFUFRLwfdvX2x2"
+  },
+  "spells-srd:Invisibility": {
+    "kind": "spell",
+    "id": "invisibility",
+    "name": "Invisibility",
+    "pack": "spells",
+    "foundryId": "XXqE1eY3w3z6xJCB"
+  },
+  "equipment-srd:4sGIy77COooxhQuC": {
+    "kind": "equipment",
+    "id": "scroll-of-6th-rank-spell",
+    "name": "Scroll of 6th-rank Spell",
+    "pack": "equipment",
+    "foundryId": "4sGIy77COooxhQuC"
+  },
+  "spells-srd:Teleport": {
+    "kind": "spell",
+    "id": "teleport",
+    "name": "Teleport",
+    "pack": "spells",
+    "foundryId": "69L70wKfGDY66Mk9"
+  },
+  "spells-srd:69L70wKfGDY66Mk9": {
+    "kind": "spell",
+    "id": "teleport",
+    "name": "Teleport",
+    "pack": "spells",
+    "foundryId": "69L70wKfGDY66Mk9"
+  },
+  "bestiary-ability-glossary-srd:etMnv73EIdEZrYYu": {
+    "kind": "creature-ability",
+    "id": "frightful-presence",
+    "name": "Frightful Presence",
+    "pack": "bestiary-ability-glossary-srd",
+    "foundryId": "etMnv73EIdEZrYYu"
+  },
+  "bestiary-family-ability-glossary:a7A4xY3NeWI2Ya4Z": {
+    "kind": "creature-ability",
+    "id": "lich-rejuvenation",
+    "name": "(Lich) Rejuvenation",
+    "pack": "bestiary-family-ability-glossary",
+    "foundryId": "a7A4xY3NeWI2Ya4Z"
+  },
+  "equipment-srd:Lich Soul Cage": {
+    "kind": "equipment",
+    "id": "lich-soul-cage",
+    "name": "Lich Soul Cage",
+    "pack": "equipment",
+    "foundryId": "NEbr7nKuiluJgBHT"
+  },
+  "bestiary-family-ability-glossary:fqZhojt2M5LfSKSH": {
+    "kind": "creature-ability",
+    "id": "lich-drain-soul-cage",
+    "name": "(Lich) Drain Soul Cage",
+    "pack": "bestiary-family-ability-glossary",
+    "foundryId": "fqZhojt2M5LfSKSH"
+  },
+  "equipment-srd:Soul Cage": {
+    "kind": "equipment",
+    "id": "soul-cage",
+    "name": "Soul Cage",
+    "pack": "equipment",
+    "foundryId": "qFVPeeJ70B1u2n81"
+  },
+  "bestiary-family-ability-glossary:b3p8x6sgTa0BOvAb": {
+    "kind": "creature-ability",
+    "id": "lich-siphon-life",
+    "name": "(Lich) Siphon Life",
+    "pack": "bestiary-family-ability-glossary",
+    "foundryId": "b3p8x6sgTa0BOvAb"
+  },
+  "conditionitems:Drained": {
+    "kind": "condition",
+    "id": "drained",
+    "name": "Drained",
+    "pack": "conditions",
+    "foundryId": "4D2KBtexWXa6oUMR"
+  },
+  "conditionitems:Restrained": {
+    "kind": "condition",
+    "id": "restrained",
+    "name": "Restrained",
+    "pack": "conditions",
+    "foundryId": "VcDeM8A5oI6VqhbM"
+  },
+  "equipment-srd:Vorpal": {
+    "kind": "equipment",
+    "id": "vorpal",
+    "name": "Vorpal",
+    "pack": "equipment",
+    "foundryId": "6xaxxKfvXED6LfIY"
+  },
+  "bestiary-ability-glossary-srd:i18TlebMzwONyPhI": {
+    "kind": "creature-ability",
+    "id": "improved-grab",
+    "name": "Improved Grab",
+    "pack": "bestiary-ability-glossary-srd",
+    "foundryId": "i18TlebMzwONyPhI"
+  },
+  "spells-srd:Z9OrRXKgAPv6Hn5l": {
+    "kind": "spell",
+    "id": "execute",
+    "name": "Execute",
+    "pack": "spells",
+    "foundryId": "Z9OrRXKgAPv6Hn5l"
+  },
+  "spells-srd:5bTt2CvYHPvaR7QQ": {
+    "kind": "spell",
+    "id": "interplanar-teleport",
+    "name": "Interplanar Teleport",
+    "pack": "spells",
+    "foundryId": "5bTt2CvYHPvaR7QQ"
+  },
+  "spells-srd:uqlxMQQeSGWEVjki": {
+    "kind": "spell",
+    "id": "truesight",
+    "name": "Truesight",
+    "pack": "spells",
+    "foundryId": "uqlxMQQeSGWEVjki"
+  },
+  "spells-srd:o6YCGx4lycsYpww4": {
+    "kind": "spell",
+    "id": "haste",
+    "name": "Haste",
+    "pack": "spells",
+    "foundryId": "o6YCGx4lycsYpww4"
+  },
+  "conditionitems:Quickened": {
+    "kind": "condition",
+    "id": "quickened",
+    "name": "Quickened",
+    "pack": "conditions",
+    "foundryId": "nlCjDvLMf2EkV2dl"
+  },
+  "spell-effects:Spell Effect: Haste": {
+    "kind": "effect",
+    "id": "spell-effect-haste",
+    "name": "Spell Effect: Haste",
+    "pack": "spell-effects",
+    "foundryId": "ElkXovNrHB0Doi6O"
+  },
+  "equipment-srd:H74vYwHJ8XT4qOPI": {
+    "kind": "equipment",
+    "id": "scythe",
+    "name": "Scythe",
+    "pack": "equipment",
+    "foundryId": "H74vYwHJ8XT4qOPI"
+  },
+  "spell-effects:ElkXovNrHB0Doi6O": {
+    "kind": "effect",
+    "id": "spell-effect-haste",
+    "name": "Spell Effect: Haste",
+    "pack": "spell-effects",
+    "foundryId": "ElkXovNrHB0Doi6O"
+  },
+  "spells-srd:Haste": {
+    "kind": "spell",
+    "id": "haste",
+    "name": "Haste",
+    "pack": "spells",
+    "foundryId": "o6YCGx4lycsYpww4"
+  },
+  "spell-effects:T5bk6UH7yuYog1Fp": {
+    "kind": "effect",
+    "id": "spell-effect-see-the-unseen",
+    "name": "Spell Effect: See the Unseen",
+    "pack": "spell-effects",
+    "foundryId": "T5bk6UH7yuYog1Fp"
+  },
+  "spells-srd:See the Unseen": {
+    "kind": "spell",
+    "id": "see-the-unseen",
+    "name": "See the Unseen",
+    "pack": "spells",
+    "foundryId": "jwK43yKsHTkJQvQ9"
+  },
+  "bestiary-ability-glossary-srd:kakyXBG5WA8c6Zfd": {
+    "kind": "creature-ability",
+    "id": "constant-spells",
+    "name": "Constant Spells",
+    "pack": "bestiary-ability-glossary-srd",
+    "foundryId": "kakyXBG5WA8c6Zfd"
+  },
+  "bestiary-effects:Effect: Aura of Misfortune": {
+    "kind": "effect",
+    "id": "effect-aura-of-misfortune",
+    "name": "Effect: Aura of Misfortune",
+    "pack": "bestiary-effects",
+    "foundryId": "QoneHsjZKtGHWlam"
+  },
+  "conditionitems:Doomed": {
+    "kind": "condition",
+    "id": "doomed",
+    "name": "Doomed",
+    "pack": "conditions",
+    "foundryId": "3uh1r86TzbQvosxv"
+  },
+  "spells-srd:AuIiqc7jjiy1GZ75": {
+    "kind": "spell",
+    "id": "manifestation",
+    "name": "Manifestation",
+    "pack": "spells",
+    "foundryId": "AuIiqc7jjiy1GZ75"
+  },
+  "spells-srd:XkDCzMIyc0YOjw05": {
+    "kind": "spell",
+    "id": "control-weather",
+    "name": "Control Weather",
+    "pack": "spells",
+    "foundryId": "XkDCzMIyc0YOjw05"
+  },
+  "spells-srd:m2xFMNyQiUKQDRaj": {
+    "kind": "spell",
+    "id": "energy-aegis",
+    "name": "Energy Aegis",
+    "pack": "spells",
+    "foundryId": "m2xFMNyQiUKQDRaj"
+  },
+  "spell-effects:Spell Effect: Energy Aegis": {
+    "kind": "effect",
+    "id": "spell-effect-energy-aegis",
+    "name": "Spell Effect: Energy Aegis",
+    "pack": "spell-effects",
+    "foundryId": "4Lo2qb5PmavSsLNk"
+  },
+  "spells-srd:2Vkd1IxylPceUAAF": {
+    "kind": "spell",
+    "id": "regenerate",
+    "name": "Regenerate",
+    "pack": "spells",
+    "foundryId": "2Vkd1IxylPceUAAF"
+  },
+  "conditionitems:Dying": {
+    "kind": "condition",
+    "id": "dying",
+    "name": "Dying",
+    "pack": "conditions",
+    "foundryId": "yZRUzMqrMmfLu0V1"
+  },
+  "conditionitems:Unconscious": {
+    "kind": "condition",
+    "id": "unconscious",
+    "name": "Unconscious",
+    "pack": "conditions",
+    "foundryId": "fBnFDH2MTzgFijKf"
+  },
+  "spell-effects:Spell Effect: Regenerate": {
+    "kind": "effect",
+    "id": "spell-effect-regenerate",
+    "name": "Spell Effect: Regenerate",
+    "pack": "spell-effects",
+    "foundryId": "dXq7z633ve4E0nlX"
+  },
+  "spells-srd:B4dDkYsHFo1H0CIF": {
+    "kind": "spell",
+    "id": "awaken-animal",
+    "name": "Awaken Animal",
+    "pack": "spells",
+    "foundryId": "B4dDkYsHFo1H0CIF"
+  },
+  "spells-srd:7DN13ILADW2N9Z1t": {
+    "kind": "spell",
+    "id": "commune",
+    "name": "Commune",
+    "pack": "spells",
+    "foundryId": "7DN13ILADW2N9Z1t"
+  },
+  "conditionitems:Stupefied": {
+    "kind": "condition",
+    "id": "stupefied",
+    "name": "Stupefied",
+    "pack": "conditions",
+    "foundryId": "e1XGnhKNSQIm5IXg"
+  },
+  "spells-srd:pZc8ZwtsyWnxUUW0": {
+    "kind": "spell",
+    "id": "primal-call",
+    "name": "Primal Call",
+    "pack": "spells",
+    "foundryId": "pZc8ZwtsyWnxUUW0"
+  },
+  "spells-srd:Planar Servitor": {
+    "kind": "spell",
+    "id": "planar-servitor",
+    "name": "Planar Servitor",
+    "pack": "spells",
+    "foundryId": "vgy00hnqxN9VoeoF"
+  },
+  "spells-srd:F1qxaqsEItmBura2": {
+    "kind": "spell",
+    "id": "nature-s-pathway",
+    "name": "Nature's Pathway",
+    "pack": "spells",
+    "foundryId": "F1qxaqsEItmBura2"
+  },
+  "spells-srd:ZhJ8d9Uk4lwIx86b": {
+    "kind": "spell",
+    "id": "plant-growth",
+    "name": "Plant Growth",
+    "pack": "spells",
+    "foundryId": "ZhJ8d9Uk4lwIx86b"
+  },
+  "spells-srd:Blight": {
+    "kind": "spell",
+    "id": "blight",
+    "name": "Blight",
+    "pack": "spells",
+    "foundryId": "7yWXx3qC4eFNHhxD"
+  },
+  "spells-srd:aqRYNoSvxsVfqglH": {
+    "kind": "spell",
+    "id": "unfettered-movement",
+    "name": "Unfettered Movement",
+    "pack": "spells",
+    "foundryId": "aqRYNoSvxsVfqglH"
+  },
+  "actionspf2e:Escape": {
+    "kind": "action",
+    "id": "escape",
+    "name": "Escape",
+    "pack": "actions",
+    "foundryId": "SkZAQRkLLkmBQNB9"
+  },
+  "spell-effects:Spell Effect: Unfettered Movement": {
+    "kind": "effect",
+    "id": "spell-effect-unfettered-movement",
+    "name": "Spell Effect: Unfettered Movement",
+    "pack": "spell-effects",
+    "foundryId": "CdAyAiMGESvgNQtz"
+  },
+  "spells-srd:rfZpqmj0AIIdkVIs": {
+    "kind": "spell",
+    "id": "heal",
+    "name": "Heal",
+    "pack": "spells",
+    "foundryId": "rfZpqmj0AIIdkVIs"
+  },
+  "spell-effects:Spell Effect: Read Aura": {
+    "kind": "effect",
+    "id": "spell-effect-read-aura",
+    "name": "Spell Effect: Read Aura",
+    "pack": "spell-effects",
+    "foundryId": "J6OhRNSN23KzOPRL"
+  },
+  "spells-srd:Speak with Plants": {
+    "kind": "spell",
+    "id": "speak-with-plants",
+    "name": "Speak with Plants",
+    "pack": "spells",
+    "foundryId": "qvwIwJ9QBihy8R0t"
+  },
+  "actionspf2e:Make an Impression": {
+    "kind": "action",
+    "id": "make-an-impression",
+    "name": "Make an Impression",
+    "pack": "actions",
+    "foundryId": "OX4fy22hQgUHDr0q"
+  },
+  "actionspf2e:Request": {
+    "kind": "action",
+    "id": "request",
+    "name": "Request",
+    "pack": "actions",
+    "foundryId": "DCb62iCBrJXy0Ik6"
+  },
+  "spells-srd:Primal Phenomenon": {
+    "kind": "spell",
+    "id": "primal-phenomenon",
+    "name": "Primal Phenomenon",
+    "pack": "spells",
+    "foundryId": "MLNeD5sAunV0E23j"
+  },
+  "bestiary-ability-glossary-srd:Improved Grab": {
+    "kind": "creature-ability",
+    "id": "improved-grab",
+    "name": "Improved Grab",
+    "pack": "bestiary-ability-glossary-srd",
+    "foundryId": "i18TlebMzwONyPhI"
+  },
+  "spells-srd:Awaken Animal": {
+    "kind": "spell",
+    "id": "awaken-animal",
+    "name": "Awaken Animal",
+    "pack": "spells",
+    "foundryId": "B4dDkYsHFo1H0CIF"
+  },
+  "spells-srd:Primal Call": {
+    "kind": "spell",
+    "id": "primal-call",
+    "name": "Primal Call",
+    "pack": "spells",
+    "foundryId": "pZc8ZwtsyWnxUUW0"
+  },
+  "actionspf2e:Grab an Edge": {
+    "kind": "action",
+    "id": "grab-an-edge",
+    "name": "Grab an Edge",
+    "pack": "actions",
+    "foundryId": "3yoajuKjwHZ9ApUY"
+  },
+  "conditionitems:yZRUzMqrMmfLu0V1": {
+    "kind": "condition",
+    "id": "dying",
+    "name": "Dying",
+    "pack": "conditions",
+    "foundryId": "yZRUzMqrMmfLu0V1"
+  },
+  "conditionitems:TBSHQspnbcqxsmjL": {
+    "kind": "condition",
+    "id": "frightened",
+    "name": "Frightened",
+    "pack": "conditions",
+    "foundryId": "TBSHQspnbcqxsmjL"
+  },
+  "conditionitems:kWc1fhmv9LBiTuei": {
+    "kind": "condition",
+    "id": "grabbed",
+    "name": "Grabbed",
+    "pack": "conditions",
+    "foundryId": "kWc1fhmv9LBiTuei"
+  },
+  "conditionitems:VcDeM8A5oI6VqhbM": {
+    "kind": "condition",
+    "id": "restrained",
+    "name": "Restrained",
+    "pack": "conditions",
+    "foundryId": "VcDeM8A5oI6VqhbM"
+  }
+}

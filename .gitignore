@@ -1,0 +1,11 @@
+node_modules/
+.cache/
+.env
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+data/creatures/
+data/hazards/
+data/index.json
+data/glossary.json
+data/build-report.json

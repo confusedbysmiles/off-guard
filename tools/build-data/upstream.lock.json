@@ -1,0 +1,7 @@
+{
+  "repo": "https://github.com/foundryvtt/pf2e.git",
+  "branch": "v14-dev",
+  "commit": "8c8a688a3225ac8147c1cb24e4c570bc22db954b",
+  "sparsePaths": ["packs/pf2e", "static/lang"],
+  "note": "Pinned so `npm run build:data` is reproducible. Bump the commit deliberately, never automatically."
+}
