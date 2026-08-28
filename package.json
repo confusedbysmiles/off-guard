@@ -10,7 +10,8 @@
   "scripts": {
     "build:data": "node tools/build-data/build.js",
     "build:data:fetch": "node tools/build-data/upstream.js",
-    "test": "vitest run"
+    "test": "vitest run",
+    "build:tables": "node tools/build-tables/build.js"
   },
   "devDependencies": {
     "vitest": "^4.1.11"

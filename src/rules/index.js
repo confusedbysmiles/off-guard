@@ -1,0 +1,53 @@
+/**
+ * The rules engine.
+ *
+ * Dependency-free and environment-free: no Node APIs, no DOM, no imports
+ * outside `src/`. The server and the browser both use this module, and nothing
+ * else in the application is allowed to do arithmetic on a stat block or on a
+ * character sheet.
+ *
+ * Everything here is a pure function over plain values. Creature transforms
+ * return a new record and never mutate the one they were given, so a toggle in
+ * the interface is a re-render rather than an undo.
+ *
+ * What is rules as written, and what is not:
+ *
+ *   adjust.js            RAW. Monster Core, Elite and Weak Adjustments.
+ *   encounter.js         RAW. GM Core pg. 75.
+ *   dc.js                RAW. GM Core pg. 53.
+ *   recall-knowledge.js  RAW for skills and DC; the ordering of what a success
+ *                        reveals is this application's convenience and says so.
+ *   proficiency.js       RAW. Player Core, Proficiency.
+ *   scale.js             NOT RAW. An approximation, labelled as one everywhere
+ *                        it surfaces.
+ */
+export {
+  adjustCreature, isLimitedUse,
+} from './adjust.js';
+
+export {
+  describeScaling, scaleCreature, SCALE_RANGE,
+} from './scale.js';
+
+export {
+  budgetFor, budgets, creatureCost, DIFFICULTIES, difficultyOf,
+  priceEncounter, repriceEncounter, STANDARD_PARTY_SIZE,
+} from './encounter.js';
+
+export {
+  DC_ADJUSTMENT, DC_BY_LEVEL, DC_BY_RARITY, DC_BY_SPELL_RANK, DEGREES,
+  dcByLevel, dcBySpellRank, degreeOfSuccess, simpleDc, SIMPLE_DC,
+} from './dc.js';
+
+export {
+  factsFor, recallKnowledge, skillsFor,
+} from './recall-knowledge.js';
+
+export {
+  armorClass, classDc, PROFICIENCY_BONUS, PROFICIENCY_RANKS,
+  proficiencyBonus, rankName, statistic,
+} from './proficiency.js';
+
+export {
+  adjustRichText, flatDamageAdjuster,
+} from './rich-text.js';

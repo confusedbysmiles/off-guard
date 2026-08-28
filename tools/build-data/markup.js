@@ -20,6 +20,7 @@ import {
   parseDamageExpression,
   renderDamageParts,
 } from '../../src/shared/damage-expression.js';
+import { parseCheckPayload, renderCheck } from '../../src/shared/check-expression.js';
 
 // Tags actually present in the corpus (surveyed across all 6,392 NPC records),
 // minus the handful we refuse to carry: div, section, a, and a stray <deity>.
@@ -29,7 +30,6 @@ const ALLOWED_TAGS = new Set([
 ]);
 const VOID_TAGS = new Set(['hr', 'br']);
 
-const SAVE_STATISTICS = new Set(['fortitude', 'reflex', 'will']);
 
 const escapeHtml = (s) =>
   String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -90,36 +90,6 @@ function readLabel(str, i) {
 }
 
 /** Parse `reflex|dc:29|basic|options:area-effect` into a structured check. */
-function parseCheckPayload(payload) {
-  const segments = String(payload).split('|');
-  const statistic = (segments.shift() ?? '').trim().toLowerCase();
-  const check = { statistic, dc: null, basic: false, name: null, traits: [] };
-  for (const seg of segments) {
-    const idx = seg.indexOf(':');
-    if (idx === -1) {
-      if (seg.trim() === 'basic') check.basic = true;
-      continue;
-    }
-    const key = seg.slice(0, idx).trim();
-    const value = seg.slice(idx + 1).trim();
-    if (key === 'dc') check.dc = Number.isNaN(Number(value)) ? value : Number(value);
-    else if (key === 'name') check.name = value;
-    else if (key === 'traits') check.traits = value.split(',').map((t) => t.trim());
-  }
-  return check;
-}
-
-export function renderCheck(check) {
-  const dc = check.dc === null ? '' : `DC ${check.dc} `;
-  if (check.statistic === 'flat') return `${dc}flat check`;
-  const label = SAVE_STATISTICS.has(check.statistic)
-    ? `${titleCase(check.statistic)} save`
-    : titleCase(check.statistic);
-  const basic = check.basic ? 'basic ' : '';
-  const name = check.name ? ` (${check.name})` : '';
-  return `${dc}${basic}${label}${name}`;
-}
-
 /**
  * `emanation|distance:30` -> `30-foot emanation`.
  *
@@ -398,4 +368,5 @@ export function htmlToText(html) {
     .trim();
 }
 
-export { sanitizeHtml, parseCheckPayload, renderTemplate, resolveRuntimeRefs };
+export { sanitizeHtml, renderTemplate, resolveRuntimeRefs };
+export { parseCheckPayload, renderCheck } from '../../src/shared/check-expression.js';
