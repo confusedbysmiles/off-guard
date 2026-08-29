@@ -1,0 +1,9 @@
+{
+  "book": "Pathfinder Guns & Gears",
+  "note": "Extracted from PF 2e - Guns & Gears.pdf by tools/build-pages/extract.py: 0 from the bookmark outline, verified by checking that the creature's name appears on the page the bookmark points at; 3 from stat-block titles read off the pages as display type, verified by checking that the level printed beside the name is the level the catalogue records. Printed page = PDF index - 0. 0 entries in this book were not found either way and have no page here.",
+  "pages": {
+    "insistent-privacy-fence": 81,
+    "malevolent-mannequins": 81,
+    "steam-vents": 81
+  }
+}

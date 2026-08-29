@@ -506,31 +506,47 @@ The upstream data has none — its publication block is
 the tables in `tools/build-data/pages/`, keyed by Off-Guard entry id and merged
 at build time, with keys that match no entry reported rather than ignored.
 
-**1,146 of them are extracted from Paizo's own PDFs** by
-`tools/build-pages/extract.py`, covering Monster Core (95%), Monster Core 2
-(95%), Battlecry (89%), Howl of the Wild (86%), Rage of Elements (79%) and Book
-of the Dead (66%). That tool is local and one-off: it needs PDFs that are not in
-this repository and never will be, it is not wired into `npm run build:data`,
-and nothing in the application depends on it. Its output is checked in, and that
-is what the build reads.
+**2,066 of them are extracted from Paizo's own PDFs** by
+`tools/build-pages/extract.py`, across eighteen books — Monster Core 98%,
+Monster Core 2 99%, NPC Core 99%, Bestiary 1 100%, Bestiary 2 97%, Bestiary 3
+92%, Book of the Dead 98%, Howl of the Wild 99%, Rage of Elements 94%, GM Core's
+hazards 97%, Battlecry 91%, and the rest. That tool is local and one-off: it
+needs PDFs that are not in this repository and never will be, it is not wired
+into `npm run build:data`, and nothing in the application depends on it. Its
+output is checked in, and that is what the build reads.
 
-Three things make those numbers trustworthy rather than plausible:
+Four things make those numbers trustworthy rather than plausible:
 
-1. They come from each PDF's own bookmark outline, which is the book's statement
-   about where its contents are, not a guess.
-2. The printed page number is read off the pages rather than assumed to equal
-   the PDF index — the offset is worked out by vote across twenty sampled pages,
-   and a book whose folio cannot be read is skipped rather than guessed at.
-3. Every match is then verified against the page: the creature's whole name has
-   to appear in that page's text. An earlier version accepted the last word
-   alone, which quietly verified Conspirator Dragon against the Adamantine
-   Dragon's page, because "dragon" matches every dragon in the book.
+1. Where a book has a bookmark outline, the numbers come from it, because that
+   is the book's own statement about where its contents are.
+2. Where it has none — NPC Core has no outline at all, and several books
+   bookmark only their chapters — the stat-block titles are read off the pages
+   as *display type*: a run of text whose size matches the run beside it reading
+   "CREATURE 4". Requiring the pair is what makes it safe. A name on its own
+   appears in prose throughout a book; a name set at title size next to its own
+   printed level is the top of an entry.
+3. The printed page number is read off the pages rather than assumed to equal
+   the PDF index, and the offset is *tested* rather than voted for: candidates
+   are nominated by how often `index - number` recurs, and the answer is the one
+   actually printed on nine sampled pages in ten. A plurality was not enough —
+   Bestiary 1 renders facing pages, so half its sheets carry two folios and the
+   true offset led the wrong one only 16 votes to 10, which is why that book
+   used to be skipped and is now at 100%.
+4. Every match is verified, and the two routes verify differently. A bookmark is
+   checked against the page's text: the creature's whole name has to be on the
+   page it points at. An earlier version accepted the last word alone, which
+   quietly verified Conspirator Dragon against the Adamantine Dragon's page,
+   because "dragon" matches every dragon in the book. A display heading is
+   checked against the catalogue instead: the level printed beside the name has
+   to be the level the catalogue records.
 
 Everything failing any of those is left out, and `null` renders as "no page
 recorded" — honest, where a wrong number sends someone flipping through the
-wrong chapter mid-session. The remainder are creatures Paizo did not bookmark
-individually; see `tools/build-data/pages/README.md` before adding to them by
-hand.
+wrong chapter mid-session. Names are compared whole and exactly, so NPC Core's
+"ORC AGRICULTURALIST" is not matched to the catalogue's "Orc Agriculturist" and
+stays without a page. The remainder are entries in books nobody here has a PDF
+of, almost all of them adventure paths; see
+`tools/build-data/pages/README.md` before adding to them by hand.
 
 ## Deploying it
 

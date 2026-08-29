@@ -1,0 +1,20 @@
+{
+  "book": "Pathfinder War of Immortals",
+  "note": "Extracted from PF 2e - War of Immortals.pdf by tools/build-pages/extract.py: 5 from the bookmark outline, verified by checking that the creature's name appears on the page the bookmark points at; 9 from stat-block titles read off the pages as display type, verified by checking that the level printed beside the name is the level the catalogue records. Printed page = PDF index - 0. 2 entries in this book were not found either way and have no page here.",
+  "pages": {
+    "agyra": 189,
+    "immortal-trickster": 180,
+    "mythic-gogiteth": 170,
+    "mythic-griffon": 173,
+    "mythic-lich": 172,
+    "mythic-ogre-boss": 171,
+    "oliphaunt-of-jandelay": 192,
+    "primal-chaos-aura": 191,
+    "sublime-breath": 198,
+    "trump-of-the-oliphaunt": 196,
+    "verex-that-was": 204,
+    "vulot": 177,
+    "weaver-of-webs": 210,
+    "wind-surge": 191
+  }
+}

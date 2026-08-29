@@ -1,6 +1,6 @@
 {
   "book": "Pathfinder Battlecry!",
-  "note": "Extracted from the bookmark outline of PF 2e - Battlecry!.pdf by tools/build-pages/extract.py, and verified by checking that each creature's name appears on the page the bookmark points at (printed page = PDF index - 0). 6 entries in this book are not bookmarked and have no page here.",
+  "note": "Extracted from PF 2e - Battlecry!.pdf by tools/build-pages/extract.py: 49 from the bookmark outline, verified by checking that the creature's name appears on the page the bookmark points at; 1 from stat-block titles read off the pages as display type, verified by checking that the level printed beside the name is the level the catalogue records. Printed page = PDF index - 0. 5 entries in this book were not found either way and have no page here.",
   "pages": {
     "angelic-chorus": 172,
     "animated-army": 173,
@@ -41,6 +41,7 @@
     "qadiran-camel-corps": 189,
     "ratfolk-shank-squad": 189,
     "redcap-brigade": 189,
+    "scamp-inferno": 190,
     "sinswarm": 191,
     "skeleton-mob": 191,
     "vanth-guardian-flock": 192,

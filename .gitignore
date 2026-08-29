@@ -9,6 +9,9 @@ data/hazards/
 data/index.json
 data/glossary.json
 data/build-report.json
-e2e/.world.json
+e2e/.world-*.json
 test-results/
 playwright-report/
+
+# Python bytecode from the one-off PDF tools.
+__pycache__/

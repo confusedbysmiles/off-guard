@@ -1,0 +1,19 @@
+{
+  "book": "Pathfinder Gamemastery Guide",
+  "note": "Extracted from PF 2e - Gamemastery Guide.pdf by tools/build-pages/extract.py: 0 from the bookmark outline, verified by checking that the creature's name appears on the page the bookmark points at; 13 from stat-block titles read off the pages as display type, verified by checking that the level printed beside the name is the level the catalogue records. Printed page = PDF index - 0. 0 entries in this book were not found either way and have no page here.",
+  "pages": {
+    "acolyte-of-nethys": 212,
+    "antipaladin": 247,
+    "barkeep": 238,
+    "brown-mold": 77,
+    "grasp-of-the-damned": 79,
+    "green-slime": 78,
+    "jealous-abjurer": 79,
+    "perilous-flash-flood": 80,
+    "plummeting-doom": 79,
+    "priest-of-pharasma": 213,
+    "server": 238,
+    "shrieker": 77,
+    "treacherous-scree": 77
+  }
+}

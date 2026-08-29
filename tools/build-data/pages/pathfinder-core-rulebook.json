@@ -1,0 +1,11 @@
+{
+  "book": "Pathfinder Core Rulebook",
+  "note": "Extracted from PF 2e - Core Rulebook [4th Printing].pdf by tools/build-pages/extract.py: 0 from the bookmark outline, verified by checking that the creature's name appears on the page the bookmark points at; 5 from stat-block titles read off the pages as display type, verified by checking that the level printed beside the name is the level the catalogue records. Printed page = PDF index - 0. 1 entries in this book were not found either way and have no page here.",
+  "pages": {
+    "frozen-moment": 525,
+    "lava-flume-tube": 528,
+    "second-chance": 525,
+    "telekinetic-swarm-trap": 528,
+    "yellow-mold": 524
+  }
+}

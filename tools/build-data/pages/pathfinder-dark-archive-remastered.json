@@ -1,0 +1,29 @@
+{
+  "book": "Pathfinder Dark Archive (Remastered)",
+  "note": "Extracted from PF 2e - Dark Archive (Remastered).pdf by tools/build-pages/extract.py: 1 from the bookmark outline, verified by checking that the creature's name appears on the page the bookmark points at; 22 from stat-block titles read off the pages as display type, verified by checking that the level printed beside the name is the level the catalogue records. Printed page = PDF index - 0. 3 entries in this book were not found either way and have no page here.",
+  "pages": {
+    "call-of-the-void": 214,
+    "clone-mirrors": 124,
+    "confounding-portal": 122,
+    "constricting-hall": 124,
+    "darkside-mirror": 125,
+    "disorienting-illusions": 122,
+    "distortion-mirror": 123,
+    "entrapping-chair": 123,
+    "exhaling-portal": 125,
+    "false-floor": 123,
+    "false-step-floor": 123,
+    "k-h-w-s-echo": 214,
+    "mirror-door": 122,
+    "mother-mitera": 152,
+    "reflected-desires": 123,
+    "reflection": 119,
+    "shrinking-hall": 123,
+    "shrouded-assailant": 125,
+    "shuffling-hall": 122,
+    "sigil-of-deepest-fears": 124,
+    "spirit-window": 124,
+    "thalassophobia-pool": 212,
+    "the-morrowkin": 192
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "book": "Pathfinder Dark Archive",
+  "note": "Extracted from PF 2e - Dark Archive.pdf by tools/build-pages/extract.py: 0 from the bookmark outline, verified by checking that the creature's name appears on the page the bookmark points at; 1 from stat-block titles read off the pages as display type, verified by checking that the level printed beside the name is the level the catalogue records. Printed page = PDF index - 0. 0 entries in this book were not found either way and have no page here.",
+  "pages": {
+    "bounding-hounds": 125
+  }
+}
