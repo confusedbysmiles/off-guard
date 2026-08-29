@@ -35,10 +35,13 @@ npm start            # http://127.0.0.1:8787
 
 npm run build:data    # ~7 minutes on a cold cache, ~6 seconds after
 npm run build:tables     # regenerates src/rules/tables/ from the pinned checkout
+                         # and tools/build-tables/gm-core-creature-building.json
 npm run build:reference  # regenerates data/reference.json, which is checked in
 npm run build:fonts   # refetches Jost into public/assets/fonts/
 npm run check:contrast
-npm run test:e2e      # Playwright, three surfaces, needs `npx playwright install chromium`
+npm run test:e2e      # Playwright: Chromium for everything, WebKit for the
+                      # engine-specific parts. Needs `npx playwright install
+                      # chromium webkit`.
 ```
 
 Configuration is documented in `.env.example`; every value has a working
