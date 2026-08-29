@@ -3,7 +3,8 @@
  *
  * One campaign, three characters, one encounter and a fight already rolled, so
  * every surface has something real on it. The tokens are written to a file the
- * tests read, because they are generated and cannot be hardcoded.
+ * tests read, because they are generated and cannot be hardcoded — one file per
+ * server port, since each Playwright project gets its own.
  */
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -17,6 +18,7 @@ import { applyPatch, createCharacter } from '../src/server/store/characters.js';
 import { createEncounter, setCreatures } from '../src/server/store/encounters.js';
 import { addCombatant, startCombat } from '../src/server/store/combat.js';
 import { mintCharacterToken, mintGmToken, mintTableToken } from '../src/server/store/tokens.js';
+import { worldFile } from './world.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -31,7 +33,7 @@ const SHEET = {
   heroPoints: 1, conditions: [], notes: '',
 };
 
-export function buildFixture() {
+export function buildFixture(port) {
   const dir = mkdtempSync(join(tmpdir(), 'off-guard-e2e-'));
   const file = join(dir, 'e2e.sqlite');
   const db = openDatabase(file, { migrationsDir: join(ROOT, 'migrations') });
@@ -100,6 +102,8 @@ export function buildFixture() {
 
   db.close();
   writeFileSync(join(dir, 'world.json'), JSON.stringify(world, null, 2));
-  writeFileSync(join(ROOT, 'e2e/.world.json'), JSON.stringify(world, null, 2));
+  // Named for the port it belongs to: each Playwright project runs its own
+  // server against its own database, and they must not read each other's.
+  writeFileSync(worldFile(port), JSON.stringify(world, null, 2));
   return world;
 }

@@ -11,7 +11,7 @@ import { openCatalogue } from '../src/server/catalogue.js';
 import { buildFixture } from './fixture.js';
 
 const port = Number(process.argv[2] ?? 8799);
-const world = buildFixture();
+const world = buildFixture(port);
 const db = openDatabase(world.database, {});
 
 const app = await buildApp({ db, catalogue: openCatalogue(), logger: false });

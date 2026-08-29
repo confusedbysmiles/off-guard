@@ -5,10 +5,11 @@
  * the shared screen on the other, proving the whole chain from a click through
  * the rules engine to SQLite to Server-Sent Events to the page.
  */
-import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 
-const world = JSON.parse(readFileSync(new URL('./.world.json', import.meta.url), 'utf8'));
+import { loadWorld, PORTS } from './world.js';
+
+const world = loadWorld(PORTS.desktop);
 
 test.describe('the player’s character sheet', () => {
   test('loads and computes its own numbers', async ({ page }) => {

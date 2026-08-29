@@ -10,10 +10,11 @@
  * covered separately by `npm run check:contrast`, which walks the design tokens
  * rather than the rendered page.
  */
-import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 
-const world = JSON.parse(readFileSync(new URL('./.world.json', import.meta.url), 'utf8'));
+import { loadWorld, PORTS } from './world.js';
+
+const world = loadWorld(PORTS.desktop);
 
 /**
  * Every interactive element must have an accessible name.
