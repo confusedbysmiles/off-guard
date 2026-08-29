@@ -21,6 +21,7 @@ const MANIFESTS = [
   'deploy/off-guard.service',
   'deploy/nginx.conf',
   'deploy/macos/com.drseim.off-guard.plist',
+  'deploy/macos/com.drseim.off-guard-backup.plist',
   'deploy/macos/install.sh',
   'deploy/linux/install.sh',
   'deploy/cloudflared/setup.sh',
@@ -73,32 +74,55 @@ describe('the port', () => {
   });
 });
 
-describe('the launchd template and its installer', () => {
-  const plist = read('deploy/macos/com.drseim.off-guard.plist');
+describe('the launchd templates and their installer', () => {
   const install = read('deploy/macos/install.sh');
+  const PLISTS = [
+    ['deploy/macos/com.drseim.off-guard.plist', 'LABEL'],
+    ['deploy/macos/com.drseim.off-guard-backup.plist', 'BACKUP_LABEL'],
+  ];
 
-  it('agrees on the label', () => {
-    const label = /<key>Label<\/key>\s*<string>([^<]+)<\/string>/.exec(plist)[1];
-    expect(install).toContain(`LABEL="${label}"`);
+  it.each(PLISTS)('%s: the installer knows its label', (file, variable) => {
+    const label = /<key>Label<\/key>\s*<string>([^<]+)<\/string>/.exec(read(file))[1];
+    expect(install).toContain(`${variable}="${label}"`);
+    // The template is found by its label, so the filename has to match it.
+    expect(file).toContain(`${label}.plist`);
   });
 
-  it('leaves no placeholder the installer does not substitute', () => {
-    // Every `/Users/YOU` path in the template has to appear in a `sed` in the
+  it.each(PLISTS)('%s: leaves no placeholder the installer does not substitute', (file) => {
+    // Every `/Users/YOU` path in a template has to appear in a `sed` in the
     // installer, or it survives into ~/Library/LaunchAgents and the agent
     // fails to start with nothing to read about why.
     const placeholders = new Set(
-      (plist.match(/\/Users\/YOU[^<"\s]*(?: [^<"\s]+)*/g) ?? [])
+      (read(file).match(/\/Users\/YOU[^<"\s]*(?: [^<"\s]+)*/g) ?? [])
         .map((path) => path.replace(/\/[^/]*\.(sqlite|log)$/, '')),
     );
-    expect(placeholders.size).toBeGreaterThan(2);
+    expect(placeholders.size).toBeGreaterThan(0);
     for (const path of placeholders) {
       expect(install.includes(path), `nothing substitutes ${path}`).toBe(true);
     }
   });
 
+  it.each(PLISTS)('%s: runs a program that is in the repository', (file) => {
+    const script = /<string>(tools\/[^<]+|src\/[^<]+)<\/string>/.exec(read(file));
+    expect(script, `${file} names no script`).not.toBeNull();
+    expect(existsSync(script[1]), `${file} runs ${script[1]}, which is not here`).toBe(true);
+  });
+
   it('refuses to install a plist with a placeholder left in it', () => {
     expect(install).toContain('/Users/YOU');
     expect(install).toContain('refusing to install a broken agent');
+  });
+
+  it('removes both agents when it uninstalls, and neither database', () => {
+    const uninstall = install.slice(install.indexOf('--uninstall'), install.indexOf('# --- what'));
+    expect(uninstall).toContain('$BACKUP_TARGET');
+    expect(uninstall).toContain('$TARGET');
+    expect(uninstall).toMatch(/untouched/);
+    expect(uninstall).not.toMatch(/rm -rf/);
+  });
+
+  it('proves the weekly backup works instead of scheduling it and hoping', () => {
+    expect(install).toContain('kickstart -w "$DOMAIN/$BACKUP_LABEL"');
   });
 });
 

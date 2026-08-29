@@ -28,7 +28,7 @@ Then, in the checkout:
 
 ```bash
 npm ci
-npm test                      # 629 unit tests, no data build needed
+npm test                      # 637 unit tests, no data build needed
 ```
 
 **Build the creature catalogue before you need it**, not at the table. It clones
@@ -187,8 +187,31 @@ put it somewhere else. It prints what it copied — read those numbers, because
 The file it hands back is a single file with no sidecars, so `cp` and `scp` are
 safe on *it* even though they are not safe on the live database.
 
-Worth a `launchd` timer or a cron line. The file is small — a season of play is
-a few megabytes — so keep them all. And restore one occasionally:
+**It already runs weekly.** `./deploy/macos/install.sh` installs two agents, not
+one: the server, and `com.drseim.off-guard-backup`, which takes a backup every
+Sunday at 04:30 and writes what it copied to
+`~/Library/Logs/off-guard-backup.log`. The installer runs it once on the spot,
+because a scheduled job that has never run is a plan rather than a backup.
+
+To change the day, edit `StartCalendarInterval` in
+`deploy/macos/com.drseim.off-guard-backup.plist` — `Weekday` is 0 for Sunday
+through 6 for Saturday, and the morning after you play is the one that matters —
+then run the installer again. It regenerates the installed copy from the
+template, so editing the template is the change that lasts.
+
+If the Mac is asleep at the appointed time, launchd runs the job on wake rather
+than skipping the week. Taking a backup by hand on the same day is not a
+conflict: the agent passes `--skip-existing` and finds nothing to do.
+
+Check on it with:
+
+```bash
+tail ~/Library/Logs/off-guard-backup.log
+launchctl print gui/$(id -u)/com.drseim.off-guard-backup | grep 'last exit'
+```
+
+The file is small — a season of play is a few megabytes — so keep them all. And
+restore one occasionally:
 
 ```bash
 npm run backup --verify-only ~/off-guard-backups/<date>.sqlite

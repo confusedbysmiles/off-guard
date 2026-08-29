@@ -127,6 +127,29 @@ describe('against a running server', () => {
   });
 });
 
+describe('the scheduled run', () => {
+  it('treats today\u2019s backup already being there as nothing to do', () => {
+    // The weekly agent uses this. A backup taken by hand on a Sunday morning
+    // should not put a failure in the log a few hours later.
+    const { dir, file, db } = liveDatabase();
+    const backup = join(dir, 'backup.sqlite');
+    run([backup], file);
+    const before = statSync(backup).mtimeMs;
+
+    expect(run(['--skip-existing', backup], file)).toContain('Nothing to do');
+    expect(statSync(backup).mtimeMs).toBe(before);
+    db.close();
+  });
+
+  it('still takes one when there is none', () => {
+    const { dir, file, db } = liveDatabase(3);
+    const backup = join(dir, 'backup.sqlite');
+    expect(run(['--skip-existing', backup], file)).toContain('3 campaigns');
+    expect(countIn(backup)).toBe(3);
+    db.close();
+  });
+});
+
 describe('refusals', () => {
   it('will not overwrite a file that is already there', () => {
     const { dir, file, db } = liveDatabase();

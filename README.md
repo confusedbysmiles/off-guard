@@ -11,7 +11,7 @@ creature data, reference tables and homebrew are global.
 
 **Status: complete, and running.** It has been live since 29 August 2026 on a
 Mac under launchd, reached through a Cloudflare Tunnel, and has been played on
-from a laptop, a phone and an iPad. 629 unit tests and 47 end-to-end tests, run
+from a laptop, a phone and an iPad. 637 unit tests and 47 end-to-end tests, run
 at a host root and at a subdirectory, in Chromium and — for the parts where
 engines differ — in WebKit. See [deploy/GOING-LIVE.md](deploy/GOING-LIVE.md).
 
@@ -663,6 +663,11 @@ structurally valid database with nothing in it passes an integrity check and is
 still the wrong thing to carry to a new machine. `tests/backup.test.js` builds a
 database with writes still in the log, copies it both ways, and asserts the
 difference.
+
+On macOS this runs weekly on its own: `deploy/macos/install.sh` installs a
+second launchd agent beside the server, and runs it once during the install,
+because a scheduled job that has never run is a plan rather than a backup. The
+day is one line of `deploy/macos/com.drseim.off-guard-backup.plist`.
 
 ## Licensing
 

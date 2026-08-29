@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  A weekly backup of the Off-Guard database.
+
+  A template. `./deploy/macos/install.sh` installs it alongside the server
+  agent and fills in the real paths; copying it by hand loads an agent that
+  cannot start and says so only in a log file it also cannot open.
+
+  It runs `tools/backup.js`, which writes ~/off-guard-backups/<date>.sqlite
+  through SQLite's online backup API. That is safe against a running server, so
+  this needs no coordination with the server agent and cannot interrupt a
+  session in progress.
+
+  `--skip-existing` makes a second run on the same day a no-op rather than an
+  error, so taking a backup by hand on a Sunday does not put a failure in the
+  log a few hours later.
+
+  To change the day or the time, edit StartCalendarInterval below and run the
+  installer again — it regenerates the installed copy from this file, so an
+  edit here is the change that lasts. Weekday is 0 for Sunday through 6 for
+  Saturday. Pick the morning after the night you play.
+
+  If the Mac is asleep at the appointed time, launchd runs the job when it
+  wakes rather than skipping the week.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.drseim.off-guard-backup</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <!-- `which node`, absolute: a launchd agent gets almost no PATH. -->
+    <string>/usr/local/bin/node</string>
+    <string>tools/backup.js</string>
+    <string>--skip-existing</string>
+  </array>
+
+  <!-- The tool reads .env from here, so it opens the same database the server
+       agent has open rather than a default that might be somewhere else. -->
+  <key>WorkingDirectory</key>
+  <string>/Users/YOU/Documents/VSCode/off-guard</string>
+
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Weekday</key>
+    <integer>0</integer>
+    <key>Hour</key>
+    <integer>4</integer>
+    <key>Minute</key>
+    <integer>30</integer>
+  </dict>
+
+  <!-- Explicitly not RunAtLoad: installing or repairing the server agent
+       should not take a backup as a side effect. The installer runs it once,
+       deliberately, and says so. -->
+  <key>RunAtLoad</key>
+  <false/>
+
+  <!-- What it copied, every week, so a backup that has silently been copying
+       an empty database is visible without going looking. -->
+  <key>StandardOutPath</key>
+  <string>/Users/YOU/Library/Logs/off-guard-backup.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/YOU/Library/Logs/off-guard-backup.log</string>
+
+  <key>ProcessType</key>
+  <string>Background</string>
+
+  <!-- Nice, because it is a page-by-page copy that nobody is waiting for. -->
+  <key>LowPriorityIO</key>
+  <true/>
+</dict>
+</plist>

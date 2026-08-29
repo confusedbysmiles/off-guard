@@ -27,6 +27,7 @@
  *     npm run backup                                  # ~/off-guard-backups/<date>.sqlite
  *     npm run backup /Volumes/Backup/off-guard.sqlite
  *     npm run backup --verify-only /path/to/one.sqlite
+ *     npm run backup --skip-existing                  # for the weekly agent
  *
  * A backup is a complete copy of every campaign, every character sheet and
  * every token hash. Tokens are hashed, so a stolen backup does not hand anyone
@@ -43,6 +44,10 @@ import { config } from '../src/server/index.js';
 
 const args = process.argv.slice(2);
 const verifyOnly = args.includes('--verify-only');
+// For the scheduled run. Today's backup already existing is the normal state
+// of a job that has already run today, not a failure worth a log line and a
+// non-zero exit -- but a person naming a destination should still be told.
+const skipExisting = args.includes('--skip-existing');
 const target = args.find((a) => !a.startsWith('--'));
 
 const bytes = (n) => `${(n / 1024 / 1024).toFixed(1)} MB`;
@@ -106,6 +111,11 @@ if (!existsSync(settings.database)) {
     + 'If the server is running somewhere else, run this from its directory.\n\n',
   );
   process.exit(1);
+}
+
+if (existsSync(destination) && skipExisting) {
+  process.stdout.write(`\n${destination} is already there. Nothing to do.\n\n`);
+  process.exit(0);
 }
 
 // Refusing rather than overwriting: the argument is a path someone typed, and

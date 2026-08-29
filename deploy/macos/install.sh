@@ -16,10 +16,13 @@
 set -euo pipefail
 
 LABEL="com.drseim.off-guard"
+BACKUP_LABEL="com.drseim.off-guard-backup"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
 TEMPLATE="$HERE/${LABEL}.plist"
 TARGET="$HOME/Library/LaunchAgents/${LABEL}.plist"
+BACKUP_TEMPLATE="$HERE/${BACKUP_LABEL}.plist"
+BACKUP_TARGET="$HOME/Library/LaunchAgents/${BACKUP_LABEL}.plist"
 DOMAIN="gui/$(id -u)"
 
 # Unload, and wait for launchd to actually finish.
@@ -29,30 +32,59 @@ DOMAIN="gui/$(id -u)"
 # uninstalled and not reinstalled, the worst of both. So poll until the label
 # really is absent.
 unload() {
+  local label="${1:-$LABEL}"
   # `bootout` fails when nothing is loaded, which is not an error here.
-  launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || true
+  launchctl bootout "$DOMAIN/$label" 2>/dev/null || true
   for _ in $(seq 1 40); do
-    launchctl print "$DOMAIN/$LABEL" > /dev/null 2>&1 || return 0
+    launchctl print "$DOMAIN/$label" > /dev/null 2>&1 || return 0
     sleep 0.25
   done
-  echo "launchd is still holding $LABEL after ten seconds." >&2
+  echo "launchd is still holding $label after ten seconds." >&2
   return 1
 }
 
 # And bootstrap with a retry, for the same reason from the other side.
 bootstrap() {
+  local target="${1:-$TARGET}"
   for attempt in 1 2 3; do
-    if launchctl bootstrap "$DOMAIN" "$TARGET" 2>/dev/null; then return 0; fi
+    if launchctl bootstrap "$DOMAIN" "$target" 2>/dev/null; then return 0; fi
     sleep 1
   done
   # Let the last attempt print its own error.
-  launchctl bootstrap "$DOMAIN" "$TARGET"
+  launchctl bootstrap "$DOMAIN" "$target"
+}
+
+# Fill this machine's real paths into a plist template.
+#
+# `|` as the delimiter, because every value here is a path. The check afterwards
+# is the point: a surviving placeholder loads an agent that cannot start, and
+# launchd reports EX_CONFIG into a log file it also cannot open, so there is
+# nothing on screen and nothing on disk.
+render() {
+  local template="$1" target="$2"
+  sed \
+    -e "s|<string>/usr/local/bin/node</string>|<string>${NODE}</string>|" \
+    -e "s|/Users/YOU/Documents/VSCode/off-guard|${ROOT}|" \
+    -e "s|/Users/YOU/Library/Application Support/off-guard|${DB_DIR}|" \
+    -e "s|/Users/YOU/Library/Logs|${LOG_DIR}|" \
+    "$template" > "$target"
+
+  if grep -q "/Users/YOU" "$target"; then
+    echo "A placeholder survived substitution; refusing to install a broken agent." >&2
+    grep -n "/Users/YOU" "$target" >&2
+    rm -f "$target"
+    exit 1
+  fi
+  plutil -lint "$target" > /dev/null
 }
 
 if [[ "${1:-}" == "--uninstall" ]]; then
-  unload
+  unload "$BACKUP_LABEL"
+  rm -f "$BACKUP_TARGET"
+  unload "$LABEL"
   rm -f "$TARGET"
-  echo "Removed. The database at ~/Library/Application Support/off-guard is untouched."
+  echo "Removed both agents. The database at ~/Library/Application Support/off-guard"
+  echo "and anything in ~/off-guard-backups are untouched."
   exit 0
 fi
 
@@ -102,30 +134,21 @@ else
   echo "Leaving the OFF_GUARD_DB already in $ENV_FILE alone."
 fi
 
-# --- write the plist ----------------------------------------------------------
+# --- write the plists ---------------------------------------------------------
 
-# `|` as the delimiter, because every value here is a path.
-sed \
-  -e "s|<string>/usr/local/bin/node</string>|<string>${NODE}</string>|" \
-  -e "s|/Users/YOU/Documents/VSCode/off-guard|${ROOT}|" \
-  -e "s|/Users/YOU/Library/Application Support/off-guard|${DB_DIR}|" \
-  -e "s|/Users/YOU/Library/Logs|${LOG_DIR}|" \
-  "$TEMPLATE" > "$TARGET"
+render "$TEMPLATE" "$TARGET"
+render "$BACKUP_TEMPLATE" "$BACKUP_TARGET"
 
-if grep -q "/Users/YOU" "$TARGET"; then
-  echo "A placeholder survived substitution; refusing to install a broken agent." >&2
-  grep -n "/Users/YOU" "$TARGET" >&2
-  rm -f "$TARGET"
-  exit 1
-fi
+# --- load them ----------------------------------------------------------------
 
-plutil -lint "$TARGET" > /dev/null
-
-# --- load it ------------------------------------------------------------------
-
-unload
-bootstrap
+unload "$LABEL"
+bootstrap "$TARGET"
 launchctl kickstart -k "$DOMAIN/$LABEL"
+
+# The backup agent is StartCalendarInterval only, so loading it schedules it and
+# runs nothing. It is kicked once below, after the server is confirmed up.
+unload "$BACKUP_LABEL"
+bootstrap "$BACKUP_TARGET"
 
 # --- and prove it is actually answering ---------------------------------------
 
@@ -140,6 +163,23 @@ for _ in $(seq 1 20); do
     echo "  from:      $ROOT"
     echo "  database:  $DB_DIR/off-guard.sqlite"
     echo "  log:       $LOG_DIR/off-guard.log"
+    echo
+
+    # Run the backup once now rather than finding out in a week that it was
+    # never going to work. A scheduled job that has never run is a plan.
+    echo "Taking one backup now, to prove the weekly agent will work:"
+    if launchctl kickstart -w "$DOMAIN/$BACKUP_LABEL" > /dev/null 2>&1; then
+      for _ in $(seq 1 20); do
+        [[ -s "$LOG_DIR/off-guard-backup.log" ]] && break
+        sleep 0.5
+      done
+      sed 's/^/  /' "$LOG_DIR/off-guard-backup.log" 2>/dev/null | tail -8
+    else
+      echo "  The backup agent did not start. Check:" >&2
+      echo "    launchctl print $DOMAIN/$BACKUP_LABEL" >&2
+    fi
+    echo "  Weekly from now on. Change the day in $(basename "$BACKUP_TEMPLATE")"
+    echo "  and run this again."
     echo
     echo "Your GM link, printed once and never again:"
     echo "  cd $ROOT && node tools/mint-gm-token.js"
