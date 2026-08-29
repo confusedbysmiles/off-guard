@@ -33,7 +33,7 @@
  * a working link -- but it is still the whole table's data, and it belongs
  * somewhere you would put a password manager export.
  */
-import { existsSync, mkdirSync, statSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 
@@ -118,7 +118,9 @@ if (existsSync(destination)) {
   process.exit(1);
 }
 
-mkdirSync(dirname(destination), { recursive: true });
+// 0700, because the default destination is a directory this creates in a home
+// directory and then fills with complete copies of everybody's data.
+mkdirSync(dirname(destination), { recursive: true, mode: 0o700 });
 
 // No migrations: a backup copies what is there. Running migrations against a
 // live database as a side effect of backing it up would be a surprising way to
@@ -135,6 +137,12 @@ try {
 } finally {
   db.close();
 }
+
+// Owner only. A backup is every campaign, every character sheet and every
+// token hash; hashing means a stolen copy is not a set of working links, but it
+// is still the whole table's data, and the default umask would have made it
+// world-readable. `deploy/MIGRATING.md` restores it with the same mode.
+chmodSync(destination, 0o600);
 
 // And make it genuinely one file. The copy inherits WAL from the source, so
 // without this the backup is three files and handing it to someone who copies

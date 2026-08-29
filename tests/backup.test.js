@@ -108,6 +108,16 @@ describe('against a running server', () => {
     db.close();
   });
 
+  it('writes it owner-only', () => {
+    // The whole table's data, in a file the default umask would have made
+    // world-readable.
+    const { dir, file, db } = liveDatabase();
+    const backup = join(dir, 'backup.sqlite');
+    run([backup], file);
+    expect(statSync(backup).mode & 0o777).toBe(0o600);
+    db.close();
+  });
+
   it('reports what it copied, so an empty backup is visible', () => {
     const { dir, file, db } = liveDatabase(2);
     const backup = join(dir, 'backup.sqlite');
