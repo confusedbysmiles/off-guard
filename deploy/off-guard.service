@@ -1,0 +1,85 @@
+# Off-Guard, as a systemd service.
+#
+#   sudo useradd --system --home /var/lib/off-guard --shell /usr/sbin/nologin off-guard
+#   sudo mkdir -p /var/lib/off-guard && sudo chown off-guard: /var/lib/off-guard
+#   sudo cp deploy/off-guard.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now off-guard
+#
+# Adjust WorkingDirectory to wherever the checkout lives. Everything else is
+# meant to be left alone.
+
+[Unit]
+Description=Off-Guard, a Pathfinder 2e table application
+Documentation=https://github.com/confusedbysmiles/off-guard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=off-guard
+Group=off-guard
+WorkingDirectory=/srv/off-guard
+ExecStart=/usr/bin/node src/server/index.js
+
+# Loopback only. TLS terminates at nginx, and a token in a URL over plain HTTP
+# is a token written on a postcard.
+Environment=OFF_GUARD_HOST=127.0.0.1
+Environment=OFF_GUARD_PORT=8787
+Environment=OFF_GUARD_DB=/var/lib/off-guard/off-guard.sqlite
+Environment=OFF_GUARD_LOG_LEVEL=info
+# Set this when serving from a subdirectory, e.g. drseim.com/off-guard.
+# Environment=OFF_GUARD_BASE_PATH=/off-guard
+
+Restart=on-failure
+RestartSec=5s
+
+# --- Hardening -------------------------------------------------------------
+#
+# The threat this is shaped against is not a determined attacker with a shell.
+# It is that this process holds every campaign, every character sheet and every
+# access token in one file, and it parses JSON that arrives from the internet.
+# So it gets the smallest surface that still lets it do its job.
+
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+ProtectProc=invisible
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=false
+RemoveIPC=true
+UMask=0077
+
+# The database directory is the only thing it may write to. `ProtectSystem=strict`
+# makes everything else, including the checkout, read-only.
+ReadWritePaths=/var/lib/off-guard
+
+# IPv4 and IPv6 sockets, and nothing else. No raw sockets, no netlink.
+RestrictAddressFamilies=AF_INET AF_INET6
+
+# The application makes one outbound request, and only when a player asks to
+# import a Pathbuilder build by id. Setting OFF_GUARD_PATHBUILDER_FETCH=off
+# removes it, at which point this line can be uncommented to enforce that at
+# the kernel rather than trusting the code.
+# IPAddressDeny=any
+# IPAddressAllow=localhost
+
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+[Install]
+WantedBy=multi-user.target

@@ -9,16 +9,22 @@
 <!-- No campaign name and no token in the title: this tab sits open on a laptop
      at a table where other people can see it. -->
 <title>Off-Guard</title>
-<link rel="stylesheet" href="/assets/css/tokens.css">
-<link rel="stylesheet" href="/assets/css/base.css">
-<link rel="stylesheet" href="/assets/css/gm.css">
+<link rel="stylesheet" href="../assets/css/tokens.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="../assets/css/gm.css">
 </head>
 <body class="gm">
 <a class="skip-link" href="#main">Skip to the dashboard</a>
 
+<!-- The page needs a level-one heading, and it cannot be the campaign name:
+     this tab sits open at a table where other people can see the screen, and
+     the same reasoning that keeps the campaign out of the title keeps it out
+     of the heading. Visually the campaign switcher does this job. -->
+<h1 class="sr-only">Off-Guard: game master</h1>
+
 <header class="topbar">
   <button class="campaign-switch" id="campaign-switch" type="button"
-          aria-haspopup="listbox" aria-expanded="false">
+          aria-haspopup="true" aria-expanded="false" aria-controls="switcher-list">
     <span class="campaign-switch__swatch" id="campaign-swatch" aria-hidden="true"></span>
     <span class="campaign-switch__text">
       <span class="campaign-switch__label">Campaign</span>
@@ -37,7 +43,11 @@
 </header>
 
 <div class="switcher" id="switcher" hidden>
-  <div class="switcher__panel" role="listbox" aria-label="Campaigns" id="switcher-list"></div>
+  <!-- A group of buttons, not a listbox. It was marked up as one, which
+       promises arrow-key semantics this does not implement; a plain labelled
+       group of buttons is what it actually is, and Tab and Escape are what
+       actually work. -->
+  <div class="switcher__panel" role="group" aria-label="Campaigns" id="switcher-list"></div>
 </div>
 
 <div class="notices" id="notices" role="status" aria-live="polite"></div>
@@ -50,6 +60,6 @@
   <p class="faint" id="licence-note"></p>
 </footer>
 
-<script type="module" src="/assets/js/gm/main.js"></script>
+<script type="module" src="../assets/js/gm/main.js"></script>
 </body>
 </html>

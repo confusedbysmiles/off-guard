@@ -11,7 +11,7 @@
  */
 import { el } from '../../lib/dom.js';
 import { icon } from '../../lib/icons.js';
-import { DiceError, parseDice } from '/engine/rules/dice.js';
+import { DiceError, parseDice } from '../../../../engine/rules/dice.js';
 
 /** The buttons a table actually reaches for. */
 const QUICK = ['1d20', '1d4', '1d6', '1d8', '1d10', '1d12', '2d6', '1d100'];

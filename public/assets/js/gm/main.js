@@ -21,6 +21,7 @@ import { applyAccents, applyCurrentAccent, overviewPanel } from './views/overvie
 import { builderView } from './views/builder.js';
 import { initiativeView, persistentDamageForm, promptList } from './views/initiative.js';
 import { statBlock } from './views/statblock.js';
+import { linkReveal, linksPanel } from './views/links.js';
 import { createDrawer, drawerShell } from './drawer.js';
 
 const TABS = [
@@ -52,12 +53,35 @@ function showDialog(id, ...content) {
       onclick: () => dialog.close(),
     }),
     ...content);
+  // Closing a <dialog> hides it; it does not remove it. Left in the document,
+  // a dismissed link dialog keeps the token it showed in the page's markup --
+  // which is the opposite of showing it once -- and the next dialog's fields
+  // are no longer the first match for their own selectors.
+  dialog.addEventListener('close', () => dialog.remove());
   document.body.append(dialog);
   dialog.showModal();
   return dialog;
 }
 
 const showStatBlock = (creature) => showDialog('statblock-dialog', statBlock(creature));
+
+/**
+ * Show a freshly minted link, once.
+ *
+ * `final` marks the case where the token this page runs on has just been
+ * replaced: every further request from this tab will 404, so the dialog is not
+ * dismissable into a dashboard that no longer works.
+ */
+function showLink(kind, token, subject, { final = false } = {}) {
+  const dialog = showDialog('link-dialog', linkReveal(kind, token, { subject }));
+  if (final) {
+    dialog.querySelector('.dialog__close')?.remove();
+    dialog.append(el('p', { class: 'muted stack-md' },
+      'This tab is now signed out. Open the link above to carry on.'));
+    dialog.addEventListener('cancel', (event) => event.preventDefault());
+  }
+  dialog.querySelector('.link-reveal__url')?.focus();
+}
 
 function showPersistentDamage(combatant) {
   const dialog = showDialog('persistent-dialog', persistentDamageForm(combatant, {
@@ -81,7 +105,7 @@ const showPrompts = (prompts) => showDialog('prompt-dialog',
 // --- the dashboard's own callbacks -----------------------------------------
 
 const actions = createActions({
-  api, store, notices, refresh: render, showStatBlock, showPrompts,
+  api, store, notices, refresh: render, showStatBlock, showPrompts, showLink,
 });
 
 const drawer = createDrawer({ store, actions, notices });
@@ -91,8 +115,8 @@ const drawer = createDrawer({ store, actions, notices });
 function renderSwitcher() {
   const { campaigns, campaignId } = store.get();
   $('#switcher-list').replaceChildren(...campaigns.map((campaign) => el('button', {
-    class: 'switcher__item', type: 'button', role: 'option',
-    'aria-selected': String(campaign.id === campaignId),
+    class: 'switcher__item', type: 'button',
+    'aria-current': campaign.id === campaignId ? 'true' : null,
     dataset: { campaign: String(campaign.id) },
     onclick: () => { closeSwitcher(); selectCampaign(campaign.id); },
   },
@@ -110,7 +134,7 @@ function renderSwitcher() {
 function openSwitcher() {
   $('#switcher').hidden = false;
   $('#campaign-switch').setAttribute('aria-expanded', 'true');
-  $('#switcher-list').querySelector('[aria-selected="true"], button')?.focus();
+  $('#switcher-list').querySelector('[aria-current="true"], button')?.focus();
 }
 
 function closeSwitcher() {
@@ -193,7 +217,15 @@ function render() {
     return;
   }
 
-  main.replaceChildren(el('div', { class: 'panels' }, partyPanel(state.party)));
+  main.replaceChildren(el('div', { class: 'panels' },
+    partyPanel(state.party),
+    state.tokens
+      ? linksPanel({
+        tokens: state.tokens,
+        characters: state.party?.characters ?? [],
+        actions,
+      })
+      : null));
 }
 
 /** Dragging a row is how a tie gets broken; the rules give no tiebreak. */
@@ -256,7 +288,8 @@ async function selectCampaign(id) {
   });
   store.writeLocation({ campaignId: id, tab: store.get().tab });
   await Promise.all([
-    actions.loadParty(), actions.loadEncounters(), actions.loadCombat(), actions.loadRolls(),
+    actions.loadParty(), actions.loadEncounters(), actions.loadCombat(),
+    actions.loadRolls(), actions.loadTokens(),
   ]);
   render();
   drawer.render();

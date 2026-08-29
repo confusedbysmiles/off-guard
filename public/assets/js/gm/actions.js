@@ -14,7 +14,9 @@ import { assignDisplayNames } from './views/builder.js';
 /** A revealed fact was stored as a bare key by an earlier build; accept both. */
 const keyOf = (fact) => (typeof fact === 'string' ? fact : fact.key);
 
-export function createActions({ api, store, notices, refresh, showStatBlock, showPrompts }) {
+export function createActions({
+  api, store, notices, refresh, showStatBlock, showPrompts, showLink,
+}) {
   /** Names for creatures on screen, so display names can be generated. */
   const creatureNames = new Map();
 
@@ -501,6 +503,75 @@ export function createActions({ api, store, notices, refresh, showStatBlock, sho
         : [];
       await actions.updateCombatant(recall.combatantId, { revealed: next });
       await actions.reloadRecall(recall.difficulty ?? null);
+    },
+
+    // --- links --------------------------------------------------------------
+
+    async loadTokens() {
+      if (!campaign()) return;
+      try {
+        store.set({ tokens: (await api.tokens(campaign())).tokens });
+      } catch (error) {
+        notices.error(`Could not load the links: ${error.message}`);
+      }
+    },
+
+    /**
+     * Each of these ends by showing the new link once. `showLink` is the
+     * dashboard's dialog; nothing here keeps the value, and the next call to
+     * `loadTokens` cannot get it back.
+     */
+    async mintTableLink() {
+      try {
+        const { token } = await api.mintTableToken(campaign());
+        await actions.loadTokens();
+        refresh();
+        showLink('table', token.token, 'the shared screen');
+      } catch (error) {
+        notices.error(`Could not make that link: ${error.message}`);
+      }
+    },
+
+    async mintCharacterLink(characterId, name) {
+      try {
+        const { token } = await api.mintCharacterToken(campaign(), characterId);
+        await actions.loadTokens();
+        refresh();
+        showLink('character', token.token, name);
+      } catch (error) {
+        notices.error(`Could not make that link: ${error.message}`);
+      }
+    },
+
+    async rotateLink(tokenId, subject) {
+      try {
+        const { token } = await api.rotateToken(tokenId);
+        await actions.loadTokens();
+        refresh();
+        showLink(token.kind, token.token, subject);
+      } catch (error) {
+        notices.error(`Could not rotate that link: ${error.message}`);
+      }
+    },
+
+    /**
+     * The GM's own link.
+     *
+     * Rotating it invalidates the token this page is running on, so the new one
+     * is shown before anything else happens and the dashboard stops making
+     * requests it can only fail. Confirmed first, because it is the one action
+     * here that cannot be undone by pressing the same button again.
+     */
+    async rotateGmLink() {
+      try {
+        // The GM token belongs to no campaign, so it is not in any campaign's
+        // listing; ask the server which token this request arrived on.
+        const me = await api.me();
+        const { token } = await api.rotateToken(me.tokenId);
+        showLink('gm', token.token, 'you', { final: true });
+      } catch (error) {
+        notices.error(`Could not rotate your link: ${error.message}`);
+      }
     },
 
     // --- campaigns ----------------------------------------------------------

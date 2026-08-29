@@ -8,6 +8,7 @@
 import { $, debounce } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
 import { setUpTheme } from '../lib/theme.js';
+import { apiPath, token } from '../lib/mount.js';
 import { createStore, STATUS } from './store.js';
 import { mount } from './render.js';
 import { openImportDialog } from './import.js';
@@ -16,8 +17,7 @@ import { openImportDialog } from './import.js';
  * The token is read from the path and never written anywhere else -- not into
  * the title, not into a data attribute, not into a link.
  */
-const token = location.pathname.split('/')[2] ?? '';
-const endpoint = `/api/c/${token}`;
+const endpoint = apiPath(`/api/c/${token}`);
 
 const store = createStore({ endpoint, storageKey: token.slice(0, 8) });
 

@@ -10,7 +10,7 @@
  */
 import { el, formatMod, titleCase } from '../../lib/dom.js';
 import { icon } from '../../lib/icons.js';
-import { CONDITIONS, CONDITION_SLUGS, isValued } from '/engine/rules/conditions.js';
+import { CONDITIONS, CONDITION_SLUGS, isValued } from '../../../../engine/rules/conditions.js';
 
 const SKILLS = ['perception', 'stealth', 'acrobatics', 'athletics', 'deception', 'intimidation',
   'nature', 'occultism', 'religion', 'society', 'survival'];

@@ -10,7 +10,7 @@
  * value. `update(state)` runs the updaters. An input the player is currently
  * typing into is never written to.
  */
-import { armorClass, classDc, statistic } from '/engine/rules/index.js';
+import { armorClass, classDc, statistic } from '../../../engine/rules/index.js';
 import { el, formatMod, titleCase } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
 import { readPath } from './store.js';

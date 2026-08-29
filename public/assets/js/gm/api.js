@@ -5,8 +5,9 @@
  * else; the campaign id is always in the URL rather than a body field, which
  * mirrors how the server scopes the request.
  */
-const token = location.pathname.split('/')[2] ?? '';
-const base = `/api/gm/${token}`;
+import { apiPath, token } from '../lib/mount.js';
+
+const base = apiPath(`/api/gm/${token}`);
 
 async function request(path, options = {}) {
   const res = await fetch(`${base}${path}`, {
@@ -35,6 +36,7 @@ const query = (params) => {
 };
 
 export const api = {
+  me: () => request('/me'),
   campaigns: () => request('/campaigns'),
   overview: () => request('/overview'),
   createCampaign: (fields) => request('/campaigns', { method: 'POST', body: fields }),
@@ -42,7 +44,12 @@ export const api = {
   archiveCampaign: (id, archived) => request(`/campaigns/${id}/archive`, { method: 'POST', body: { archived } }),
 
   party: (id) => request(`/campaigns/${id}/party`),
+
   tokens: (id) => request(`/campaigns/${id}/tokens`),
+  mintCharacterToken: (id, characterId) =>
+    request(`/campaigns/${id}/tokens/character/${characterId}`, { method: 'POST', body: {} }),
+  mintTableToken: (id) => request(`/campaigns/${id}/tokens/table`, { method: 'POST', body: {} }),
+  rotateToken: (tokenId) => request(`/tokens/${tokenId}/rotate`, { method: 'POST', body: {} }),
 
   reference: () => request('/reference'),
 

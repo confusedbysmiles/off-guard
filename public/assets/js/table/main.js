@@ -12,9 +12,9 @@
 import { $, el } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
 import { prefersLight } from '../lib/theme.js';
+import { apiPath, token } from '../lib/mount.js';
 
-const token = location.pathname.split('/')[2] ?? '';
-const endpoint = `/api/table/${token}`;
+const endpoint = apiPath(`/api/table/${token}`);
 
 const DENSITY_KEY = 'off-guard:table-density';
 

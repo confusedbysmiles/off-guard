@@ -45,7 +45,9 @@ const SHARED_DIR = resolve(HERE, '../shared');
  */
 export async function buildApp({
   db, catalogue = null, reference = null, bus = null, logger = false, trustProxy = true,
+  basePath = '',
 } = {}) {
+  const mount = normalizeBasePath(basePath);
   const app = Fastify({
     logger,
     trustProxy,
@@ -101,32 +103,49 @@ export async function buildApp({
     reply.header('cache-control', cacheable ? 'public, max-age=86400' : 'no-cache');
   };
 
-  await app.register(fastifyStatic, {
-    root: resolve(PUBLIC_DIR, 'assets'),
-    prefix: '/assets/',
-    index: false,
-    cacheControl: false,
-    setHeaders: setAssetHeaders,
-  });
+  /**
+   * Everything the browser can reach lives inside this one plugin, so mounting
+   * the application under a subdirectory is a single prefix rather than a
+   * prefix threaded through twenty registrations. The browser side needs no
+   * matching setting: the pages work their own mount point out from their
+   * address, which is why nothing they load is root-absolute any more.
+   */
+  await app.register(async (site) => {
+    await site.register(fastifyStatic, {
+      root: resolve(PUBLIC_DIR, 'assets'),
+      prefix: '/assets/',
+      index: false,
+      cacheControl: false,
+      setHeaders: setAssetHeaders,
+    });
 
   // The rules engine, served to the browser as the same files the server and
   // the tests import. Copying it into public/ would be a build step, and two
   // copies of the arithmetic is exactly what the engine exists to prevent.
   // `src/rules` imports `../shared/...`, so the two mounts have to sit under a
   // common prefix for that relative path to resolve.
-  for (const [prefix, root] of [['/engine/rules/', RULES_DIR], ['/engine/shared/', SHARED_DIR]]) {
-    await app.register(fastifyStatic, {
-      root, prefix, index: false, cacheControl: false, decorateReply: false,
-      setHeaders: setAssetHeaders,
+    for (const [prefix, root] of [['/engine/rules/', RULES_DIR], ['/engine/shared/', SHARED_DIR]]) {
+      await site.register(fastifyStatic, {
+        root, prefix, index: false, cacheControl: false, decorateReply: false,
+        setHeaders: setAssetHeaders,
+      });
+    }
+
+    // Served here as well as from the host root, which nginx handles: a
+    // subdirectory install cannot reach the root of a domain it shares.
+    site.get('/robots.txt', async (request, reply) => {
+      reply.type('text/plain');
+      return ROBOTS_TXT;
     });
-  }
 
-  app.get('/robots.txt', async (request, reply) => {
-    reply.type('text/plain');
-    return ROBOTS_TXT;
-  });
+    site.get('/healthz', async () => ({ ok: true }));
 
-  app.get('/healthz', async () => ({ ok: true }));
+    await registerPageRoutes(site, { publicDir: PUBLIC_DIR });
+
+    await site.register(scopedRoutes('gm', registerGmRoutes), { prefix: '/api/gm/:token' });
+    await site.register(scopedRoutes('character', registerCharacterRoutes), { prefix: '/api/c/:token' });
+    await site.register(scopedRoutes('table', registerTableRoutes), { prefix: '/api/table/:token' });
+  }, mount ? { prefix: mount } : {});
 
   app.setErrorHandler((error, request, reply) => {
     const status = error.statusCode ?? 500;
@@ -137,13 +156,18 @@ export async function buildApp({
     return reply.status(status).send({ error: error.message });
   });
 
-  await registerPageRoutes(app, { publicDir: PUBLIC_DIR });
-
-  await app.register(scopedRoutes('gm', registerGmRoutes), { prefix: '/api/gm/:token' });
-  await app.register(scopedRoutes('character', registerCharacterRoutes), { prefix: '/api/c/:token' });
-  await app.register(scopedRoutes('table', registerTableRoutes), { prefix: '/api/table/:token' });
-
   return app;
+}
+
+/**
+ * `/off-guard`, `off-guard/`, `/off-guard/` and `` all mean the same thing.
+ * Normalized to a leading slash and no trailing one, or the empty string for a
+ * host root, because Fastify's prefix and the client's `../` arithmetic both
+ * depend on there being exactly one form.
+ */
+export function normalizeBasePath(value) {
+  const trimmed = String(value ?? '').trim().replace(/^\/+|\/+$/g, '');
+  return trimmed ? `/${trimmed}` : '';
 }
 
 /**

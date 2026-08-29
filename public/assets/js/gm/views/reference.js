@@ -13,8 +13,8 @@
  */
 import { el, titleCase } from '../../lib/dom.js';
 import { icon } from '../../lib/icons.js';
-import { CONDITIONS, CONDITION_SLUGS } from '/engine/rules/conditions.js';
-import { DC_BY_LEVEL, dcByLevel, SIMPLE_DC } from '/engine/rules/dc.js';
+import { CONDITIONS, CONDITION_SLUGS } from '../../../../engine/rules/conditions.js';
+import { DC_BY_LEVEL, dcByLevel, SIMPLE_DC } from '../../../../engine/rules/dc.js';
 
 /** Conditions, in the same shape a corpus entry has, so search is uniform. */
 function conditionEntries() {

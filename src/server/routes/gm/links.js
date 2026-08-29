@@ -14,6 +14,19 @@ import {
 export async function registerLinkRoutes(app) {
   const { db } = app;
 
+  /**
+   * Which link this request arrived on.
+   *
+   * The GM token belongs to no campaign, so it appears in no campaign's
+   * listing, and the dashboard would otherwise have no way to name the thing it
+   * is running on in order to rotate it. Returns the row's id and nothing that
+   * could reconstruct the token.
+   */
+  app.get('/me', async (request) => ({
+    tokenId: request.scope.tokenId,
+    kind: request.scope.kind,
+  }));
+
   app.get('/campaigns/:campaignId/tokens', async (request) => ({
     tokens: listTokens(db, request.scope, request.params.campaignId),
     retrievable: false,

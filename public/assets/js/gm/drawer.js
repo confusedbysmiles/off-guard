@@ -136,14 +136,41 @@ export function createDrawer({ store, actions, notices }) {
     return true;
   }
 
+  /**
+   * A real tablist, with the semantics that word promises.
+   *
+   * Selected tab is the only one in the tab order -- a roving tabindex -- and
+   * the arrows move between them, which is what a screen reader user will try
+   * because the role told them to. Marking buttons `role="tab"` and then not
+   * doing this is worse than leaving the roles off.
+   */
   function renderTabs() {
     const { drawer } = store.get();
     tabList.replaceChildren(...TABS.map(([id, label, key]) => el('button', {
-      class: 'tab', type: 'button', role: 'tab',
+      class: 'tab', type: 'button', role: 'tab', id: `drawer-tab-${id}`,
       'aria-selected': String(id === drawer.tab),
+      'aria-controls': 'drawer-body',
+      tabindex: id === drawer.tab ? '0' : '-1',
       onclick: () => open(id),
     }, label, el('span', { class: 'tab__key' }, key))));
+
+    body.setAttribute('aria-labelledby', `drawer-tab-${drawer.tab}`);
   }
+
+  function moveTab(step) {
+    const { drawer } = store.get();
+    const index = TABS.findIndex(([id]) => id === drawer.tab);
+    const next = TABS[(index + step + TABS.length) % TABS.length];
+    open(next[0]);
+    tabList.querySelector('[aria-selected="true"]')?.focus();
+  }
+
+  tabList.addEventListener('keydown', (event) => {
+    const moves = { ArrowRight: 1, ArrowLeft: -1 };
+    if (event.key in moves) { event.preventDefault(); moveTab(moves[event.key]); return; }
+    if (event.key === 'Home') { event.preventDefault(); open(TABS[0][0]); tabList.querySelector('[aria-selected="true"]')?.focus(); }
+    if (event.key === 'End') { event.preventDefault(); open(TABS.at(-1)[0]); tabList.querySelector('[aria-selected="true"]')?.focus(); }
+  });
 
   function render() {
     if (!isOpen()) return;
@@ -230,10 +257,16 @@ export function drawerShell() {
     'aria-label': 'Reference, dice and Recall Knowledge',
   },
   el('div', { class: 'drawer__head' },
-    el('div', { class: 'tabs', id: 'drawer-tabs', role: 'tablist' }),
+    el('div', {
+      class: 'tabs', id: 'drawer-tabs', role: 'tablist',
+      'aria-label': 'Reference, dice and Recall Knowledge',
+    }),
     el('button', {
       class: 'btn btn--icon btn--quiet', id: 'drawer-close', type: 'button',
       html: `${icon('x')}<span class="sr-only">Close the drawer</span>`,
     })),
-  el('div', { class: 'drawer__body', id: 'drawer-body' }));
+  // `tabindex` so the panel itself can be focused and scrolled from the
+  // keyboard: it is the only scrolling region on the page that is not reachable
+  // by tabbing through its contents when those contents are a wall of prose.
+  el('div', { class: 'drawer__body', id: 'drawer-body', role: 'tabpanel', tabindex: '0' }));
 }

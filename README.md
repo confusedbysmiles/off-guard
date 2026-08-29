@@ -9,9 +9,8 @@ Multiple concurrent campaigns are first-class. A character belongs to exactly
 one campaign; an encounter belongs to one campaign but can be copied to another;
 creature data, reference tables and homebrew are global.
 
-**Status: milestone 8 of 9.** All three surfaces work, the shared screen updates
-live, and the dashboard has a reference drawer, a dice roller and a Recall
-Knowledge helper.
+**Status: complete.** All nine milestones are done: 513 unit tests and 39
+end-to-end tests, run at a host root and at a subdirectory.
 
 | # | Milestone | State |
 |---|-----------|-------|
@@ -23,7 +22,7 @@ Knowledge helper.
 | 6 | Initiative tracker | done |
 | 7 | Shared screen over SSE | done |
 | 8 | Reference drawer, dice roller, Recall Knowledge helper | done |
-| 9 | Deployment, accessibility and security pass | next |
+| 9 | Deployment, accessibility and security pass | done |
 
 ## Running it
 
@@ -262,6 +261,14 @@ readable in two years' time. A clone that has not run `npm run build:data` still
 starts; the dashboard says the catalogue is missing rather than failing in a way
 that looks like a bug.
 
+**Links are made and unmade from the party tab.** One shared-screen link per
+campaign, one per player, and your own. Nothing there can show you a link that
+already exists — only its hash is stored — so a fresh one is shown once, large,
+with a copy button and a sentence saying it will not be shown again. Rotating a
+link kills the old one on the next request. Rotating your own signs this tab out
+immediately, so the new link is shown first and the dialog cannot be dismissed
+into a dashboard that no longer works.
+
 ## The initiative tracker
 
 `I` on the dashboard. Space or `N` advances the turn, `P` steps back.
@@ -403,6 +410,29 @@ hit-point bar is therefore a real `<progress>` element and the per-campaign
 accent colour is applied through a constructed stylesheet. The page loads with
 zero CSP violations, which is what makes a violation report worth reading.
 
+### Accessibility
+
+Checked rather than asserted. `e2e/accessibility.spec.js` walks all three
+surfaces and fails on an interactive element with no accessible name, on a
+placeholder used as a label, on a missing or duplicated level-one heading, and
+on the drawer's tabs if they stop behaving like tabs. `npm run check:contrast`
+walks the design tokens and fails on any ink/ground pair below WCAG AA, in dark,
+in light-by-toggle and in light-by-system.
+
+Writing those found three things that no amount of looking at the screen would
+have: the dashboard had no `<h1>` at all, the campaign switcher was marked up as
+a `listbox` with `option` children and implemented none of the arrow-key
+behaviour that promises, and the drawer's tabs were `role="tab"` in name only.
+The switcher is now what it always was — a labelled group of buttons — and the
+drawer's tabs got the roving tabindex, `aria-controls`, arrow keys and
+`tabpanel` that the role was claiming.
+
+Everything else was already there and stayed: focus is visible and never
+removed, `prefers-reduced-motion` collapses every transition, every icon button
+carries an `sr-only` label, and the shared screen announces turn changes through
+one polite live region while the order itself is not one — a creature four rows
+down losing hit points should not interrupt a reader mid-sentence.
+
 ## Data
 
 `npm run build:data` normalizes 6,392 creatures and 1,221 hazards. The record
@@ -467,6 +497,64 @@ recorded" — honest, where a wrong number sends someone flipping through the
 wrong chapter mid-session. The remainder are creatures Paizo did not bookmark
 individually; see `tools/build-data/pages/README.md` before adding to them by
 hand.
+
+## Deploying it
+
+Two supported shapes, and the browser needs no configuration for either.
+
+**As a service.** `deploy/off-guard.service` is a systemd unit: a dedicated
+user, `ProtectSystem=strict`, one writable path, an empty capability bounding
+set and a `@system-service` syscall filter. It binds loopback and expects nginx
+in front, because the token is in the URL and a URL over plain HTTP is a
+postcard.
+
+**In a container.** `docker compose up -d`, then
+`docker compose exec off-guard node tools/mint-gm-token.js` for the GM link.
+The image is two stages so the C++ toolchain that builds `better-sqlite3` is
+not in the image that runs; the container is read-only apart from the database
+volume, drops all capabilities, and publishes only to `127.0.0.1`.
+
+*Not verified.* The Dockerfile and compose file are written and every path they
+reference is checked, but no image has been built — there is no Docker on the
+machine this was developed on. Treat the systemd path as the tested one.
+
+**Serving from a subdirectory.** The brief puts this at `drseim.com/off-guard`
+rather than on a host of its own. Set `OFF_GUARD_BASE_PATH=/off-guard` and use
+`deploy/nginx.conf`, which forwards the prefix rather than stripping it — one
+source of truth for the URL shape instead of two that can drift.
+
+Nothing in the browser changes, and there is no setting to keep in step. Every
+page is exactly two segments deep (`<mount>/gm/<token>`), so stylesheets and
+module imports reach their targets with `../` and the client works its own
+mount point out from `location.pathname`. A root-absolute `href` would work
+perfectly at a host root and 404 silently for every player the moment the
+application moved; a test asserts there are none.
+
+Two things in the nginx snippet are load-bearing rather than boilerplate:
+
+- **`proxy_buffering off`.** The shared screen is one long-lived response fed a
+  few hundred bytes at a time. Buffered, the television updates in batches
+  minutes apart, which looks exactly like the application being broken.
+- **`X-Forwarded-For`.** The defence against token guessing counts failures per
+  client address. Without it every attempt looks like it came from nginx, and
+  one guesser locks out the whole table.
+
+The access log is turned off for this location. An access log line here is a
+credential written to disk in cleartext, rotated, and often shipped somewhere.
+
+### Backing it up
+
+The database is the whole application state: every campaign, every sheet, every
+token hash. **It is not one file.** WAL mode means recent writes live in
+`off-guard.sqlite-wal` until a checkpoint, so `cp off-guard.sqlite backup.sqlite`
+silently loses them — which is how, while testing the token migration, a copy
+came back with one token in it instead of three.
+
+Use SQLite's own backup, which is consistent against a running server:
+
+```bash
+sqlite3 /var/lib/off-guard/off-guard.sqlite ".backup '/backups/off-guard.sqlite'"
+```
 
 ## Licensing
 

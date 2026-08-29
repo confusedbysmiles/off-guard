@@ -1,0 +1,59 @@
+# Off-Guard.
+#
+#   docker compose up -d
+#   docker compose exec off-guard node tools/mint-gm-token.js
+#
+# The second line prints the GM link. It is printed once and cannot be printed
+# again -- tokens are stored hashed -- so put it somewhere before closing the
+# terminal.
+
+services:
+  off-guard:
+    build: .
+    image: off-guard
+    restart: unless-stopped
+
+    # Published to loopback only. This container speaks plain HTTP and the
+    # access token is in the URL, so it must not be reachable from the network
+    # without TLS in front of it. Put nginx on the host; deploy/nginx.conf has
+    # the configuration, including the Server-Sent Events settings that a
+    # buffering proxy otherwise breaks in a way that looks like a bug.
+    ports:
+      - "127.0.0.1:8787:8787"
+
+    environment:
+      OFF_GUARD_LOG_LEVEL: info
+      # Uncomment to serve from a subdirectory, e.g. drseim.com/off-guard.
+      # The browser needs no matching setting.
+      # OFF_GUARD_BASE_PATH: /off-guard
+      #
+      # The application's only outbound request is fetching a Pathbuilder build
+      # by id. `off` removes it; the JSON upload path keeps working, and is the
+      # one that actually works, since pathbuilder2e.com answers servers with a
+      # Cloudflare challenge.
+      OFF_GUARD_PATHBUILDER_FETCH: "on"
+
+    volumes:
+      # Every campaign, every character sheet and every token hash. This is the
+      # thing to back up, and see the README on doing that safely: a WAL
+      # database is three files and copying only the first loses recent writes.
+      - off-guard-data:/var/lib/off-guard
+
+      # The creature catalogue, built outside the image by `npm run build:data`
+      # because it is 67 MB of derived data. Read-only: the server never writes
+      # here. Comment this out to run without a catalogue -- the dashboard says
+      # the catalogue is missing rather than failing in a way that looks broken.
+      - ./data:/srv/off-guard/data:ro
+
+    # Nothing in here needs to write outside the database directory, and
+    # `tmpfs` covers the one place a Node process expects to be able to.
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+volumes:
+  off-guard-data:

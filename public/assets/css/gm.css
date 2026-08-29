@@ -143,7 +143,7 @@
   text-align: left;
 }
 .switcher__item:hover,
-.switcher__item[aria-selected='true'] { background: var(--surface-2); border-color: var(--border-strong); }
+.switcher__item[aria-current='true'] { background: var(--surface-2); border-color: var(--border-strong); }
 .switcher__swatch {
   width: 14px; height: 30px;
   border-radius: 4px;
@@ -725,3 +725,52 @@
 
 .hero-points { gap: var(--sp-1); }
 .hero-points .input { width: 3rem; text-align: center; }
+
+/* --- Links ---------------------------------------------------------------- */
+
+.links { display: grid; gap: var(--sp-2); margin-top: var(--sp-3); }
+
+.link-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  padding: var(--sp-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--campaign-accent, var(--primary));
+  border-radius: var(--radius-sm);
+}
+.link-row__what { display: grid; gap: 2px; min-width: 0; font-size: var(--step--1); }
+.link-row__what strong { font-size: var(--step-0); }
+.link-row__tools { display: flex; gap: var(--sp-2); }
+
+.links__gm { margin-top: var(--sp-4); }
+.links__gm summary {
+  cursor: pointer;
+  padding: var(--sp-2) 0;
+  font-weight: 600;
+}
+.links__gm .btn { margin-top: var(--sp-2); }
+
+/* --- The one time a link is visible --------------------------------------- */
+
+.link-reveal { display: grid; gap: var(--sp-3); }
+.link-reveal h2 { font-size: var(--step-2); }
+.link-reveal .row-inline { align-items: stretch; }
+.link-reveal__url {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+}
+
+/* An inline warning inside a dialog, where the floating notice strip cannot
+   reach. */
+.notice-inline {
+  padding: var(--sp-2) var(--sp-3);
+  border-left: 3px solid var(--warn);
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+}

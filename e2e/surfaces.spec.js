@@ -317,3 +317,59 @@ test.describe('Recall Knowledge', () => {
     await gm.close();
   });
 });
+
+test.describe('the links panel', () => {
+  test('shows a new link once, and never again', async ({ page }) => {
+    await page.goto(`/gm/${world.gmToken}`);
+
+    const row = page.locator('.link-row', { hasText: 'Shared screen' });
+    await row.getByRole('button', { name: 'Rotate' }).click();
+
+    const field = page.locator('.link-reveal__url');
+    await expect(field).toBeVisible();
+    const url = await field.inputValue();
+    expect(url).toMatch(/\/table\/[0-9A-HJKMNP-TV-Z]{26}$/);
+
+    // The link works.
+    const table = await page.context().newPage();
+    expect((await table.goto(url)).status()).toBe(200);
+    await table.close();
+
+    // And is gone from the dashboard the moment the dialog closes.
+    await page.locator('#link-dialog .dialog__close').click();
+    await expect(page.locator('.link-reveal')).toHaveCount(0);
+    expect(await page.content()).not.toContain(url.split('/').pop());
+
+    // A reload does not bring it back.
+    await page.reload();
+    expect(await page.content()).not.toContain(url.split('/').pop());
+  });
+
+  test('rotating kills the link it replaced', async ({ page }) => {
+    await page.goto(`/gm/${world.gmToken}`);
+
+    const row = page.locator('.link-row', { hasText: 'Kestrel Vane' });
+    await row.getByRole('button', { name: /Rotate|Make a link/ }).click();
+    const first = await page.locator('.link-reveal__url').inputValue();
+    await page.locator('#link-dialog .dialog__close').click();
+
+    await row.getByRole('button', { name: 'Rotate' }).click();
+    const second = await page.locator('.link-reveal__url').inputValue();
+    expect(second).not.toBe(first);
+    await page.locator('#link-dialog .dialog__close').click();
+
+    const other = await page.context().newPage();
+    expect((await other.goto(first)).status()).toBe(404);
+    expect((await other.goto(second)).status()).toBe(200);
+    await other.close();
+  });
+
+  test('never renders a token it was not just given', async ({ page }) => {
+    await page.goto(`/gm/${world.gmToken}`);
+    await expect(page.locator('.links')).toBeVisible();
+    const html = await page.content();
+    // The listing says what exists, not what it is.
+    expect(html).not.toContain(world.tableToken);
+    expect(html).not.toContain(world.characterToken);
+  });
+});

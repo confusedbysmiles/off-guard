@@ -18,6 +18,8 @@ export function config(env = process.env) {
     database: env.OFF_GUARD_DB ?? resolve(ROOT, 'off-guard.sqlite'),
     migrations: resolve(ROOT, 'migrations'),
     logLevel: env.OFF_GUARD_LOG_LEVEL ?? 'info',
+    // '' serves from the host root; '/off-guard' from a subdirectory of one.
+    basePath: env.OFF_GUARD_BASE_PATH ?? '',
   };
 }
 
@@ -29,6 +31,7 @@ async function main() {
   const app = await buildApp({
     db,
     catalogue,
+    basePath: settings.basePath,
     logger: { level: settings.logLevel },
   });
 
@@ -45,7 +48,10 @@ async function main() {
   process.on('SIGINT', shutdown);
 
   await app.listen({ host: settings.host, port: settings.port });
-  app.log.info(`Off-Guard on http://${settings.host}:${settings.port}, database ${settings.database}`);
+  app.log.info(
+    `Off-Guard on http://${settings.host}:${settings.port}${settings.basePath}, `
+    + `database ${settings.database}`,
+  );
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
