@@ -6,12 +6,16 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { buildApp } from './app.js';
+import { loadEnv } from './env.js';
 import { openDatabase } from './db.js';
 import { openCatalogue } from './catalogue.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 
 export function config(env = process.env) {
+  // Read `.env` first, so a shell and the service agree about which database
+  // they mean. A real environment variable still wins.
+  loadEnv({ env });
   return {
     host: env.OFF_GUARD_HOST ?? '127.0.0.1',
     port: Number(env.OFF_GUARD_PORT ?? 8787),

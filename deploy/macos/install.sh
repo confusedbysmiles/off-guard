@@ -22,9 +22,31 @@ TEMPLATE="$HERE/${LABEL}.plist"
 TARGET="$HOME/Library/LaunchAgents/${LABEL}.plist"
 DOMAIN="gui/$(id -u)"
 
+# Unload, and wait for launchd to actually finish.
+#
+# `bootout` returns before the job is gone, and a `bootstrap` issued into that
+# gap fails with "Input/output error" -- which on a re-run leaves the agent
+# uninstalled and not reinstalled, the worst of both. So poll until the label
+# really is absent.
 unload() {
   # `bootout` fails when nothing is loaded, which is not an error here.
   launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || true
+  for _ in $(seq 1 40); do
+    launchctl print "$DOMAIN/$LABEL" > /dev/null 2>&1 || return 0
+    sleep 0.25
+  done
+  echo "launchd is still holding $LABEL after ten seconds." >&2
+  return 1
+}
+
+# And bootstrap with a retry, for the same reason from the other side.
+bootstrap() {
+  for attempt in 1 2 3; do
+    if launchctl bootstrap "$DOMAIN" "$TARGET" 2>/dev/null; then return 0; fi
+    sleep 1
+  done
+  # Let the last attempt print its own error.
+  launchctl bootstrap "$DOMAIN" "$TARGET"
 }
 
 if [[ "${1:-}" == "--uninstall" ]]; then
@@ -57,6 +79,29 @@ if [[ ! -d "$ROOT/node_modules" ]]; then
   exit 1
 fi
 
+# --- make the shell agree with the service ------------------------------------
+#
+# The plist tells the service where the database is. A `node tools/...` typed
+# into a terminal would otherwise take the default and quietly work on a
+# different file -- which is how "A GM token already exists" gets reported about
+# a database the running server has never opened. `.env` is what both read.
+
+ENV_FILE="$ROOT/.env"
+if [[ ! -f "$ENV_FILE" ]]; then
+  {
+    echo "# Written by deploy/macos/install.sh. See .env.example for everything else."
+    echo "# Read by the server and by every tool in tools/, so a command typed into a"
+    echo "# shell works on the same database the service does."
+    echo "OFF_GUARD_DB=${DB_DIR}/off-guard.sqlite"
+  } > "$ENV_FILE"
+  echo "Wrote $ENV_FILE"
+elif ! grep -q '^OFF_GUARD_DB=' "$ENV_FILE"; then
+  echo "OFF_GUARD_DB=${DB_DIR}/off-guard.sqlite" >> "$ENV_FILE"
+  echo "Added OFF_GUARD_DB to $ENV_FILE"
+else
+  echo "Leaving the OFF_GUARD_DB already in $ENV_FILE alone."
+fi
+
 # --- write the plist ----------------------------------------------------------
 
 # `|` as the delimiter, because every value here is a path.
@@ -79,7 +124,7 @@ plutil -lint "$TARGET" > /dev/null
 # --- load it ------------------------------------------------------------------
 
 unload
-launchctl bootstrap "$DOMAIN" "$TARGET"
+bootstrap
 launchctl kickstart -k "$DOMAIN/$LABEL"
 
 # --- and prove it is actually answering ---------------------------------------
@@ -98,6 +143,8 @@ for _ in $(seq 1 20); do
     echo
     echo "Your GM link, printed once and never again:"
     echo "  cd $ROOT && node tools/mint-gm-token.js"
+    echo
+    echo "It prints which database it opened. Check that it is the one above."
     exit 0
   fi
   sleep 0.5
