@@ -69,6 +69,58 @@ export function createEncounter(db, scope, requestedCampaignId, fields = {}) {
   return getEncounter(db, scope, info.lastInsertRowid, campaignId);
 }
 
+const UPDATABLE = {
+  name: 'name',
+  adventure: 'adventure',
+  chapter: 'chapter',
+  sortOrder: 'sort_order',
+  notes: 'notes',
+  terrain: 'terrain',
+  lighting: 'lighting',
+  treasure: 'treasure',
+  partyLevelOverride: 'party_level_override',
+  partySizeOverride: 'party_size_override',
+};
+
+export function updateEncounter(db, scope, encounterId, fields, requestedCampaignId = null) {
+  assertWritable(scope);
+  if (!isGm(scope)) throw new ScopeError('Only the GM edits encounters');
+  const campaignId = campaignFor(scope, requestedCampaignId);
+
+  const sets = [];
+  const params = { id: encounterId, campaignId };
+  for (const [key, column] of Object.entries(UPDATABLE)) {
+    if (key in fields) {
+      sets.push(`${column} = @${key}`);
+      params[key] = fields[key];
+    }
+  }
+  if (!sets.length) return getEncounter(db, scope, encounterId, campaignId);
+
+  sets.push("updated_at = datetime('now')");
+  // The campaign is in the WHERE clause rather than checked beforehand, so an
+  // encounter id from another campaign updates no rows at all.
+  const info = db.prepare(
+    `UPDATE encounter SET ${sets.join(', ')} WHERE id = @id AND campaign_id = @campaignId`,
+  ).run(params);
+  if (!info.changes) throw new NotFoundError('No such encounter');
+  return getEncounter(db, scope, encounterId, campaignId);
+}
+
+/** Reorder a campaign's encounters in one statement each, inside a transaction. */
+export function reorderEncounters(db, scope, order, requestedCampaignId = null) {
+  assertWritable(scope);
+  if (!isGm(scope)) throw new ScopeError('Only the GM reorders encounters');
+  const campaignId = campaignFor(scope, requestedCampaignId);
+  const update = db.prepare(
+    "UPDATE encounter SET sort_order = ?, updated_at = datetime('now') WHERE id = ? AND campaign_id = ?",
+  );
+  db.transaction(() => {
+    order.forEach((id, index) => update.run(index, id, campaignId));
+  })();
+  return listEncounters(db, scope, campaignId);
+}
+
 export function deleteEncounter(db, scope, encounterId, requestedCampaignId = null) {
   assertWritable(scope);
   if (!isGm(scope)) throw new ScopeError('Only the GM deletes encounters');

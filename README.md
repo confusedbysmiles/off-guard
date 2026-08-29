@@ -9,8 +9,8 @@ Multiple concurrent campaigns are first-class. A character belongs to exactly
 one campaign; an encounter belongs to one campaign but can be copied to another;
 creature data, reference tables and homebrew are global.
 
-**Status: milestone 4 of 9.** Data pipeline, rules engine, campaign-scoped API,
-and a working player character sheet.
+**Status: milestone 5 of 9.** Data pipeline, rules engine, campaign-scoped API,
+player character sheet, and a working GM dashboard.
 
 | # | Milestone | State |
 |---|-----------|-------|
@@ -18,8 +18,8 @@ and a working player character sheet.
 | 2 | Rules engine + tests | done |
 | 3 | Server, schema, migrations, token access, campaign-scoped API | done |
 | 4 | Player character sheet, Pathbuilder import | done |
-| 5 | GM dashboard: campaigns, party panel, encounter builder, XP budget | next |
-| 6 | Initiative tracker | |
+| 5 | GM dashboard: campaigns, party panel, encounter builder, XP budget | done |
+| 6 | Initiative tracker | next |
 | 7 | Shared screen over SSE | |
 | 8 | Reference drawer, dice roller, Recall Knowledge helper | |
 | 9 | Deployment, accessibility and security pass | |
@@ -183,6 +183,45 @@ of paths and nothing else, so the free-text feats, features, reactions, items
 and notes sections are invisible to it; play state — current and temporary hit
 points, conditions, hero points, spent slots and focus — is produced but never
 proposed, because levelling up should not heal the character.
+
+## The GM dashboard
+
+`/gm/<token>`, one token, every campaign. Dense and keyboard-driven, built for a
+laptop at a table.
+
+The campaign switcher is `C`; `1`–`9` jump straight to a campaign; `T`, `E` and
+`A` switch between the table, the encounter builder and the cross-campaign view.
+Each campaign's accent colour runs through the whole chrome — the top border, the
+switcher swatch, every panel heading and the left edge of every party card —
+because the failure this is designed against is applying damage to the wrong
+table's goblin at eleven at night, and a colour in one corner does not prevent
+that.
+
+**The party panel is live from the sheets.** Every AC, save and skill total is
+computed by the rules engine from what the player last typed, so the panel and
+the sheet cannot disagree. Sheets are flagged when nobody has touched them for
+three weeks, when their level trails the party, or when they have no hit points
+recorded.
+
+**Encounter budget comes from the sheets too.** Party size is however many
+characters exist; party level is the *median of the levels on the sheets*, not
+the campaign's `partyLevel` field — a campaign whose level was never updated
+should not silently price encounters against a number nobody is playing. The
+panel says when the two disagree, and an encounter can still override both for a
+one-shot.
+
+Creatures are priced at their *adjusted* level, so an elite goblin costs what a
+level 1 creature costs. A creature more than four levels from the party is not
+priced at all: the encounter table does not extend there, so the builder reports
+which creature is off the table and refuses to show a difficulty, rather than
+showing a total that quietly omits something.
+
+Search runs on the server — the index is 2.6 MB across ~7,600 rows, and shipping
+that to a browser so the GM can find a goblin would be worse than a request.
+It is a linear scan, measured at about 2 ms, which is under a keystroke and
+readable in two years' time. A clone that has not run `npm run build:data` still
+starts; the dashboard says the catalogue is missing rather than failing in a way
+that looks like a bug.
 
 ## Look
 

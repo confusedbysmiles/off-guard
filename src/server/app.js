@@ -23,10 +23,11 @@ import { resolveScope, ScopeError, NotFoundError } from './scope.js';
 import { isWellFormed, normalizeToken, tokenFingerprint } from './tokens.js';
 import { recordFailure, touchToken } from './store/tokens.js';
 import { ROBOTS_TXT, securityHeaders } from './security.js';
-import { registerGmRoutes } from './routes/gm.js';
+import { registerGmRoutes } from './routes/gm/index.js';
 import { registerCharacterRoutes } from './routes/character.js';
 import { registerTableRoutes } from './routes/table.js';
 import { registerPageRoutes } from './routes/pages.js';
+import { openCatalogue } from './catalogue.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = resolve(HERE, '../../public');
@@ -40,7 +41,7 @@ const SHARED_DIR = resolve(HERE, '../shared');
  * themselves. Expressed as a controller rather than the `disableRequestLogging`
  * option, which is deprecated in Fastify 5.
  */
-export async function buildApp({ db, logger = false, trustProxy = true } = {}) {
+export async function buildApp({ db, catalogue = null, logger = false, trustProxy = true } = {}) {
   const app = Fastify({
     logger,
     trustProxy,
@@ -48,6 +49,9 @@ export async function buildApp({ db, logger = false, trustProxy = true } = {}) {
   });
 
   app.decorate('db', db);
+  // The catalogue is global across campaigns and read-only, so it is a
+  // process-wide value rather than something a request builds.
+  app.decorate('catalogue', catalogue ?? openCatalogue());
 
   await app.register(rateLimit, {
     global: false,

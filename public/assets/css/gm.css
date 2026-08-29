@@ -1,0 +1,418 @@
+/**
+ * The GM dashboard.
+ *
+ * Dense and keyboard-driven, built for a laptop screen at a table. Where the
+ * character sheet is mobile-first because a player holds it in one hand, this
+ * is desktop-first because the GM has it open next to the books.
+ *
+ * The campaign accent is the load-bearing colour here: the failure mode this
+ * layout is designed against is applying damage to the wrong table's goblin at
+ * eleven at night, so the accent appears on the switcher, the top border and
+ * every panel heading rather than in one corner.
+ */
+
+.gm { display: flex; flex-direction: column; min-height: 100vh; }
+
+/* --- Top bar ----------------------------------------------------------- */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: stretch;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  /* The campaign's colour, at full width, above everything. */
+  box-shadow: inset 0 4px 0 0 var(--campaign-accent, var(--primary));
+}
+
+.topbar__tools { display: flex; align-items: center; gap: var(--sp-2); margin-left: auto; }
+
+.campaign-switch {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: var(--tap);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  cursor: pointer;
+  text-align: left;
+  min-width: 15rem;
+}
+.campaign-switch:hover { border-color: var(--campaign-accent, var(--primary)); }
+
+.campaign-switch__swatch {
+  width: 14px; height: 34px;
+  border-radius: 4px;
+  background: var(--card-accent, var(--campaign-accent, var(--primary)));
+  flex: none;
+}
+
+.campaign-switch__text { min-width: 0; }
+.campaign-switch__label {
+  display: block;
+  font-size: var(--step--2);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-dim);
+}
+.campaign-switch__name {
+  display: block;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.campaign-switch__key {
+  margin-left: auto;
+  padding: 2px 7px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  font-size: var(--step--2);
+  color: var(--ink-dim);
+}
+
+.tabs { display: flex; align-items: center; gap: var(--sp-1); flex-wrap: wrap; }
+
+.tab {
+  min-height: var(--tap);
+  padding: var(--sp-2) var(--sp-3);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--ink-dim);
+}
+.tab:hover { background: var(--surface-2); color: var(--ink); }
+.tab[aria-current='page'] {
+  background: var(--surface-2);
+  border-color: var(--campaign-accent, var(--primary));
+  color: var(--ink);
+  font-weight: 600;
+}
+.tab__key {
+  margin-left: var(--sp-2);
+  font-size: var(--step--2);
+  color: var(--ink-faint);
+}
+
+/* --- Campaign switcher panel ------------------------------------------- */
+
+/* A class that sets `display` beats the user agent's `[hidden] { display:none }`,
+   so the attribute has to be honoured explicitly or the panel is always open. */
+.switcher[hidden] { display: none; }
+
+.switcher {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgb(10 6 20 / 0.55);
+  display: grid;
+  place-items: start center;
+  padding-top: 12vh;
+}
+
+.switcher__panel {
+  width: min(38rem, 94vw);
+  max-height: 70vh;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: var(--sp-2);
+}
+
+.switcher__item {
+  display: grid;
+  grid-template-columns: 14px 1fr auto;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  padding: var(--sp-3);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+}
+.switcher__item:hover,
+.switcher__item[aria-selected='true'] { background: var(--surface-2); border-color: var(--border-strong); }
+.switcher__swatch {
+  width: 14px; height: 30px;
+  border-radius: 4px;
+  background: var(--card-accent, var(--border-strong));
+}
+.switcher__meta { display: block; font-size: var(--step--1); color: var(--ink-dim); }
+
+/* --- Layout ------------------------------------------------------------ */
+
+.main { flex: 1; padding: var(--sp-4); max-width: 1500px; width: 100%; margin: 0 auto; }
+
+.panels { display: grid; gap: var(--sp-4); }
+
+@media (min-width: 75rem) {
+  .panels--split { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  .panels--builder { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; }
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--sp-4);
+  min-width: 0;
+}
+
+.panel__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-3);
+  padding-bottom: var(--sp-2);
+  border-bottom: 2px solid var(--campaign-accent, var(--primary));
+}
+.panel__title { font-size: var(--step-1); }
+
+/* --- Party panel -------------------------------------------------------- */
+
+.party { display: grid; gap: var(--sp-2); }
+
+.pc {
+  display: grid;
+  grid-template-columns: minmax(9rem, 1.4fr) repeat(5, minmax(3.2rem, auto)) 1fr;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--campaign-accent, var(--primary));
+  border-radius: var(--radius-sm);
+}
+.pc--flagged { border-left-color: var(--warn); }
+
+.pc__name { min-width: 0; }
+.pc__name strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pc__player { font-size: var(--step--2); color: var(--ink-dim); }
+
+.pc__stat { text-align: center; font-variant-numeric: tabular-nums; }
+.pc__stat span { display: block; font-size: var(--step--2); color: var(--ink-faint); }
+.pc__stat strong { font-size: var(--step-1); }
+
+.pc__hp { min-width: 7rem; }
+.pc__flags { display: flex; flex-wrap: wrap; gap: var(--sp-1); }
+
+@media (max-width: 60rem) {
+  .pc { grid-template-columns: 1fr 1fr 1fr; }
+  .pc__name { grid-column: 1 / -1; }
+}
+
+.skill-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(4.5rem, 1fr));
+  gap: 2px;
+  margin-top: var(--sp-2);
+  font-size: var(--step--2);
+}
+.skill-grid__cell {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-1);
+  padding: 2px var(--sp-1);
+  background: var(--surface-sunk);
+  border-radius: 3px;
+  font-variant-numeric: tabular-nums;
+}
+.skill-grid__cell[data-untrained='true'] { color: var(--ink-faint); }
+
+/* --- Creature search ---------------------------------------------------- */
+
+.filters { display: grid; gap: var(--sp-2); margin-bottom: var(--sp-3); }
+.filters__row { display: grid; grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); gap: var(--sp-2); }
+
+.results { display: grid; gap: 2px; max-height: 58vh; overflow-y: auto; }
+
+.result {
+  display: grid;
+  grid-template-columns: 3.2rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2);
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+}
+.result:hover, .result:focus-within { border-color: var(--border-strong); }
+.result[data-active='true'] { border-color: var(--campaign-accent, var(--primary)); background: var(--primary-sunk); }
+
+.result__level {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  padding: 2px;
+  border-radius: 4px;
+  background: var(--surface-sunk);
+}
+.result__name { min-width: 0; }
+.result__name strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.result__traits {
+  display: flex; gap: 3px; flex-wrap: wrap;
+  font-size: var(--step--2); color: var(--ink-dim);
+}
+.result__trait { padding: 0 4px; border: 1px solid var(--border); border-radius: 3px; }
+.result__trait[data-rarity='uncommon'] { border-color: var(--warn); color: var(--warn-ink); }
+.result__trait[data-rarity='rare'] { border-color: var(--primary); color: var(--primary-ink); }
+.result__trait[data-rarity='unique'] { border-color: var(--accent); color: var(--accent-ink); }
+.result__actions { display: flex; gap: var(--sp-1); align-items: center; }
+
+/* --- Encounter builder --------------------------------------------------- */
+
+.encounter-rows { display: grid; gap: var(--sp-2); }
+
+.encounter-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.encounter-row__controls { display: flex; flex-wrap: wrap; gap: var(--sp-1); align-items: center; }
+.encounter-row__xp { font-variant-numeric: tabular-nums; color: var(--ink-dim); }
+
+.scale-step {
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Budget meter -------------------------------------------------------- */
+
+.budget { display: grid; gap: var(--sp-2); }
+
+.budget__total {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-3);
+}
+.budget__xp { font-size: var(--step-4); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.budget__band {
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: 999px;
+  font-weight: 600;
+  border: 1px solid currentColor;
+}
+.budget__band[data-band='trivial']  { color: var(--ink-dim); }
+.budget__band[data-band='low']      { color: var(--good-ink); }
+.budget__band[data-band='moderate'] { color: var(--primary-ink); }
+.budget__band[data-band='severe']   { color: var(--warn-ink); }
+.budget__band[data-band='extreme']  { color: var(--bad-ink); }
+.budget__band[data-band='beyond-extreme'] { color: var(--bad-ink); border-style: dashed; }
+
+.budget__scale { display: grid; gap: 3px; }
+
+.budget__mark {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr 3.5rem;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--step--1);
+}
+.budget__track {
+  appearance: none;
+  width: 100%;
+  height: 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--surface-sunk);
+}
+.budget__track::-webkit-progress-bar { background: var(--surface-sunk); }
+.budget__track::-webkit-progress-value { background: var(--campaign-accent, var(--primary)); }
+.budget__track::-moz-progress-bar { background: var(--campaign-accent, var(--primary)); }
+.budget__mark[data-reached='true'] .budget__track::-webkit-progress-value { background: var(--warn); }
+.budget__mark[data-reached='true'] .budget__track::-moz-progress-bar { background: var(--warn); }
+
+/* --- Cross-campaign overview --------------------------------------------- */
+
+.overview { display: grid; gap: var(--sp-3); }
+
+@media (min-width: 60rem) {
+  .overview { grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); }
+}
+
+.overview-card {
+  padding: var(--sp-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 4px solid var(--card-accent, var(--primary));
+  border-radius: var(--radius);
+  display: grid;
+  gap: var(--sp-2);
+  align-content: start;
+}
+.overview-card__meta { display: flex; gap: var(--sp-3); flex-wrap: wrap; font-size: var(--step--1); color: var(--ink-dim); }
+.overview-card--cold { border-color: var(--warn); }
+.overview-card--archived { opacity: 0.6; }
+
+.gm-footer { padding: var(--sp-5) var(--sp-4); text-align: center; font-size: var(--step--2); }
+
+.empty {
+  padding: var(--sp-6) var(--sp-4);
+  text-align: center;
+  color: var(--ink-dim);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+}
+
+/* --- Stat block ---------------------------------------------------------- */
+
+.statblock { font-size: var(--step--1); line-height: 1.55; }
+.statblock__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding-bottom: var(--sp-2);
+  border-bottom: 2px solid var(--campaign-accent, var(--primary));
+}
+.statblock__head h2 { font-size: var(--step-2); }
+.statblock__level { font-variant-numeric: tabular-nums; color: var(--ink-dim); }
+.statblock__line { margin: var(--sp-1) 0; }
+.statblock hr { border: none; border-top: 1px solid var(--border); margin: var(--sp-3) 0; }
+.statblock__ability { margin: var(--sp-2) 0; }
+.statblock__ability .pill { margin-left: var(--sp-2); }
+.statblock__text p { margin: var(--sp-1) 0; }
+.statblock__text hr { margin: var(--sp-1) 0; }
+.statblock__source { margin-top: var(--sp-4); }
+
+/* Resolved Foundry markup: an internal link, an unresolved one, and the
+   damage and check markers the rules engine rewrites in place. */
+.og-ref { color: var(--primary-ink); text-decoration: underline dotted; }
+.og-ref--unresolved { color: var(--ink-faint); text-decoration: underline dotted; cursor: help; }
+.og-dmg, .og-chk { font-variant-numeric: tabular-nums; }
+.og-dmg { color: var(--bad-ink); }
+.og-chk { color: var(--primary-ink); }
+
+.dialog {
+  width: min(46rem, 94vw);
+  max-height: 86vh;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  padding: var(--sp-4);
+  overflow-y: auto;
+}
+.dialog::backdrop { background: rgb(10 6 20 / 0.7); }
+.dialog__close { position: sticky; top: 0; float: right; }

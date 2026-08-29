@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#1A1033">
+<!-- No campaign name and no token in the title: this tab sits open on a laptop
+     at a table where other people can see it. -->
+<title>Off-Guard</title>
+<link rel="stylesheet" href="/assets/css/tokens.css">
+<link rel="stylesheet" href="/assets/css/base.css">
+<link rel="stylesheet" href="/assets/css/gm.css">
+</head>
+<body class="gm">
+<a class="skip-link" href="#main">Skip to the dashboard</a>
+
+<header class="topbar">
+  <button class="campaign-switch" id="campaign-switch" type="button"
+          aria-haspopup="listbox" aria-expanded="false">
+    <span class="campaign-switch__swatch" id="campaign-swatch" aria-hidden="true"></span>
+    <span class="campaign-switch__text">
+      <span class="campaign-switch__label">Campaign</span>
+      <span class="campaign-switch__name" id="campaign-name">Loading…</span>
+    </span>
+    <span class="campaign-switch__key" aria-hidden="true">C</span>
+  </button>
+
+  <nav class="tabs" id="tabs" aria-label="Sections"></nav>
+
+  <div class="topbar__tools">
+    <button class="btn btn--icon btn--quiet" id="theme" type="button" aria-pressed="false">
+      <span class="sr-only">Switch to the light theme</span>
+    </button>
+  </div>
+</header>
+
+<div class="switcher" id="switcher" hidden>
+  <div class="switcher__panel" role="listbox" aria-label="Campaigns" id="switcher-list"></div>
+</div>
+
+<div class="notices" id="notices" role="status" aria-live="polite"></div>
+
+<main id="main" class="main" tabindex="-1">
+  <p class="muted" id="loading">Loading…</p>
+</main>
+
+<footer class="gm-footer">
+  <p class="faint" id="licence-note"></p>
+</footer>
+
+<script type="module" src="/assets/js/gm/main.js"></script>
+</body>
+</html>

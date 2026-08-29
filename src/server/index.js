@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 import { buildApp } from './app.js';
 import { openDatabase } from './db.js';
+import { openCatalogue } from './catalogue.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -24,10 +25,16 @@ async function main() {
   const settings = config();
   const db = openDatabase(settings.database, { migrationsDir: settings.migrations });
 
+  const catalogue = openCatalogue();
   const app = await buildApp({
     db,
+    catalogue,
     logger: { level: settings.logLevel },
   });
+
+  if (!catalogue.available) {
+    app.log.warn(catalogue.reason);
+  }
 
   const shutdown = async () => {
     await app.close();

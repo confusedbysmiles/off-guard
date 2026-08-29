@@ -41,4 +41,5 @@ export async function registerPageRoutes(app, { publicDir }) {
   };
 
   app.get('/c/:token', { onRequest: app.rateLimit() }, page('character', 'sheet.html'));
+  app.get('/gm/:token', { onRequest: app.rateLimit() }, page('gm', 'gm.html'));
 }
