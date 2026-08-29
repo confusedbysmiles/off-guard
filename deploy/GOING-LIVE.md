@@ -96,19 +96,34 @@ Cannot determine default origin certificate path. No file cert.pem in [...]
 which is a complete description of the problem that never mentions `login`.
 `ls ~/.cloudflared/cert.pem` is the check.
 
+Then the rest is a script, because the alternative asked you to copy a UUID out
+of terminal scrollback and hand-edit YAML around it:
+
 ```bash
-cloudflared tunnel create off-guard
-cloudflared tunnel route dns off-guard offguard.drseim.com
+./deploy/cloudflared/setup.sh offguard.drseim.com
 ```
 
-Copy `deploy/cloudflared/config.yml` to `~/.cloudflared/config.yml`, fill in the
-credentials path the create step printed, then:
+It creates the tunnel if it is missing, adds the DNS record if it is absent,
+finds the credentials file the create step wrote, generates
+`~/.cloudflared/config.yml` pointing at Off-Guard, validates it, and checks
+Off-Guard is actually answering. Safe to run again; it backs up any config it
+replaces.
+
+Run it in the foreground first, so you can watch it connect:
 
 ```bash
 cloudflared tunnel run off-guard
 ```
 
-Once it works, `sudo cloudflared service install` keeps it running.
+Open `https://offguard.drseim.com/healthz`. When that returns `{"ok":true}`,
+Ctrl-C and make it permanent:
+
+```bash
+sudo cloudflared service install
+```
+
+`deploy/cloudflared/config.yml` in this repository is a commented reference for
+what the generated file contains and why. You do not need to copy it anywhere.
 
 ## 5. Your link
 
