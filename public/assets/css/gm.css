@@ -416,3 +416,90 @@
 }
 .dialog::backdrop { background: rgb(10 6 20 / 0.7); }
 .dialog__close { position: sticky; top: 0; float: right; }
+
+/* --- Initiative ---------------------------------------------------------- */
+
+.initiative { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
+
+.combatant {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(9rem, 1.6fr) minmax(9rem, 1fr) auto;
+  grid-template-areas:
+    'init identity hp tools'
+    'note note note note';
+  align-items: center;
+  gap: var(--sp-2) var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-left: 4px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: grab;
+}
+
+/*
+ * The current turn, readable from across a table at a laptop's viewing angle.
+ * Colour alone would not do it: the row also grows, gains the gradient bar and
+ * carries a marker, so it survives a bad angle and a colour-blind reader.
+ */
+.combatant--active {
+  border-left: 6px solid transparent;
+  border-image: var(--gradient) 1;
+  background: var(--primary-sunk);
+  box-shadow: var(--shadow);
+  font-size: var(--step-1);
+}
+.combatant--active .combatant__identity strong::before {
+  content: '▶';
+  margin-right: var(--sp-2);
+  color: var(--primary-ink);
+}
+
+.combatant--waiting { opacity: 0.75; border-left-color: var(--warn); }
+.combatant--dragging { opacity: 0.4; cursor: grabbing; }
+
+.combatant__initiative { grid-area: init; }
+.combatant__initiative .input { text-align: center; font-variant-numeric: tabular-nums; }
+.combatant__identity { grid-area: identity; min-width: 0; }
+.combatant__identity strong { display: block; }
+.combatant__hp { grid-area: hp; display: grid; gap: var(--sp-1); }
+.combatant__damage { width: 5rem; }
+.combatant__tools { grid-area: tools; display: flex; flex-wrap: wrap; gap: var(--sp-1); align-items: center; }
+.combatant__note { grid-area: note; }
+
+@media (max-width: 60rem) {
+  .combatant {
+    grid-template-columns: 4.5rem 1fr;
+    grid-template-areas:
+      'init identity'
+      'hp hp'
+      'tools tools'
+      'note note';
+  }
+}
+
+.tab__dot::after {
+  content: '';
+  display: inline-block;
+  width: 7px; height: 7px;
+  margin-left: var(--sp-2);
+  border-radius: 50%;
+  background: var(--bad);
+}
+
+/* --- End-of-turn prompts -------------------------------------------------- */
+
+.prompts { display: grid; gap: var(--sp-3); margin-top: var(--sp-3); }
+
+.prompt {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--warn);
+  border-radius: var(--radius-sm);
+}
+.prompt p { margin: var(--sp-1) 0 0; font-size: var(--step--1); }

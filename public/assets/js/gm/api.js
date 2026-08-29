@@ -65,5 +65,27 @@ export const api = {
     request(`/campaigns/${id}/encounters/${encounterId}/reprice${query({ toCampaignId })}`),
 
   price: (id, body) => request(`/campaigns/${id}/price`, { method: 'POST', body }),
+
+  combat: (id) => request(`/campaigns/${id}/combat`),
+  startCombat: (id, fields) => request(`/campaigns/${id}/combat`, { method: 'POST', body: fields }),
+  populate: (id, combatId, body) =>
+    request(`/campaigns/${id}/combat/${combatId}/populate`, { method: 'POST', body }),
+  addCombatant: (id, combatId, fields) =>
+    request(`/campaigns/${id}/combat/${combatId}/combatants`, { method: 'POST', body: fields }),
+  updateCombatant: (id, combatantId, fields) =>
+    request(`/campaigns/${id}/combat/combatants/${combatantId}`, { method: 'PATCH', body: fields }),
+  removeCombatant: (id, combatantId) =>
+    request(`/campaigns/${id}/combat/combatants/${combatantId}`, { method: 'DELETE' }),
+  damage: (id, combatantId, amount) =>
+    request(`/campaigns/${id}/combat/combatants/${combatantId}/damage`, { method: 'POST', body: { amount } }),
+  sortInitiative: (id, combatId) =>
+    request(`/campaigns/${id}/combat/${combatId}/sort`, { method: 'POST', body: {} }),
+  orderCombatants: (id, combatId, order) =>
+    request(`/campaigns/${id}/combat/${combatId}/order`, { method: 'POST', body: { order } }),
+  advance: (id, combatId, direction) =>
+    request(`/campaigns/${id}/combat/${combatId}/advance`, { method: 'POST', body: { direction } }),
+  endCombat: (id, combatId) =>
+    request(`/campaigns/${id}/combat/${combatId}/end`, { method: 'POST', body: {} }),
+  tableView: (id) => request(`/campaigns/${id}/table-view`),
   budget: (id, encounterId) => request(`/campaigns/${id}/encounters/${encounterId}/budget`),
 };

@@ -22,6 +22,9 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve as resolvePath } from 'node:path';
 
 import { ensureUpstream, LOCK, PROJECT_ROOT } from '../build-data/upstream.js';
+import { buildUuidIndex } from '../build-data/uuid-index.js';
+import { loadGlossary } from '../build-data/glossary.js';
+import { createMarkupResolver } from '../build-data/markup.js';
 
 const OUT_DIR = resolvePath(PROJECT_ROOT, 'src/rules/tables');
 
@@ -171,6 +174,49 @@ export const CREATURE_XP_BY_LEVEL_DIFFERENCE = ${js({
 `;
 }
 
+// ------------------------------------------------------------------ Conditions
+
+/**
+ * The conditions, from the pinned checkout's own condition items rather than
+ * from the GM Screen journal: the items carry the full printed text, whether
+ * the condition takes a value, and which conditions override which.
+ */
+function buildConditions(upstream, resolve) {
+  const dir = resolvePath(upstream, 'packs/pf2e/conditions');
+  const out = {};
+  for (const file of readdirSync(dir).filter((f) => f.endsWith('.json'))) {
+    const doc = JSON.parse(readFileSync(resolvePath(dir, file), 'utf8'));
+    if (doc.type !== 'condition') continue;
+    const slug = file.replace(/\.json$/, '');
+    const text = resolve(doc.system?.description?.value ?? '', {});
+    out[slug] = {
+      slug,
+      name: doc.name,
+      valued: Boolean(doc.system?.value?.isValued),
+      group: doc.system?.group ?? null,
+      overrides: doc.system?.overrides ?? [],
+      source: doc.system?.publication?.title ?? null,
+      license: doc.system?.publication?.license ?? null,
+      text: text.text,
+      html: text.html,
+    };
+  }
+
+  return header('Conditions.', [
+    'From the condition items in the pinned foundryvtt/pf2e checkout, which',
+    'carry the printed text, whether a condition takes a value, and which',
+    'conditions override which.',
+    '',
+    'What decreases on its own, and what does not, is not encoded here: it is',
+    'in `src/rules/conditions.js`, where each rule cites the sentence it comes',
+    'from. Only frightened decreases at the end of a turn; doomed, drained and',
+    'fatigued key off a night\'s rest, and stunned off actions actually lost.',
+    `Upstream commit ${LOCK.commit}.`,
+  ]) + `
+export const CONDITIONS = ${js(out)};
+`;
+}
+
 // --------------------------------------------------------- Level scaling (fit)
 
 const SCALE_LEVELS = { min: -1, max: 25 };
@@ -253,10 +299,17 @@ function main() {
   const upstream = ensureUpstream();
   const pages = gmScreenPages(upstream);
 
+  // Condition text contains @UUID links to other conditions, so it goes
+  // through the same resolver the creature build uses.
+  const { index: uuidIndex } = buildUuidIndex(upstream);
+  const glossary = loadGlossary(upstream);
+  const { resolve: resolveMarkup } = createMarkupResolver({ uuidIndex, glossary });
+
   const outputs = [
     ['dcs.js', buildDcTable(pages)],
     ['recall-knowledge.js', buildRecallTable(pages)],
     ['encounter.js', buildEncounterTable(pages)],
+    ['conditions.js', buildConditions(upstream, resolveMarkup)],
     ['creature-scaling.js', buildScalingTable()],
   ];
 

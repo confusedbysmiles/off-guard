@@ -26,8 +26,10 @@ describe('naming the creatures in an encounter', () => {
     ])).toEqual(['Goblin Warrior A', 'Goblin Warrior B', 'Goblin Warrior C']);
   });
 
-  it('letters a row that stands for several of the same creature', () => {
-    expect(run([{ creatureId: 'goblin-warrior', count: 3 }])).toEqual(['Goblin Warrior A']);
+  it('does not letter a single row, however many it stands for', () => {
+    // The count says three. The three individual goblins are lettered when the
+    // fight starts, not here -- doing both produced "Goblin A B".
+    expect(run([{ creatureId: 'goblin-warrior', count: 3 }])).toEqual(['Goblin Warrior']);
   });
 
   it('counts each kind separately', () => {

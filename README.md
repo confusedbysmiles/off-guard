@@ -9,8 +9,8 @@ Multiple concurrent campaigns are first-class. A character belongs to exactly
 one campaign; an encounter belongs to one campaign but can be copied to another;
 creature data, reference tables and homebrew are global.
 
-**Status: milestone 5 of 9.** Data pipeline, rules engine, campaign-scoped API,
-player character sheet, and a working GM dashboard.
+**Status: milestone 6 of 9.** Data pipeline, rules engine, campaign-scoped API,
+player character sheet, GM dashboard and a working initiative tracker.
 
 | # | Milestone | State |
 |---|-----------|-------|
@@ -19,8 +19,8 @@ player character sheet, and a working GM dashboard.
 | 3 | Server, schema, migrations, token access, campaign-scoped API | done |
 | 4 | Player character sheet, Pathbuilder import | done |
 | 5 | GM dashboard: campaigns, party panel, encounter builder, XP budget | done |
-| 6 | Initiative tracker | next |
-| 7 | Shared screen over SSE | |
+| 6 | Initiative tracker | done |
+| 7 | Shared screen over SSE | next |
 | 8 | Reference drawer, dice roller, Recall Knowledge helper | |
 | 9 | Deployment, accessibility and security pass | |
 
@@ -222,6 +222,37 @@ It is a linear scan, measured at about 2 ms, which is under a keystroke and
 readable in two years' time. A clone that has not run `npm run build:data` still
 starts; the dashboard says the catalogue is missing rather than failing in a way
 that looks like a bug.
+
+## The initiative tracker
+
+`I` on the dashboard. Space or `N` advances the turn, `P` steps back.
+
+Starting a fight adds the party and rolls initiative for the creatures. The
+creature rolls happen on the server, because the roll needs the stat block and a
+modifier sent up from the browser would let a mistake in the interface change the
+numbers. **Player initiative is deliberately left blank** — the rules have the
+player roll it, and inventing a number for someone else's character is the one
+thing a tracker must not do. Creatures start hidden from the shared screen: a
+fight the players walk into should not be listed before they see it.
+
+Sorting is by initiative, descending. **Ties are not broken.** The rules give no
+tiebreak, so tied combatants keep the order they are in and the GM drags them;
+a re-sort does not undo the drag.
+
+The rule the tracker is built around: **apply what the rules state plainly, and
+ask about everything else.** Checked against the printed text of every condition
+in the pinned checkout, exactly one decreases on its own at the end of a turn —
+frightened. Doomed, drained and fatigued key off a night's rest; stunned keys off
+actions actually lost. So at a turn boundary the tracker decrements frightened
+and then shows a list of what it did *not* decide — persistent damage with its
+flat check, stunned, a dying combatant's recovery check — each quoting the
+sentence the rule comes from.
+
+Damage takes a negative number to heal, which is what a GM actually types.
+Temporary hit points are spent first and not healed back; dropping to 0 sets
+dying to 1 plus the wounded value; damage while dying raises it; dying 4 is
+reported as death; and being healed out of dying raises the wounded value, which
+is easy to forget at a table and easier to forget in code.
 
 ## Look
 

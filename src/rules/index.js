@@ -18,6 +18,9 @@
  *   recall-knowledge.js  RAW for skills and DC; the ordering of what a success
  *                        reveals is this application's convenience and says so.
  *   proficiency.js       RAW. Player Core, Proficiency.
+ *   conditions.js        RAW where the rules state it plainly, and a prompt
+ *                        everywhere else. Only frightened decreases on its own
+ *                        at the end of a turn; everything ambiguous is asked.
  *   scale.js             NOT RAW. An approximation, labelled as one everywhere
  *                        it surfaces.
  */
@@ -51,3 +54,9 @@ export {
 export {
   adjustRichText, flatDamageAdjuster,
 } from './rich-text.js';
+
+export {
+  addCondition, applyAutomatic, applyDamage, conditionValue, CONDITION_SLUGS,
+  CONDITIONS, DYING_MAXIMUM, endOfTurn, isValued, PERSISTENT_FLAT_DC,
+  recoverFromDying, removeCondition, setConditionValue, startOfTurn,
+} from './conditions.js';

@@ -7,6 +7,7 @@
  */
 import { $, debounce } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
+import { setUpTheme } from '../lib/theme.js';
 import { createStore, STATUS } from './store.js';
 import { mount } from './render.js';
 import { openImportDialog } from './import.js';
@@ -32,7 +33,6 @@ const SAVE_LABEL = {
 function setUpIcons() {
   $('#undo').prepend(fragment(icon('undo')));
   $('#print').prepend(fragment(icon('print')));
-  $('#theme').prepend(fragment(icon('sun')));
 }
 
 function fragment(html) {
@@ -43,44 +43,15 @@ function fragment(html) {
 
 // --- theme ---------------------------------------------------------------
 
-const THEME_KEY = 'off-guard:theme';
-
-function applyTheme(theme) {
-  const root = document.documentElement;
-  if (theme === 'light' || theme === 'dark') root.dataset.theme = theme;
-  else delete root.dataset.theme;
-
-  const button = $('#theme');
-  const isLight = theme === 'light'
-    || (!theme && matchMedia('(prefers-color-scheme: light)').matches);
-  button.setAttribute('aria-pressed', String(isLight));
-  button.replaceChildren(
-    fragment(icon(isLight ? 'moon' : 'sun')),
-    Object.assign(document.createElement('span'), {
-      className: 'sr-only',
-      textContent: isLight ? 'Switch to the dark theme' : 'Switch to the light theme',
-    }),
-  );
-  $('meta[name="theme-color"]').content = isLight ? '#F6F4FB' : '#1A1033';
-}
-
-function setUpTheme() {
-  let stored = null;
-  try { stored = localStorage.getItem(THEME_KEY); } catch { /* private mode */ }
-  applyTheme(stored);
-
-  $('#theme').addEventListener('click', () => {
-    const isLight = $('#theme').getAttribute('aria-pressed') === 'true';
-    const next = isLight ? 'dark' : 'light';
-    try { localStorage.setItem(THEME_KEY, next); } catch { /* private mode */ }
-    applyTheme(next);
-  });
-
-  // A player who has never touched the toggle follows the system.
-  matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
-    let current = null;
-    try { current = localStorage.getItem(THEME_KEY); } catch { /* private mode */ }
-    if (!current) applyTheme(null);
+function setUpThemeButton() {
+  setUpTheme($('#theme'), (isLight) => {
+    $('#theme').replaceChildren(
+      fragment(icon(isLight ? 'moon' : 'sun')),
+      Object.assign(document.createElement('span'), {
+        className: 'sr-only',
+        textContent: isLight ? 'Switch to the dark theme' : 'Switch to the light theme',
+      }),
+    );
   });
 }
 
@@ -153,7 +124,7 @@ function preview(value) {
 
 async function start() {
   setUpIcons();
-  setUpTheme();
+  setUpThemeButton();
 
   const root = $('#sheet');
   const update = mount(root, store);

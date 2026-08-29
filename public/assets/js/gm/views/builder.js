@@ -14,22 +14,31 @@ const SIZES = [['tiny', 'Tiny'], ['sm', 'Small'], ['med', 'Medium'], ['lg', 'Lar
   ['huge', 'Huge'], ['grg', 'Gargantuan']];
 
 /**
- * Display names, assigned automatically.
+ * Display names for the *rows* of an encounter.
  *
- * Three goblins become Goblin A, Goblin B and Goblin C. A GM who has renamed
- * one keeps that name: only rows still carrying a generated name are renumbered.
+ * The division of labour matters here. A row is a line in the encounter, not a
+ * creature: a single row with a count of three is still one row. So a row is
+ * lettered only when another row holds the same creature -- two separate goblin
+ * entries become Goblin Warrior A and Goblin Warrior B, because the GM meant
+ * them to be distinguishable.
+ *
+ * Individual creatures are lettered later, when a fight starts and a row of
+ * three becomes three combatants. Doing it in both places is what produced
+ * "Goblin A B".
+ *
+ * A GM who has renamed a row keeps that name.
  */
 export function assignDisplayNames(rows, nameOf) {
-  const counts = new Map();
+  const rowsPerCreature = new Map();
   for (const row of rows) {
     const base = nameOf(row.creatureId) ?? row.creatureId;
-    counts.set(base, (counts.get(base) ?? 0) + (row.count ?? 1));
+    rowsPerCreature.set(base, (rowsPerCreature.get(base) ?? 0) + 1);
   }
   const seen = new Map();
   return rows.map((row) => {
     const base = nameOf(row.creatureId) ?? row.creatureId;
     if (row.renamed) return row;
-    if ((counts.get(base) ?? 0) <= 1) return { ...row, displayName: base };
+    if ((rowsPerCreature.get(base) ?? 0) <= 1) return { ...row, displayName: base };
     const index = seen.get(base) ?? 0;
     seen.set(base, index + 1);
     return { ...row, displayName: `${base} ${String.fromCharCode(65 + index)}` };
