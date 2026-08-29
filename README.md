@@ -9,9 +9,11 @@ Multiple concurrent campaigns are first-class. A character belongs to exactly
 one campaign; an encounter belongs to one campaign but can be copied to another;
 creature data, reference tables and homebrew are global.
 
-**Status: complete, and ready to deploy.** 524 unit tests and 43 end-to-end
-tests, run at a host root and at a subdirectory. See
-[deploy/GOING-LIVE.md](deploy/GOING-LIVE.md).
+**Status: complete, and running.** It has been live since 29 August 2026 on a
+Mac under launchd, reached through a Cloudflare Tunnel, and has been played on
+from a laptop, a phone and an iPad. 617 unit tests and 47 end-to-end tests, run
+at a host root and at a subdirectory, in Chromium and — for the parts where
+engines differ — in WebKit. See [deploy/GOING-LIVE.md](deploy/GOING-LIVE.md).
 
 | # | Milestone | State |
 |---|-----------|-------|
@@ -553,13 +555,25 @@ of, almost all of them adventure paths; see
 
 ## Deploying it
 
-Two supported shapes, and the browser needs no configuration for either.
+Four shapes, and the browser needs no configuration for any of them. They are
+listed in order of how much evidence there is that they work, which is not the
+same as the order they were written in.
 
-**Through a Cloudflare Tunnel**, which is the shape
-[deploy/GOING-LIVE.md](deploy/GOING-LIVE.md) walks through end to end:
-`deploy/macos/com.drseim.off-guard.plist` runs it under launchd and
-`deploy/cloudflared/config.yml` connects it outbound to a hostname. Nothing
-listens on a public port, there is no port forwarding and no VPS.
+**Through a Cloudflare Tunnel, on macOS.** This is the one that is running.
+[deploy/GOING-LIVE.md](deploy/GOING-LIVE.md) walks it through end to end, and
+two scripts do the parts that are easy to get wrong:
+
+```
+./deploy/macos/install.sh                      # launchd agent, --uninstall reverses it
+./deploy/cloudflared/setup.sh offguard.example.com
+```
+
+The installer fills the real paths into the plist template, refuses to install
+if a placeholder survives, writes `.env` so a command typed into a shell opens
+the same database the service does, and waits for `/healthz` before claiming
+success. The tunnel script reads the tunnel's UUID off disk rather than asking
+you to copy it out of scrollback. Nothing listens on a public port; there is no
+port forwarding and no VPS.
 
 That means a subdomain rather than `drseim.com/off-guard`: a tunnel becomes the
 origin for a whole hostname, and pointing `www` at it would take the GitHub
@@ -567,11 +581,11 @@ Pages site with it. Splitting one hostname across two origins needs a Cloudflare
 Worker in front of both. The application supports either — this is a deployment
 choice, and the subdomain is the cheap one.
 
-**As a service.** `deploy/off-guard.service` is a systemd unit: a dedicated
-user, `ProtectSystem=strict`, one writable path, an empty capability bounding
-set and a `@system-service` syscall filter. It binds loopback and expects nginx
-in front, because the token is in the URL and a URL over plain HTTP is a
-postcard.
+**As a systemd service.** *Written, not run — this was developed on a Mac.*
+`deploy/off-guard.service` is a unit with a dedicated user,
+`ProtectSystem=strict`, one writable path, an empty capability bounding set and
+a `@system-service` syscall filter. It binds loopback and expects nginx in
+front, because the token is in the URL and a URL over plain HTTP is a postcard.
 
 **In a container.** `docker compose up -d`, then
 `docker compose exec off-guard node tools/mint-gm-token.js` for the GM link.
@@ -579,9 +593,15 @@ The image is two stages so the C++ toolchain that builds `better-sqlite3` is
 not in the image that runs; the container is read-only apart from the database
 volume, drops all capabilities, and publishes only to `127.0.0.1`.
 
-*Not verified.* The Dockerfile and compose file are written and every path they
-reference is checked, but no image has been built — there is no Docker on the
-machine this was developed on. Treat the systemd path as the tested one.
+*Written, not run.* No image has ever been built: there is no container runtime
+on the machine this was developed on. What can be checked without one is
+checked, by `tests/deploy.test.js` rather than by assertion — every `COPY`
+names a path that exists, every `OFF_GUARD_` variable any manifest sets is one
+the application reads and `.env.example` documents, and the port is the same
+number in the Dockerfile, the compose file, the nginx snippet, the systemd unit,
+the launchd plist and the server's own default. That catches a renamed
+directory or a typo'd variable. It does not catch anything that only shows up
+when an image is built, so the first `docker compose up` is still a first.
 
 **Serving from a subdirectory.** The brief puts this at `drseim.com/off-guard`
 rather than on a host of its own. Set `OFF_GUARD_BASE_PATH=/off-guard` and use

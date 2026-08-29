@@ -28,7 +28,7 @@ Then, in the checkout:
 
 ```bash
 npm ci
-npm test                      # 524 unit tests, no data build needed
+npm test                      # 617 unit tests, no data build needed
 ```
 
 **Build the creature catalogue before you need it**, not at the table. It clones
