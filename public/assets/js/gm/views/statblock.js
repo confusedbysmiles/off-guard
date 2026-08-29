@@ -34,8 +34,10 @@ export function statBlock(creature) {
 
     creature.scaling?.approximate
       ? el('p', { class: 'faint' },
-        'Level scaling is an approximation built from the creature-building '
-        + 'tables, not a rules-as-written adjustment like elite or weak.')
+        'Level scaling is an approximation. Every number is placed on the '
+        + `creature-building tables (${creature.scaling.source}) and read back `
+        + 'at the new level, but moving a creature between levels is not a '
+        + 'rules-as-written adjustment the way elite and weak are.')
       : null,
 
     el('div', { class: 'chips' },

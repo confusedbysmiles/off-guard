@@ -217,80 +217,136 @@ export const CONDITIONS = ${js(out)};
 `;
 }
 
-// --------------------------------------------------------- Level scaling (fit)
+// ------------------------------------------------------- Creature building
 
-const SCALE_LEVELS = { min: -1, max: 25 };
+/**
+ * The GM Core creature-building tables, transcribed from the book by
+ * `tools/build-tables/extract-gm-core.py` and checked in as JSON.
+ *
+ * This used to be *fitted*: the median of each statistic across the bundled
+ * bestiary, because the printed tables are not in any data anyone ships. The
+ * medians turned out to track the moderate column closely, which is why it was
+ * usable, but it described what Paizo published rather than what the tables
+ * prescribe -- and it had one column where the book has four, so a creature
+ * with extreme damage scaled at the same rate as a creature with low damage.
+ */
+function buildCreatureBuilding() {
+  const file = resolvePath(PROJECT_ROOT, 'tools/build-tables/gm-core-creature-building.json');
+  const raw = JSON.parse(readFileSync(file, 'utf8'));
 
-function median(values) {
-  if (!values.length) return null;
-  const sorted = values.slice().sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+  // The printed spell table interleaves DC and attack modifier across six
+  // columns. The engine wants two tables that each descend from extreme, so
+  // that a spell DC can be placed against DC columns and nothing else.
+  const { spell, ...rest } = raw;
+  const half = (suffix) => ({
+    citation: spell.citation,
+    columns: ['extreme', 'high', 'moderate'],
+    rows: Object.fromEntries(Object.entries(spell.rows).map(([level, cells]) => [
+      level,
+      spell.columns.flatMap((name, i) => (name.endsWith(suffix) ? [cells[i]] : [])),
+    ])),
+  });
+
+  const tables = { ...rest, spellDc: half('Dc'), spellAttack: half('Attack') };
+  reportAgainstTheBestiary(tables);
+
+  return header('The GM Core creature-building tables.', [
+    'Transcribed from the book by `tools/build-tables/extract-gm-core.py`, which',
+    'checks every row against the level sequence it must follow and refuses a',
+    'printing whose folios do not match the citations below.',
+    '',
+    'Columns descend: extreme, high, moderate, low, terrible, and each table',
+    'carries only the columns the book prints for it. Hit Points and the Skills',
+    'low column are printed as ranges and are recorded here as their midpoints,',
+    'half rounding up.',
+    '',
+    'These tables describe how to *build* a creature of a given level. Using',
+    'them to move an existing creature between levels is still not rules as',
+    'written -- there is no printed operation for that -- but the numbers the',
+    'move is built from are now the printed ones. See `src/rules/scale.js`.',
+  ]) + `
+export const SCALING_SOURCE = 'GM Core pp. 114–121';
+
+export const CREATURE_BUILDING = ${renderTables(tables)};
+`;
 }
 
-function buildScalingTable() {
+/**
+ * One line per level, so a row can be read against the printed page.
+ * `js()` would put every cell on a line of its own: 1,600 lines for 9 tables.
+ */
+function renderTables(tables) {
+  const cell = (v) => (v === null ? 'null' : String(v));
+  const one = (t) => [
+    '{',
+    `    citation: '${t.citation}',`,
+    `    columns: [${t.columns.map((c) => `'${c}'`).join(', ')}],`,
+    '    rows: {',
+    // Numeric order, so a row can be found where the book puts it. Object
+    // literals reorder integer-like keys at parse time and would bury -1.
+    ...Object.entries(t.rows)
+      .sort(([a], [b]) => Number(a) - Number(b))
+      .map(([level, cells]) => `      '${level}': [${cells.map(cell).join(', ')}],`),
+    '    },',
+    '  }',
+  ].join('\n');
+  return `{\n${Object.entries(tables)
+    .map(([name, t]) => `  ${name}: ${one(t)},`)
+    .join('\n\n')}\n}`;
+}
+
+/**
+ * Print the printed moderate column beside the bestiary median.
+ *
+ * Not a check that can fail -- the book is right and the bestiary is a sample --
+ * but two independent sources agreeing to within a point or two is how a
+ * transcription error announces itself, and it is cheap to look at.
+ */
+function reportAgainstTheBestiary(tables) {
   const dir = resolvePath(PROJECT_ROOT, 'data/creatures');
   if (!existsSync(dir)) {
-    console.log('  data/creatures missing - run `npm run build:data` first. Scaling table skipped.');
-    return null;
+    console.log('  data/creatures missing - skipping the sanity check against published creatures.');
+    return;
   }
+
+  const median = (values) => {
+    if (!values.length) return null;
+    const sorted = values.slice().sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+  };
 
   const buckets = new Map();
   let sampled = 0;
   for (const file of readdirSync(dir).filter((f) => f.endsWith('.json'))) {
     for (const c of JSON.parse(readFileSync(resolvePath(dir, file), 'utf8'))) {
-      // Superseded legacy reprints would double-count their remaster twin.
-      if (c.supersededBy) continue;
-      const level = c.level;
-      if (level < SCALE_LEVELS.min || level > SCALE_LEVELS.max) continue;
-      if (!buckets.has(level)) {
-        buckets.set(level, { ac: [], hp: [], perception: [], attack: [], save: [], spellDc: [] });
-      }
-      const b = buckets.get(level);
+      if (c.supersededBy) continue;              // would double-count its remaster twin
+      if (!(String(c.level) in tables.ac.rows)) continue;
+      if (!buckets.has(c.level)) buckets.set(c.level, { ac: [], hp: [], save: [] });
+      const b = buckets.get(c.level);
       sampled += 1;
       b.ac.push(c.ac.value);
       b.hp.push(c.hp.max);
-      b.perception.push(c.perception.mod);
       for (const key of ['fortitude', 'reflex', 'will']) b.save.push(c.saves[key].mod);
-      const best = c.strikes.reduce((m, s) => Math.max(m, s.mod), -Infinity);
-      if (Number.isFinite(best)) b.attack.push(best);
-      for (const entry of c.spellcasting) if (entry.dc) b.spellDc.push(entry.dc);
     }
   }
 
-  const rows = {};
-  for (const [level, b] of [...buckets.entries()].sort((a, x) => a[0] - x[0])) {
-    rows[level] = {
-      n: b.ac.length,
-      ac: median(b.ac),
-      hp: median(b.hp),
-      perception: median(b.perception),
-      attack: median(b.attack),
-      save: median(b.save),
-      spellDc: median(b.spellDc),
-    };
+  const moderate = (table, level) => {
+    const { columns, rows } = tables[table];
+    return rows[String(level)][columns.indexOf('moderate')];
+  };
+
+  let worst = { key: null, gap: 0 };
+  for (const [level, b] of buckets) {
+    for (const key of ['ac', 'save']) {
+      const gap = Math.abs(median(b[key]) - moderate(key, level));
+      if (gap > worst.gap) worst = { key: `${key} at level ${level}`, gap };
+    }
   }
-
-  return header('Creature statistics by level, for approximate level scaling.', [
-    'NOT rules as written. The GM Core creature-building tables are printed text',
-    'and are not present in any bundled data, so this table is fitted: it is the',
-    `median of each statistic across ${sampled} bundled creatures, excluding legacy`,
-    'reprints superseded by a remaster entry.',
-    '',
-    'The fit is close to the printed "moderate" column where that can be checked',
-    'by hand (level 1 HP 20, level 2 HP 30, level 5 HP 75), which is why it is',
-    'usable, but it is a description of what Paizo published rather than of what',
-    'the tables prescribe. Scaling built on it must be labelled an approximation',
-    'in the interface, distinct from elite and weak.',
-    '',
-    'To replace it with transcribed GM Core values, overwrite the rows below and',
-    'set `source` to a citation; nothing else in the engine needs to change.',
-    `Fitted from data built at upstream commit ${LOCK.commit}.`,
-  ]) + `
-export const SCALING_SOURCE = 'fitted';
-
-export const CREATURE_STATS_BY_LEVEL = ${js(rows)};
-`;
+  console.log(
+    `  checked against ${sampled} published creatures: the printed moderate column`
+    + ` is within ${worst.gap} of the median everywhere (worst: ${worst.key}).`,
+  );
 }
 
 // ----------------------------------------------------------------------- main
@@ -310,7 +366,7 @@ function main() {
     ['recall-knowledge.js', buildRecallTable(pages)],
     ['encounter.js', buildEncounterTable(pages)],
     ['conditions.js', buildConditions(upstream, resolveMarkup)],
-    ['creature-scaling.js', buildScalingTable()],
+    ['creature-scaling.js', buildCreatureBuilding()],
   ];
 
   for (const [name, contents] of outputs) {

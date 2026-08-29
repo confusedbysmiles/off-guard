@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  DiceError, double, format, halve, parseDice, rollDice,
+  averageOf, DiceError, double, format, halve, parseDice, rollDice,
 } from '../../src/rules/dice.js';
 
 /** A random source that walks a fixed list, so every roll below is exact. */
@@ -148,5 +148,32 @@ describe('halving and doubling', () => {
     // 2d6+3 rolling 4 and 5 is 12; a critical hit is 24, not 4+4+5+5+3 = 21.
     const rolled = rollDice('2d6+3', { random: rolling([4, 5], 6) });
     expect(double(rolled.total)).toBe(24);
+  });
+});
+
+describe('averages', () => {
+  // The book quotes these: "a d4 counts as 2.5 damage, a d6 as 3.5, a d8 as
+  // 4.5, a d10 as 5.5, and a d12 as 6.5" (GM Core, Strike Damage).
+  it.each([
+    ['1d4', 2.5], ['1d6', 3.5], ['1d8', 4.5], ['1d10', 5.5], ['1d12', 6.5],
+    ['2d6+3', 10], ['18d6', 63], ['5', 5], ['2d8+7', 16], ['1d6-1', 2.5],
+  ])('%s averages %s', (text, expected) => {
+    expect(averageOf(text)).toBe(expected);
+  });
+
+  it('matches the printed Strike Damage averages', () => {
+    // Three rows of GM Core pg. 120, expression against printed average.
+    expect(Math.round(averageOf('2d8+7'))).toBe(16);   // level 5, high
+    expect(Math.round(averageOf('4d12+42'))).toBe(68); // level 24, extreme
+    expect(Math.floor(averageOf('3d12+19'))).toBe(38); // level 12, extreme
+  });
+
+  it('refuses what it cannot mean', () => {
+    // A kept-highest roll has a mean, but not one the damage tables intend,
+    // and an unresolved reference has none at all.
+    expect(averageOf('2d20kh1')).toBeNull();
+    expect(averageOf('@item.level')).toBeNull();
+    expect(averageOf('')).toBeNull();
+    expect(averageOf('nonsense')).toBeNull();
   });
 });

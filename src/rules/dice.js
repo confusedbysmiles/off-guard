@@ -161,3 +161,33 @@ export function halve(total) {
 export function double(total) {
   return Number(total) * 2;
 }
+
+/**
+ * The mean of an expression, the way the creature-building tables quote it:
+ * a d4 is 2.5, a d6 3.5, a d8 4.5, a d10 5.5, a d12 6.5 (GM Core, Strike Damage).
+ *
+ * This is how a damage expression is placed against the column of the printed
+ * table it belongs to, which is what level scaling needs to know.
+ *
+ * Returns null rather than a guess for anything it cannot read, including an
+ * expression that keeps only some of its dice: a kept-highest roll has a mean,
+ * but not one these tables ever intend.
+ */
+export function averageOf(text) {
+  let parsed;
+  try {
+    parsed = parseDice(text);
+  } catch {
+    return null;
+  }
+  let total = 0;
+  for (const term of parsed.terms) {
+    if (term.kind === 'flat') {
+      total += term.sign * term.value;
+      continue;
+    }
+    if (term.keep) return null;
+    total += term.sign * term.count * ((term.faces + 1) / 2);
+  }
+  return total;
+}

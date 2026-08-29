@@ -23,8 +23,10 @@
  *                        at the end of a turn; everything ambiguous is asked.
  *   dice.js              RAW for halving and doubling; the expression syntax
  *                        is this application's, and deliberately small.
- *   scale.js             NOT RAW. An approximation, labelled as one everywhere
- *                        it surfaces.
+ *   scale.js             NOT RAW -- there is no printed operation for moving a
+ *                        creature between levels -- but built from the printed
+ *                        GM Core creature-building tables. Labelled an
+ *                        approximation everywhere it surfaces.
  */
 export {
   adjustCreature, isLimitedUse,
@@ -49,7 +51,8 @@ export {
 } from './recall-knowledge.js';
 
 export {
-  DiceError, DIE_FACES, double, format as formatDice, halve, parseDice, rollDice,
+  averageOf, DiceError, DIE_FACES, double, format as formatDice, halve,
+  parseDice, rollDice,
 } from './dice.js';
 
 export {
@@ -58,7 +61,7 @@ export {
 } from './proficiency.js';
 
 export {
-  adjustRichText, flatDamageAdjuster,
+  adjustRichText, flatDamageAdjuster, projectedDamageAdjuster,
 } from './rich-text.js';
 
 export {

@@ -11,7 +11,7 @@
  * the sentence. Adjusting the parsed arrays and re-rendering the marker bodies
  * does that without re-parsing English or doing surgery on rendered prose.
  */
-import { adjustDamageParts, renderDamageParts } from '../shared/damage-expression.js';
+import { adjustDamageParts, adjustFormulaFlat, renderDamageParts } from '../shared/damage-expression.js';
 import { adjustCheckDc, renderCheck } from '../shared/check-expression.js';
 
 const MARKER = /(<span class="og-(dmg|chk)" data-og-(?:dmg|chk)="(\d+)">)([\s\S]*?)(<\/span>)/g;
@@ -37,14 +37,20 @@ function htmlToText(html) {
  * `damageDelta` is applied by `adjustDamage`, which receives the whole parsed
  * expression -- callers differ on which part of a multi-part expression should
  * take the adjustment, so the decision does not live here.
+ *
+ * DCs move by a flat `dcDelta`, or by `adjustDc(dc)` when the caller needs the
+ * shift to depend on the DC itself. Level scaling does: a DC is placed against
+ * the printed spell DC columns before it is moved, so a creature's extreme DC
+ * stays extreme.
  */
-export function adjustRichText(rich, { adjustDamage = null, dcDelta = 0 } = {}) {
+export function adjustRichText(rich, { adjustDamage = null, dcDelta = 0, adjustDc = null } = {}) {
   if (!rich || typeof rich.html !== 'string') return rich;
 
   const damage = adjustDamage ? (rich.damage ?? []).map(adjustDamage) : (rich.damage ?? []);
-  const checks = dcDelta
-    ? (rich.checks ?? []).map((c) => adjustCheckDc(c, dcDelta))
-    : (rich.checks ?? []);
+  const shiftDc = adjustDc
+    ? (c) => (c.dc === null ? c : adjustCheckDc(c, adjustDc(c.dc) - c.dc))
+    : (dcDelta ? (c) => adjustCheckDc(c, dcDelta) : null);
+  const checks = shiftDc ? (rich.checks ?? []).map(shiftDc) : (rich.checks ?? []);
 
   const html = rich.html.replace(MARKER, (whole, open, kind, index, body, close) => {
     const i = Number(index);
@@ -82,6 +88,33 @@ export function flatDamageAdjuster(delta) {
     if (target === -1) return expression;
     const adjusted = parts.map((p, i) => (
       i === target ? adjustDamageParts([p], delta)[0] : p
+    ));
+    return { ...expression, parts: adjusted };
+  };
+}
+
+/**
+ * The same rule, but with the adjustment computed from the expression.
+ *
+ * `project` receives the formula of the part being adjusted and returns the
+ * flat amount to add to it, or 0 to leave it alone. Level scaling uses this to
+ * move damage along the printed Strike Damage column it already sits in, so a
+ * creature built on extreme damage keeps gaining at the extreme rate instead of
+ * an average one.
+ *
+ * A formula whose mean cannot be read -- a kept-highest roll, an unresolved
+ * `@item.level` -- gets a delta of 0 and is left exactly as it was.
+ */
+export function projectedDamageAdjuster(project) {
+  if (!project) return null;
+  return (expression) => {
+    const parts = expression.parts ?? [];
+    const target = parts.findIndex((p) => !p.persistent);
+    if (target === -1) return expression;
+    const delta = project(parts[target].formula);
+    if (!delta) return expression;
+    const adjusted = parts.map((p, i) => (
+      i === target ? { ...p, formula: adjustFormulaFlat(p.formula, delta) } : p
     ));
     return { ...expression, parts: adjusted };
   };
