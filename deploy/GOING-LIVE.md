@@ -28,7 +28,7 @@ Then, in the checkout:
 
 ```bash
 npm ci
-npm test                      # 617 unit tests, no data build needed
+npm test                      # 628 unit tests, no data build needed
 ```
 
 **Build the creature catalogue before you need it**, not at the table. It clones
@@ -171,16 +171,39 @@ character, and make each player's link. Each of those is shown once too.
 ## Keeping it
 
 **A WAL database is not one file.** Copying `off-guard.sqlite` on its own loses
-whatever is still in `off-guard.sqlite-wal`, silently. Use SQLite's own backup,
-which is consistent against a running server:
+whatever is still in `off-guard.sqlite-wal`, silently — that is how a copy taken
+during the token migration came back with one token in it instead of three.
 
 ```bash
-sqlite3 ~/Library/Application\ Support/off-guard/off-guard.sqlite \
-  ".backup '$HOME/Backups/off-guard-$(date +%F).sqlite'"
+cd ~/Documents/VSCode/off-guard
+npm run backup
 ```
 
+That writes `~/off-guard-backups/<date>.sqlite`, through SQLite's own online
+backup API, and is safe to run while a session is in progress. Give it a path to
+put it somewhere else. It prints what it copied — read those numbers, because
+`1 campaign, 0 characters` is a sentence that should stop you.
+
+The file it hands back is a single file with no sidecars, so `cp` and `scp` are
+safe on *it* even though they are not safe on the live database.
+
 Worth a `launchd` timer or a cron line. The file is small — a season of play is
-a few megabytes — so keep them all.
+a few megabytes — so keep them all. And restore one occasionally:
+
+```bash
+npm run backup --verify-only ~/off-guard-backups/<date>.sqlite
+```
+
+A backup that has never been read back is a hypothesis.
+
+## Moving it to another machine
+
+The point of an always-on box is that this laptop can then sleep.
+[MIGRATING.md](MIGRATING.md) is the whole procedure; the part worth knowing in
+advance is that **every player's link keeps working**. Tokens live in the
+database, not in configuration and not in the hostname, so moving the database
+and leaving the hostname pointed at whatever now runs changes nothing anyone has
+bookmarked.
 
 ## Updating
 

@@ -18,12 +18,11 @@ import { describe, expect, it } from 'vitest';
 const read = (path) => readFileSync(path, 'utf8');
 
 const MANIFESTS = [
-  'Dockerfile',
-  'docker-compose.yml',
   'deploy/off-guard.service',
   'deploy/nginx.conf',
   'deploy/macos/com.drseim.off-guard.plist',
   'deploy/macos/install.sh',
+  'deploy/linux/install.sh',
   'deploy/cloudflared/setup.sh',
 ];
 
@@ -53,23 +52,13 @@ describe('every OFF_GUARD_ name a manifest sets', () => {
   });
 });
 
-describe('the Dockerfile', () => {
-  const dockerfile = read('Dockerfile');
-
-  it('copies only paths that exist', () => {
-    // `COPY --from=build ...` names a path inside the earlier stage, not one
-    // in this repository, so it is not a claim about the checkout.
-    const copies = [...dockerfile.matchAll(/^COPY (?!--from)(.+)$/gm)]
-      .flatMap(([, line]) => line.trim().split(/\s+/).slice(0, -1));
-    expect(copies.length).toBeGreaterThan(4);
-    for (const path of copies) {
-      expect(existsSync(path), `Dockerfile copies ${path}, which is not here`).toBe(true);
-    }
-  });
-
+describe('every manifest that starts the server', () => {
   it('starts the same entry point the package does', () => {
-    const start = JSON.parse(read('package.json')).scripts.start;
-    expect(dockerfile).toContain(start.replace(/^node /, ''));
+    const entry = JSON.parse(read('package.json')).scripts.start.replace(/^node /, '');
+    expect(existsSync(entry)).toBe(true);
+    for (const file of ['deploy/off-guard.service', 'deploy/macos/com.drseim.off-guard.plist']) {
+      expect(read(file), `${file} does not start ${entry}`).toContain(entry);
+    }
   });
 });
 
@@ -78,9 +67,6 @@ describe('the port', () => {
     // A container published on one port and answering on another is a
     // twenty-minute debugging session for a number that should be typed once.
     expect(read('src/server/index.js')).toContain(`?? ${PORT}`);
-    expect(read('Dockerfile')).toContain(`OFF_GUARD_PORT=${PORT}`);
-    expect(read('Dockerfile')).toContain(`EXPOSE ${PORT}`);
-    expect(read('docker-compose.yml')).toContain(`127.0.0.1:${PORT}:${PORT}`);
     expect(read('deploy/off-guard.service')).toContain(`OFF_GUARD_PORT=${PORT}`);
     expect(read('deploy/nginx.conf')).toContain(`proxy_pass http://127.0.0.1:${PORT}`);
     expect(read('deploy/macos/com.drseim.off-guard.plist')).toContain(`<string>${PORT}</string>`);
@@ -113,6 +99,31 @@ describe('the launchd template and its installer', () => {
   it('refuses to install a plist with a placeholder left in it', () => {
     expect(install).toContain('/Users/YOU');
     expect(install).toContain('refusing to install a broken agent');
+  });
+});
+
+describe('the systemd unit and its installer', () => {
+  const unit = read('deploy/off-guard.service');
+  const install = read('deploy/linux/install.sh');
+
+  it('rewrites every line that names a path on this machine', () => {
+    // The macOS template uses `/Users/YOU` placeholders; this one ships real
+    // defaults, so what has to hold is that the installer overwrites each of
+    // them rather than leaving one at somebody else's path.
+    for (const key of ['WorkingDirectory', 'ExecStart', 'Environment=OFF_GUARD_DB']) {
+      expect(unit, `the unit has no ${key}`).toContain(`${key}=`);
+      expect(install, `install.sh does not rewrite ${key}`).toContain(`s|^${key}=.*|`);
+    }
+  });
+
+  it('checks the result rather than trusting the substitution', () => {
+    expect(install).toContain('would point at something that is not there');
+  });
+
+  it('leaves the database alone when it uninstalls', () => {
+    expect(install).toContain('--uninstall');
+    expect(install).toMatch(/database at \$\{DB_DIR\} and the .* are untouched/);
+    expect(install).not.toMatch(/rm -rf .*DB_DIR/);
   });
 });
 

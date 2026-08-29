@@ -8,6 +8,7 @@
     "node": ">=20"
   },
   "scripts": {
+    "backup": "node tools/backup.js",
     "build:data": "node tools/build-data/build.js",
     "build:data:fetch": "node tools/build-data/upstream.js",
     "build:fonts": "node tools/build-fonts/build.js",

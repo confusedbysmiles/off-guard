@@ -11,7 +11,7 @@ creature data, reference tables and homebrew are global.
 
 **Status: complete, and running.** It has been live since 29 August 2026 on a
 Mac under launchd, reached through a Cloudflare Tunnel, and has been played on
-from a laptop, a phone and an iPad. 617 unit tests and 47 end-to-end tests, run
+from a laptop, a phone and an iPad. 628 unit tests and 47 end-to-end tests, run
 at a host root and at a subdirectory, in Chromium and — for the parts where
 engines differ — in WebKit. See [deploy/GOING-LIVE.md](deploy/GOING-LIVE.md).
 
@@ -41,6 +41,7 @@ npm run build:tables     # regenerates src/rules/tables/ from the pinned checkou
 npm run build:reference  # regenerates data/reference.json, which is checked in
 npm run build:fonts   # refetches Jost into public/assets/fonts/
 npm run check:contrast
+npm run backup        # a consistent one-file copy, safe while the server runs
 npm run test:e2e      # Playwright: Chromium for everything, WebKit for the
                       # engine-specific parts. Needs `npx playwright install
                       # chromium webkit`.
@@ -555,9 +556,12 @@ of, almost all of them adventure paths; see
 
 ## Deploying it
 
-Four shapes, and the browser needs no configuration for any of them. They are
+Three shapes, and the browser needs no configuration for any of them. They are
 listed in order of how much evidence there is that they work, which is not the
-same as the order they were written in.
+same as the order they were written in. There is no container: for one process
+with one SQLite file, reached through a tunnel that dials out, a runtime VM on
+the machine buys isolation this does not need and moves the database somewhere
+harder to back up.
 
 **Through a Cloudflare Tunnel, on macOS.** This is the one that is running.
 [deploy/GOING-LIVE.md](deploy/GOING-LIVE.md) walks it through end to end, and
@@ -581,27 +585,27 @@ Pages site with it. Splitting one hostname across two origins needs a Cloudflare
 Worker in front of both. The application supports either — this is a deployment
 choice, and the subdomain is the cheap one.
 
-**As a systemd service.** *Written, not run — this was developed on a Mac.*
-`deploy/off-guard.service` is a unit with a dedicated user,
-`ProtectSystem=strict`, one writable path, an empty capability bounding set and
-a `@system-service` syscall filter. It binds loopback and expects nginx in
-front, because the token is in the URL and a URL over plain HTTP is a postcard.
+**On a Linux box, under systemd.** This is the migration path — the point of a
+machine that is always on is that a laptop can then sleep. *The unit has never
+been started; there is no systemd here.* `sudo ./deploy/linux/install.sh` is the
+mirror of the macOS one: it fills the real paths into the unit, refuses if the
+result points at a node or a checkout that is not there, checks that
+`better-sqlite3` actually loads under that Node — it is a native module, and a
+`node_modules` carried from another machine will not — creates the system user
+and its one writable directory, and waits for `/healthz`.
 
-**In a container.** `docker compose up -d`, then
-`docker compose exec off-guard node tools/mint-gm-token.js` for the GM link.
-The image is two stages so the C++ toolchain that builds `better-sqlite3` is
-not in the image that runs; the container is read-only apart from the database
-volume, drops all capabilities, and publishes only to `127.0.0.1`.
+`deploy/off-guard.service` itself is hardened well past what one table needs:
+dedicated user, `ProtectSystem=strict`, one `ReadWritePaths`, an empty
+capability bounding set, `@system-service` syscall filter, `AF_INET`/`AF_INET6`
+and nothing else. It binds loopback and expects TLS in front — nginx, or the
+same Cloudflare Tunnel — because the token is in the URL and a URL over plain
+HTTP is a postcard.
 
-*Written, not run.* No image has ever been built: there is no container runtime
-on the machine this was developed on. What can be checked without one is
-checked, by `tests/deploy.test.js` rather than by assertion — every `COPY`
-names a path that exists, every `OFF_GUARD_` variable any manifest sets is one
-the application reads and `.env.example` documents, and the port is the same
-number in the Dockerfile, the compose file, the nginx snippet, the systemd unit,
-the launchd plist and the server's own default. That catches a renamed
-directory or a typo'd variable. It does not catch anything that only shows up
-when an image is built, so the first `docker compose up` is still a first.
+**Moving between them** is [deploy/MIGRATING.md](deploy/MIGRATING.md). The short
+version is that access tokens live in the database rather than in configuration
+or in the hostname, so moving the database and leaving the hostname pointed at
+whatever now runs keeps every player's existing bookmark working. Nobody has to
+be sent a new link.
 
 **Serving from a subdirectory.** The brief puts this at `drseim.com/off-guard`
 rather than on a host of its own. Set `OFF_GUARD_BASE_PATH=/off-guard` and use
@@ -635,11 +639,30 @@ token hash. **It is not one file.** WAL mode means recent writes live in
 silently loses them — which is how, while testing the token migration, a copy
 came back with one token in it instead of three.
 
-Use SQLite's own backup, which is consistent against a running server:
+Use the backup tool, which is safe to run against a server that is mid-session:
 
 ```bash
-sqlite3 /var/lib/off-guard/off-guard.sqlite ".backup '/backups/off-guard.sqlite'"
+npm run backup                          # ~/off-guard-backups/<date>.sqlite
+npm run backup /Volumes/Backup/off-guard.sqlite
+npm run backup --verify-only <file>     # integrity check and a row summary
 ```
+
+It goes through SQLite's online backup API, which copies page by page and
+restarts if a writer commits underneath it. That API is already linked into
+`better-sqlite3`, so this needs nothing installed — the documented alternative,
+`sqlite3 … ".backup …"`, is correct but assumes the SQLite command-line tool,
+which is on neither a stock macOS nor a minimal Debian.
+
+The file it writes is switched to DELETE journalling before you get it, so the
+backup itself is genuinely one file. Without that step the copy would inherit
+WAL from the source and moving it with `cp` would reproduce the exact failure
+the tool exists to prevent.
+
+It prints what it copied — campaigns, characters, encounters, tokens — because a
+structurally valid database with nothing in it passes an integrity check and is
+still the wrong thing to carry to a new machine. `tests/backup.test.js` builds a
+database with writes still in the log, copies it both ways, and asserts the
+difference.
 
 ## Licensing
 
