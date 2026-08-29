@@ -37,9 +37,20 @@ describe('the engine runs anywhere', () => {
     }
   });
 
-  it('has no dependencies at all', () => {
+  it('imports no package, so the browser can load it directly', () => {
+    // The application has dependencies; the rules engine must not reach any of
+    // them. Every specifier above is relative, which is the assertion -- this
+    // one guards against a bare specifier being added to a *new* file.
     const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'));
-    expect(pkg.dependencies ?? {}).toEqual({});
+    const packages = Object.keys(pkg.dependencies ?? {});
+    for (const file of files) {
+      const source = readFileSync(file, 'utf8');
+      for (const name of packages) {
+        expect(source, `${file} imports ${name}`).not.toMatch(
+          new RegExp(`from\\s+'${name.replace(/[/@]/g, '\\$&')}`),
+        );
+      }
+    }
   });
 });
 

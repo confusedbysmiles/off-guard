@@ -9,15 +9,15 @@ Multiple concurrent campaigns are first-class. A character belongs to exactly
 one campaign; an encounter belongs to one campaign but can be copied to another;
 creature data, reference tables and homebrew are global.
 
-**Status: milestone 2 of 9.** The data pipeline and the rules engine exist.
-There is no server and no interface yet.
+**Status: milestone 3 of 9.** Data pipeline, rules engine, and a running
+campaign-scoped API. There is no interface yet.
 
 | # | Milestone | State |
 |---|-----------|-------|
 | 1 | Data pipeline, normalized creature format, inline-markup resolver | done |
 | 2 | Rules engine + tests | done |
-| 3 | Server, schema, migrations, token access, campaign-scoped API | next |
-| 4 | Player character sheet, Pathbuilder import | |
+| 3 | Server, schema, migrations, token access, campaign-scoped API | done |
+| 4 | Player character sheet, Pathbuilder import | next |
 | 5 | GM dashboard: campaigns, party panel, encounter builder, XP budget | |
 | 6 | Initiative tracker | |
 | 7 | Shared screen over SSE | |
@@ -29,9 +29,51 @@ There is no server and no interface yet.
 ```bash
 npm install
 npm test             # no data build required
+npm run mint-gm      # prints your GM link, once
+npm start            # http://127.0.0.1:8787
+
 npm run build:data   # ~7 minutes on a cold cache, ~6 seconds after
 npm run build:tables # regenerates src/rules/tables/ from the pinned checkout
 ```
+
+Configuration is documented in `.env.example`; every value has a working
+default. Migrations in `migrations/` run at startup, each in its own
+transaction.
+
+## Access
+
+There are no accounts and no passwords. Access is by unguessable token in the
+URL — 128 bits, rendered as 26 characters of Crockford base32, which drops I, L,
+O and U so a link can be read aloud across a table and typed back without
+ambiguity.
+
+| Link | Reaches |
+|------|---------|
+| `/gm/<token>` | every campaign. One token, minted by `npm run mint-gm`, never through the API |
+| `/c/<token>` | one character in one campaign, read/write |
+| `/table/<token>` | one campaign's shared screen, read-only |
+
+The rule the model rests on: **a campaign id that arrives from the client is
+never trusted.** Every store function takes the scope resolved from the URL
+token, and a campaign id that does not match it is refused rather than quietly
+replaced with the caller's own — silent redirection would hide a bug and turn a
+probe into a request that merely returned something else. Campaign filters are
+in the SQL, so a character id from another campaign returns no row at all rather
+than a row that is checked afterwards.
+
+Malformed, unknown, revoked and wrong-kind tokens all produce the same 404 after
+the same work, so none can be told apart from outside. Failures are recorded with
+a four-character fingerprint, never the token; Fastify's own request logging is
+off, because its log lines carry the URL and the URL is the credential. Rate
+limiting is per IP. Rotation revokes immediately and keeps the old row, so an
+old log line still means something.
+
+Tokens are stored in the clear. They protect data that lives in the same SQLite
+file, so hashing them would not raise the bar for anyone holding the file, and it
+would stop the dashboard re-showing a player their link — which is a real
+workflow, and rotation is the answer to compromise. The schema enforces scoping
+with CHECK constraints, so a bug in application code cannot produce a character
+token with no campaign or a GM token bound to one.
 
 `build:data` clones the pinned `foundryvtt/pf2e` commit into `.cache/` (sparse,
 packs only) and writes `data/creatures/`, `data/hazards/`, `data/index.json` and
