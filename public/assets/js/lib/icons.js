@@ -28,6 +28,8 @@ const PATHS = {
   alert:      'M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z',
   dice:       'M4 4h16v16H4zM8.5 8.5h.01M15.5 15.5h.01M12 12h.01',
   book:       'M4 4h11a3 3 0 0 1 3 3v13H7a3 3 0 0 1-3-3zM18 7h2v13H7',
+  screen:     'M3 4h18v12H3z M8 20h8 M12 16v4',
+  phone:      'M8 2h8a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z M11 18h2',
 };
 
 export const ICON_NAMES = Object.keys(PATHS);

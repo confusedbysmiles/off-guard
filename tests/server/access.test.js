@@ -80,14 +80,32 @@ describe('refusals are indistinguishable', () => {
   });
 });
 
-describe('rate limiting', () => {
-  it('cuts off a run of guesses from one address', async () => {
+describe('the guessing defence', () => {
+  it('cuts off an address that keeps failing', async () => {
     let limited = 0;
-    for (let i = 0; i < 45; i += 1) {
+    for (let i = 0; i < 25; i += 1) {
       const res = await app.inject({ method: 'GET', url: `/api/c/${mintToken()}` });
       if (res.statusCode === 429) limited += 1;
     }
     expect(limited).toBeGreaterThan(0);
+  });
+
+  it('does not throttle a working link, however busy the session', async () => {
+    // The defence counts failures, not requests. A GM at a table makes several
+    // requests per action, and a cap tight enough to matter to an attacker
+    // would throttle the one person the application exists for.
+    for (let i = 0; i < 120; i += 1) {
+      const res = await app.inject({ method: 'GET', url: `/api/c/${world.tuesday.characterToken}` });
+      expect(res.statusCode, `request ${i}`).toBe(200);
+    }
+  });
+
+  it('stops a page load from a guessing address too', async () => {
+    for (let i = 0; i < 20; i += 1) {
+      await app.inject({ method: 'GET', url: `/c/${mintToken()}` });
+    }
+    const res = await app.inject({ method: 'GET', url: `/c/${mintToken()}` });
+    expect(res.statusCode).toBe(429);
   });
 });
 

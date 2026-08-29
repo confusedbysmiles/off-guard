@@ -99,6 +99,23 @@ export function recordFailure(db, { ip = '', path = '', tokenPrefix = '' }) {
     .run(ip, path, tokenPrefix);
 }
 
+/**
+ * How many times this address has failed recently.
+ *
+ * This is what the guessing defence is actually keyed on. A blanket
+ * requests-per-minute cap punishes the one legitimate user -- a GM at a table
+ * clicking through a dashboard makes several requests per action -- while doing
+ * nothing a failure counter does not do better: someone walking the token space
+ * produces failures and nothing else.
+ */
+export function failureCount(db, ip, { minutes = 5 } = {}) {
+  const row = db.prepare(`
+    SELECT COUNT(*) AS n FROM access_failure
+    WHERE ip = ? AND at >= datetime('now', ?)
+  `).get(String(ip ?? ''), `-${Number(minutes)} minutes`);
+  return row?.n ?? 0;
+}
+
 export function recentFailures(db, { minutes = 60 } = {}) {
   return db.prepare(`
     SELECT ip, COUNT(*) AS attempts, MAX(at) AS lastAt

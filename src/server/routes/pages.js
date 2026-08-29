@@ -12,7 +12,7 @@ import { resolve } from 'node:path';
 
 import { resolveScope } from '../scope.js';
 import { isWellFormed, normalizeToken, tokenFingerprint } from '../tokens.js';
-import { recordFailure } from '../store/tokens.js';
+import { failureCount, recordFailure } from '../store/tokens.js';
 
 export async function registerPageRoutes(app, { publicDir }) {
   const shells = new Map();
@@ -22,6 +22,13 @@ export async function registerPageRoutes(app, { publicDir }) {
   };
 
   const page = (kind, file) => async (request, reply) => {
+    // The same failure counter the API gate uses: a page load with a bad token
+    // is exactly as much of a guess as an API call with one.
+    if (failureCount(app.db, request.ip, { minutes: 5 }) >= 15) {
+      reply.status(429).type('text/html');
+      return shell('not-found.html');
+    }
+
     const token = normalizeToken(request.params.token);
     const scope = isWellFormed(token) ? resolveScope(app.db, token) : null;
 
@@ -42,4 +49,5 @@ export async function registerPageRoutes(app, { publicDir }) {
 
   app.get('/c/:token', { onRequest: app.rateLimit() }, page('character', 'sheet.html'));
   app.get('/gm/:token', { onRequest: app.rateLimit() }, page('gm', 'gm.html'));
+  app.get('/table/:token', { onRequest: app.rateLimit() }, page('table', 'table.html'));
 }

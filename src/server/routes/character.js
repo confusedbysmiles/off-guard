@@ -9,6 +9,7 @@ import { applyPatch, getOwnCharacter, versionsFor } from '../store/characters.js
 import { getCampaign } from '../store/campaigns.js';
 import { diffImport, mapPathbuilder } from '../../shared/pathbuilder.js';
 import { fetchBuild, fetchEnabled } from '../pathbuilder-fetch.js';
+import { characterChannel, streamTo } from '../events.js';
 
 export async function registerCharacterRoutes(app) {
   const { db } = app;
@@ -23,6 +24,22 @@ export async function registerCharacterRoutes(app) {
       // nothing about the other players.
       campaign: { id: campaign.id, name: campaign.name, accentColor: campaign.accentColor },
     };
+  });
+
+  /**
+   * The live stream, so a condition the GM pushes appears on the player's phone
+   * without them refreshing.
+   */
+  app.get('/stream', async (request, reply) => {
+    streamTo(reply, request, {
+      bus: app.bus,
+      channel: characterChannel(request.scope.characterId),
+      snapshot: () => {
+        const character = getOwnCharacter(db, request.scope);
+        return { character, versions: versionsFor(db, character.id) };
+      },
+    });
+    return reply;
   });
 
   app.patch('/', async (request) => applyPatch(

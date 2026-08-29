@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#1A1033">
+<!-- No campaign name in the title: this link gets pasted into a group chat, and
+     a preview that names the game is a preview that names the game. -->
+<title>Initiative</title>
+<link rel="stylesheet" href="/assets/css/tokens.css">
+<link rel="stylesheet" href="/assets/css/base.css">
+<link rel="stylesheet" href="/assets/css/table.css">
+</head>
+<body class="table-screen" data-density="tv">
+
+<header class="table-bar">
+  <h1 class="table-bar__round" id="round">—</h1>
+  <div class="table-bar__tools">
+    <output class="connection" id="connection" data-state="connecting">
+      <span class="connection__dot" aria-hidden="true"></span>
+      <span id="connection-text">Connecting…</span>
+    </output>
+    <button class="btn btn--icon btn--quiet" id="density" type="button" aria-pressed="true">
+      <span class="sr-only">Switch to phone size</span>
+    </button>
+  </div>
+</header>
+
+<!-- The turn change is announced here. The list itself is not a live region:
+     an HP change on a creature four rows down should not interrupt a reader. -->
+<p class="sr-only" id="announcement" role="status" aria-live="polite"></p>
+
+<main id="order" class="order">
+  <p class="table-empty" id="empty">No fight running.</p>
+</main>
+
+<script type="module" src="/assets/js/table/main.js"></script>
+</body>
+</html>

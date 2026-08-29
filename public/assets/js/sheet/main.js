@@ -154,6 +154,8 @@ async function start() {
 
   addImportButton();
 
+  connectStream();
+
   // Everything queued is sent before the tab closes, and the queue survives if
   // the send does not arrive.
   addEventListener('visibilitychange', () => { if (document.hidden) store.flush(); });
@@ -170,6 +172,36 @@ async function start() {
       store.flush();
     }
   });
+}
+
+/**
+ * The live stream, so a condition the GM pushes appears without a refresh.
+ *
+ * EventSource reconnects on its own; the only thing to handle here is a tab
+ * that was asleep, which comes back with a stream the browser has not yet
+ * noticed is dead.
+ */
+let source = null;
+
+function connectStream() {
+  if (typeof EventSource !== 'function') return;
+  source?.close();
+  source = new EventSource(`${endpoint}/stream`);
+
+  const onData = (event) => {
+    try {
+      store.receive(JSON.parse(event.data));
+    } catch (error) {
+      console.error('Could not read an update', error);
+    }
+  };
+
+  source.addEventListener('snapshot', onData);
+  source.addEventListener('character', onData);
+
+  addEventListener('visibilitychange', () => {
+    if (!document.hidden && source?.readyState === EventSource.CLOSED) connectStream();
+  }, { once: true });
 }
 
 function addImportButton() {

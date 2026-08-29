@@ -9,8 +9,8 @@ Multiple concurrent campaigns are first-class. A character belongs to exactly
 one campaign; an encounter belongs to one campaign but can be copied to another;
 creature data, reference tables and homebrew are global.
 
-**Status: milestone 6 of 9.** Data pipeline, rules engine, campaign-scoped API,
-player character sheet, GM dashboard and a working initiative tracker.
+**Status: milestone 7 of 9.** All three surfaces work, and the shared screen
+updates live.
 
 | # | Milestone | State |
 |---|-----------|-------|
@@ -20,8 +20,8 @@ player character sheet, GM dashboard and a working initiative tracker.
 | 4 | Player character sheet, Pathbuilder import | done |
 | 5 | GM dashboard: campaigns, party panel, encounter builder, XP budget | done |
 | 6 | Initiative tracker | done |
-| 7 | Shared screen over SSE | next |
-| 8 | Reference drawer, dice roller, Recall Knowledge helper | |
+| 7 | Shared screen over SSE | done |
+| 8 | Reference drawer, dice roller, Recall Knowledge helper | next |
 | 9 | Deployment, accessibility and security pass | |
 
 ## Running it
@@ -36,6 +36,7 @@ npm run build:data    # ~7 minutes on a cold cache, ~6 seconds after
 npm run build:tables  # regenerates src/rules/tables/ from the pinned checkout
 npm run build:fonts   # refetches Jost into public/assets/fonts/
 npm run check:contrast
+npm run test:e2e      # Playwright, three surfaces, needs `npx playwright install chromium`
 ```
 
 Configuration is documented in `.env.example`; every value has a working
@@ -253,6 +254,35 @@ Temporary hit points are spent first and not healed back; dropping to 0 sets
 dying to 1 plus the wounded value; damage while dying raises it; dying 4 is
 reported as death; and being healed out of dying raises the wounded value, which
 is easy to forget at a table and easier to forget in code.
+
+## The shared screen
+
+`/table/<token>`, one per campaign, read-only. Nothing on the page can write and
+the token cannot write either — every mutating store function refuses a table
+scope, so the page having no controls is belt and braces rather than the only
+guard. A Playwright test asserts the page contains no inputs at all.
+
+Player characters show their numbers; the party knows its own. Creatures show a
+descriptor — Unharmed through Near Death — unless the GM flips that one creature
+to numeric. **Hidden combatants are absent, not redacted**: they are filtered out
+of the payload before it leaves the server, and the active-turn index is
+recomputed against the filtered list, so neither a gap in the order nor a jump in
+the highlight can betray that something is there.
+
+Updates arrive over Server-Sent Events. Every event carries the whole view rather
+than a delta — it is a few hundred bytes, and it removes the entire class of bug
+where a client drifts from the server after a dropped event. The connection state
+is always on screen, because a screen cast to a television that has quietly
+stopped updating is worse than one that says so. A turn change fires an
+`aria-live` announcement; the list itself is not a live region, so a creature four
+rows down losing hit points does not interrupt a screen reader mid-sentence.
+
+Two densities from one stylesheet: `tv`, which is the default because that is
+usually what the link is for, and `phone`.
+
+Player sheets are on the same stream. A condition the GM pushes appears on the
+player's phone without a refresh, and anything the player has queued locally wins
+over the push — a condition must not overwrite a sentence being typed.
 
 ## Look
 

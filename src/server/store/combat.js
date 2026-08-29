@@ -7,6 +7,7 @@
  * that says "hidden", tells the table there is something there.
  */
 import { applyDamage, endOfTurn, applyAutomatic, startOfTurn } from '../../rules/conditions.js';
+import { applyPatch } from './characters.js';
 import { assertWritable, campaignFor, isGm, NotFoundError, ScopeError } from '../scope.js';
 
 const COMBAT_COLUMNS = `
@@ -19,13 +20,15 @@ const COMBATANT_COLUMNS = `
   display_name AS displayName, initiative, sort_order AS sortOrder,
   hp_current AS hpCurrent, hp_max AS hpMax, hp_temp AS hpTemp,
   conditions, dying, wounded, hero_points AS heroPoints, state, notes,
-  visible, hp_numeric AS hpNumeric, revealed, stat_block AS statBlock
+  visible, hp_numeric AS hpNumeric, revealed, stat_block AS statBlock,
+  persistent_damage AS persistentDamage
 `;
 
 const hydrate = (row) => (row ? {
   ...row,
   conditions: JSON.parse(row.conditions),
   revealed: JSON.parse(row.revealed),
+  persistentDamage: JSON.parse(row.persistentDamage ?? '[]'),
   statBlock: row.statBlock ? JSON.parse(row.statBlock) : null,
   visible: Boolean(row.visible),
   hpNumeric: Boolean(row.hpNumeric),
@@ -175,15 +178,26 @@ export function updateCombatant(db, scope, combatantId, fields, requestedCampaig
     sets.push(`${column} = @${key}`);
     params[key] = BOOLEAN_FIELDS.has(key) ? (fields[key] ? 1 : 0) : fields[key];
   }
-  for (const key of ['conditions', 'revealed']) {
+  for (const key of ['conditions', 'revealed', 'persistentDamage']) {
     if (!(key in fields)) continue;
-    sets.push(`${key} = @${key}`);
+    sets.push(`${key === 'persistentDamage' ? 'persistent_damage' : key} = @${key}`);
     params[key] = JSON.stringify(fields[key] ?? []);
   }
   if (!sets.length) return getCombatant(db, scope, combatantId, requestedCampaignId);
 
   db.prepare(`UPDATE combatant SET ${sets.join(', ')} WHERE id = @id`).run(params);
-  return getCombatant(db, scope, combatantId, requestedCampaignId);
+
+  // A player character's conditions belong to their sheet, which is the copy
+  // they are looking at on their phone. Writing them in two places would mean
+  // two answers to "am I frightened"; the combatant row is the copy that
+  // follows, and `tableView` reads the sheet for a linked character.
+  const after = getCombatant(db, scope, combatantId, requestedCampaignId);
+  if ('conditions' in fields && after.characterId) {
+    applyPatch(db, scope, after.characterId, [{ path: 'conditions', value: fields.conditions ?? [] }],
+      { by: 'gm', campaignId: requestedCampaignId });
+  }
+
+  return after;
 }
 
 export function removeCombatant(db, scope, combatantId, requestedCampaignId = null) {
@@ -318,8 +332,8 @@ export function tableView(db, scope, requestedCampaignId = null) {
   if (!combat) return { round: null, turnIndex: null, combatants: [] };
 
   const characters = new Map(
-    db.prepare('SELECT id, name, player_name AS playerName FROM character WHERE campaign_id = ?')
-      .all(campaignId).map((c) => [c.id, c]),
+    db.prepare('SELECT id, name, player_name AS playerName, sheet FROM character WHERE campaign_id = ?')
+      .all(campaignId).map((c) => [c.id, { ...c, sheet: JSON.parse(c.sheet) }]),
   );
 
   const combatants = combat.combatants
@@ -331,7 +345,8 @@ export function tableView(db, scope, requestedCampaignId = null) {
         isPlayer: Boolean(character),
         name: character ? character.name : c.displayName,
         playerName: character ? character.playerName : null,
-        conditions: c.conditions,
+        // One source of truth: the sheet for a player, the row for a creature.
+        conditions: character ? (character.sheet.conditions ?? []) : c.conditions,
         revealed: c.revealed,
         state: c.state,
       };

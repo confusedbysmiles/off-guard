@@ -15,9 +15,11 @@
     "start": "node src/server/index.js",
     "mint-gm": "node tools/mint-gm-token.js",
     "build:fonts": "node tools/build-fonts/build.js",
-    "check:contrast": "node tools/check-contrast.js"
+    "check:contrast": "node tools/check-contrast.js",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "vitest": "^4.1.11"
   },
   "dependencies": {

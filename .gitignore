@@ -9,3 +9,6 @@ data/hazards/
 data/index.json
 data/glossary.json
 data/build-report.json
+e2e/.world.json
+test-results/
+playwright-report/

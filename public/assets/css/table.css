@@ -1,0 +1,194 @@
+/**
+ * The shared initiative screen.
+ *
+ * Two densities from one stylesheet. `data-density="tv"` is the default because
+ * that is what the link is usually for: a television across a room, read by
+ * people who are not going to lean in. `phone` is the same layout at a size that
+ * fits in a hand.
+ *
+ * Everything here is read-only. There are no controls on this page beyond the
+ * density toggle, and nothing on it can write.
+ */
+
+.table-screen {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  /* The ground is the deep one in both themes: a bright screen in a dark room
+     is the reason people turn these things off. */
+  background: var(--surface-sunk);
+}
+
+/* --- Sizes -------------------------------------------------------------- */
+
+.table-screen[data-density='tv'] {
+  --row-name: clamp(1.8rem, 3.6vw, 3.4rem);
+  --row-meta: clamp(1rem, 1.5vw, 1.6rem);
+  --row-gap: clamp(0.5rem, 1vw, 1rem);
+  --round-size: clamp(1.6rem, 3vw, 3rem);
+}
+
+.table-screen[data-density='phone'] {
+  --row-name: 1.3rem;
+  --row-meta: 0.9rem;
+  --row-gap: 0.4rem;
+  --round-size: 1.3rem;
+}
+
+/* --- Bar ---------------------------------------------------------------- */
+
+.table-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: var(--sp-3) var(--sp-5);
+  background: var(--gradient);
+  color: #FFFFFF;
+}
+
+.table-bar__round { font-size: var(--round-size); letter-spacing: 0.02em; }
+.table-bar__tools { display: flex; align-items: center; gap: var(--sp-3); }
+.table-bar .btn { color: #FFFFFF; border-color: rgb(255 255 255 / 0.35); }
+.table-bar :focus-visible { outline-color: #FFFFFF; }
+
+.connection {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 4px var(--sp-3);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.18);
+  font-size: var(--row-meta);
+}
+.connection__dot {
+  width: 0.7em; height: 0.7em;
+  border-radius: 50%;
+  background: currentColor;
+}
+.connection[data-state='live'] .connection__dot { background: #6EE7B7; }
+.connection[data-state='connecting'] .connection__dot { background: #FCD34D; }
+.connection[data-state='lost'] .connection__dot { background: #FCA5A5; }
+.connection[data-state='lost'] { background: rgb(220 38 38 / 0.65); }
+
+/* --- The order ----------------------------------------------------------- */
+
+.order {
+  flex: 1;
+  display: grid;
+  gap: var(--row-gap);
+  padding: var(--sp-4) var(--sp-5) var(--sp-6);
+  align-content: start;
+  max-width: 1600px;
+  width: 100%;
+  margin: 0 auto;
+  list-style: none;
+}
+
+.table-empty {
+  align-self: center;
+  justify-self: center;
+  font-size: var(--row-name);
+  color: var(--ink-dim);
+}
+
+.turn {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(8rem, 22rem);
+  align-items: center;
+  gap: var(--sp-4);
+  padding: var(--row-gap) var(--sp-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 6px solid transparent;
+  border-radius: var(--radius);
+}
+
+/*
+ * The current turn.
+ *
+ * Legible from across a room means more than a colour: the row grows, gains the
+ * gradient down its edge and carries a caret, so it survives a bad viewing
+ * angle, a cheap television's colour rendering and a colour-blind reader.
+ */
+.turn--current {
+  background: var(--primary-sunk);
+  border-color: var(--primary);
+  border-left: 10px solid transparent;
+  border-image: var(--gradient) 1;
+  box-shadow: var(--shadow);
+}
+.turn--current .turn__name { font-size: calc(var(--row-name) * 1.15); }
+.turn__caret { color: var(--primary-ink); }
+
+.turn--waiting { opacity: 0.7; }
+
+.turn__name {
+  font-size: var(--row-name);
+  font-weight: 600;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.turn__player { font-size: var(--row-meta); color: var(--ink-dim); }
+
+.turn__state {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+  font-size: var(--row-meta);
+}
+
+.turn__condition {
+  padding: 2px var(--sp-3);
+  border-radius: 999px;
+  border: 1px solid var(--warn);
+  color: var(--warn-ink);
+}
+
+.turn__fact {
+  padding: 2px var(--sp-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  color: var(--ink-dim);
+}
+
+.turn__health { text-align: right; }
+
+.turn__descriptor {
+  font-size: var(--row-meta);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.turn__descriptor[data-health='Unharmed'] { color: var(--good-ink); }
+.turn__descriptor[data-health='Lightly Injured'] { color: var(--good-ink); }
+.turn__descriptor[data-health='Moderately Injured'] { color: var(--warn-ink); }
+.turn__descriptor[data-health='Heavily Injured'] { color: var(--warn-ink); }
+.turn__descriptor[data-health='Near Death'] { color: var(--bad-ink); }
+
+.turn__numbers { font-size: var(--row-meta); font-variant-numeric: tabular-nums; }
+
+.turn__bar {
+  appearance: none;
+  width: 100%;
+  height: calc(var(--row-meta) * 0.55);
+  margin-top: var(--sp-1);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--surface-sunk);
+}
+.turn__bar::-webkit-progress-bar { background: var(--surface-sunk); }
+.turn__bar::-webkit-progress-value { background: var(--good); }
+.turn__bar::-moz-progress-bar { background: var(--good); }
+.turn__bar[data-hurt='some']::-webkit-progress-value { background: var(--warn); }
+.turn__bar[data-hurt='some']::-moz-progress-bar { background: var(--warn); }
+.turn__bar[data-hurt='badly']::-webkit-progress-value { background: var(--bad); }
+.turn__bar[data-hurt='badly']::-moz-progress-bar { background: var(--bad); }
+
+@media (max-width: 48rem) {
+  .turn { grid-template-columns: minmax(0, 1fr); }
+  .turn__health { text-align: left; }
+  .order { padding: var(--sp-3); }
+  .table-bar { padding: var(--sp-2) var(--sp-3); }
+}

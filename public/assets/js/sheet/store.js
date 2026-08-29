@@ -258,8 +258,25 @@ export function createStore({ endpoint, storageKey = '', fetchImpl = globalThis.
     schedule(0);
   }
 
+  /**
+   * State pushed from the server, over the live stream.
+   *
+   * Anything still queued locally wins: a condition the GM pushed must not
+   * overwrite the sentence the player is in the middle of typing, and the
+   * queued write is by definition newer than what the server has sent.
+   */
+  function receive(payload) {
+    if (!payload?.character) return;
+    character = payload.character;
+    versions = payload.versions ?? versions;
+    sheet = payload.character.sheet ?? {};
+    for (const [path, write] of Object.entries(queue)) writePath(sheet, path, write.value);
+    persist(sheetKey, { sheet, versions, character, campaign });
+    notify();
+  }
+
   return {
-    subscribe, load, set, undo, flush, keepLocal, dismissConflict, replaceAll,
+    subscribe, load, set, undo, flush, keepLocal, dismissConflict, replaceAll, receive,
     get state() { return state(); },
     get sheet() { return sheet; },
   };

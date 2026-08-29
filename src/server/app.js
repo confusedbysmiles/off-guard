@@ -21,13 +21,14 @@ import fastifyStatic from '@fastify/static';
 
 import { resolveScope, ScopeError, NotFoundError } from './scope.js';
 import { isWellFormed, normalizeToken, tokenFingerprint } from './tokens.js';
-import { recordFailure, touchToken } from './store/tokens.js';
+import { failureCount, recordFailure, touchToken } from './store/tokens.js';
 import { ROBOTS_TXT, securityHeaders } from './security.js';
 import { registerGmRoutes } from './routes/gm/index.js';
 import { registerCharacterRoutes } from './routes/character.js';
 import { registerTableRoutes } from './routes/table.js';
 import { registerPageRoutes } from './routes/pages.js';
 import { openCatalogue } from './catalogue.js';
+import { createEventBus } from './events.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = resolve(HERE, '../../public');
@@ -41,7 +42,9 @@ const SHARED_DIR = resolve(HERE, '../shared');
  * themselves. Expressed as a controller rather than the `disableRequestLogging`
  * option, which is deprecated in Fastify 5.
  */
-export async function buildApp({ db, catalogue = null, logger = false, trustProxy = true } = {}) {
+export async function buildApp({
+  db, catalogue = null, bus = null, logger = false, trustProxy = true,
+} = {}) {
   const app = Fastify({
     logger,
     trustProxy,
@@ -52,12 +55,21 @@ export async function buildApp({ db, catalogue = null, logger = false, trustProx
   // The catalogue is global across campaigns and read-only, so it is a
   // process-wide value rather than something a request builds.
   app.decorate('catalogue', catalogue ?? openCatalogue());
+  app.decorate('bus', bus ?? createEventBus());
+  app.addHook('onClose', async () => { app.bus.close(); });
 
+  /**
+   * Two different limits, because they defend against two different things.
+   *
+   * This one is a ceiling on traffic from a single address -- generous, because
+   * the legitimate user is one GM whose dashboard makes several requests per
+   * action, and a cap tight enough to matter to an attacker would throttle a
+   * session at a table. Guessing is handled below by counting *failures*, which
+   * is what an attacker produces and a real user does not.
+   */
   await app.register(rateLimit, {
     global: false,
-    // Keyed by IP. A GM refreshing a dashboard is nowhere near this; someone
-    // walking the token space hits it immediately.
-    max: 30,
+    max: 600,
     timeWindow: '1 minute',
   });
 
@@ -137,6 +149,10 @@ export async function buildApp({ db, catalogue = null, logger = false, trustProx
  * A malformed token, an unknown token and a revoked token all produce the same
  * 404 after the same work, so none of them can be told apart from outside.
  */
+/** A wrong link is a typo once or twice, not fifteen times in five minutes. */
+const FAILURE_LIMIT = 15;
+const FAILURE_WINDOW_MINUTES = 5;
+
 function scopedRoutes(kind, register) {
   return async function plugin(app) {
     app.addHook('onRequest', app.rateLimit());
@@ -157,6 +173,15 @@ function scopedRoutes(kind, register) {
         );
         return reply.status(404).send({ error: 'Not found' });
       };
+
+      // Someone walking the token space is recognisable by their failures, and
+      // is stopped after a handful of them rather than after a fixed number of
+      // requests. 128 bits is not guessable anyway; this makes it visible.
+      if (failureCount(app.db, request.ip, { minutes: FAILURE_WINDOW_MINUTES })
+          >= FAILURE_LIMIT) {
+        request.log.warn({ ip: request.ip }, 'too many failed token attempts');
+        return reply.status(429).send({ error: 'Too many attempts. Try again later.' });
+      }
 
       if (!isWellFormed(token)) return deny();
 
