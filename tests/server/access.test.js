@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { buildApp } from '../../src/server/app.js';
 import { resolveScope } from '../../src/server/scope.js';
-import { rotateToken } from '../../src/server/store/tokens.js';
+import { mintGmToken, rotateToken } from '../../src/server/store/tokens.js';
 import { hashToken, isWellFormed, mintToken, normalizeToken, tokenFingerprint } from '../../src/server/tokens.js';
 import { contentSecurityPolicy } from '../../src/server/security.js';
 import { freshApp, freshDb, seed } from './helpers.js';
@@ -141,7 +141,6 @@ describe('headers', () => {
 
 describe('the GM token is unique', () => {
   it('cannot be minted twice', async () => {
-    const { mintGmToken } = await import('../../src/server/store/tokens.js');
     const clean = freshDb();
     mintGmToken(clean);
     expect(() => mintGmToken(clean)).toThrow(/already exists/);
@@ -238,5 +237,44 @@ describe('tokens at rest', () => {
     expect(hashToken(a)).toBe(hashToken(a));
     expect(hashToken(a)).not.toBe(hashToken(b));
     expect(hashToken(a)).toMatch(/^[0-9a-f]{64}$/);
+  });
+});
+
+
+describe('replacing a lost GM link', () => {
+  /**
+   * The GM link is shown once and only its hash is stored, so losing it used to
+   * mean editing the database by hand. `--replace` is the supported answer, and
+   * it is not a hole: it runs on the command line of the machine holding the
+   * database, and anyone who can run it can already read every campaign in it.
+   */
+  it('revokes the old one and mints exactly one new one', () => {
+    const clean = freshDb();
+    const first = mintGmToken(clean);
+    expect(() => mintGmToken(clean)).toThrow(/already exists/);
+
+    const second = mintGmToken(clean, { replace: true });
+    expect(second).not.toBe(first);
+    expect(resolveScope(clean, first)).toBeNull();
+    expect(resolveScope(clean, second).kind).toBe('gm');
+    expect(clean.prepare(
+      "SELECT COUNT(*) n FROM token WHERE kind = 'gm' AND revoked_at IS NULL",
+    ).get().n).toBe(1);
+    clean.close();
+  });
+
+  it('leaves the rest of the database alone', async () => {
+    const before = db.prepare('SELECT COUNT(*) n FROM campaign').get().n;
+    const gm = resolveScope(db, world.gmToken);
+    expect(gm.kind).toBe('gm');
+
+    mintGmToken(db, { replace: true });
+
+    expect(db.prepare('SELECT COUNT(*) n FROM campaign').get().n).toBe(before);
+    // Player and shared-screen links are untouched.
+    expect(resolveScope(db, world.tuesday.characterToken).kind).toBe('character');
+    expect(resolveScope(db, world.tuesday.tableToken).kind).toBe('table');
+    // And the old GM link is dead.
+    expect(resolveScope(db, world.gmToken)).toBeNull();
   });
 });

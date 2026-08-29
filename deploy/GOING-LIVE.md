@@ -100,14 +100,26 @@ Once it works, `sudo cloudflared service install` keeps it running.
 node tools/mint-gm-token.js
 ```
 
-**Printed once and never again** — tokens are stored hashed. Put it in a
-password manager before you close the terminal. If you lose it, mint a new one
-by rotating from a session you are still signed into; if you have lost every
-copy, the row has to be deleted from the database by hand.
+It prints the database it opened first — check that is the one you expect —
+then the link.
 
-Then open `https://offguard.drseim.com/gm/<token>` and, on the **Setup** tab:
-give the campaign a name and an accent colour, add each character, and make each
-player's link. Each of those is shown once too.
+**The link is printed once and never again**, because only its hash is stored.
+Put it in a password manager before you close the terminal.
+
+If you lose it:
+
+```bash
+node tools/mint-gm-token.js --replace
+```
+
+That revokes the old one and prints a new one. Everything else — campaigns,
+sheets, player links — is untouched. It is only available at the command line of
+the machine holding the database, which is the same access as reading the
+database file, so it protects nothing to make it harder.
+
+Then open the link — **the whole 26-character token, not a placeholder** — and,
+on the **Setup** tab: give the campaign a name and an accent colour, add each
+character, and make each player's link. Each of those is shown once too.
 
 ---
 

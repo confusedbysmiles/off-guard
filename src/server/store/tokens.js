@@ -23,17 +23,37 @@ const COLUMNS = `
   created_at AS createdAt, last_used_at AS lastUsedAt, revoked_at AS revokedAt
 `;
 
-/** The GM's own token. Minted by the CLI, never through the API. */
-export function mintGmToken(db, { note = '' } = {}) {
+/**
+ * The GM's own token. Minted by the CLI, never through the API.
+ *
+ * Refuses to mint a second by default: a spare GM token nobody remembers
+ * issuing is exactly the thing this access model cannot have.
+ *
+ * `replace` revokes the existing one first, which is the answer to a GM link
+ * that was printed once and lost. That is not a hole: this runs on the command
+ * line of the machine holding the database, and anyone who can run it can
+ * already read every campaign in that file. Requiring them to open SQLite and
+ * delete a row by hand would protect nothing and would go wrong in ways a
+ * checked-in function does not.
+ */
+export function mintGmToken(db, { note = '', replace = false } = {}) {
   const existing = db.prepare(
     "SELECT id FROM token WHERE kind = 'gm' AND revoked_at IS NULL",
   ).get();
-  if (existing) {
+
+  if (existing && !replace) {
     throw new Error('A GM token already exists. Rotate it rather than minting a second.');
   }
+
   const token = mintToken();
-  db.prepare("INSERT INTO token (token_hash, kind, note) VALUES (?, 'gm', ?)")
-    .run(hashToken(token), note);
+  const write = db.transaction(() => {
+    if (existing) {
+      db.prepare("UPDATE token SET revoked_at = datetime('now') WHERE id = ?").run(existing.id);
+    }
+    db.prepare("INSERT INTO token (token_hash, kind, note) VALUES (?, 'gm', ?)")
+      .run(hashToken(token), note);
+  });
+  write();
   return token;
 }
 

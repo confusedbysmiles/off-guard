@@ -17,13 +17,20 @@ import { openDatabase } from '../src/server/db.js';
 import { mintGmToken } from '../src/server/store/tokens.js';
 import { config } from '../src/server/index.js';
 
+const args = process.argv.slice(2);
+const replace = args.includes('--replace');
+const note = args.find((a) => !a.startsWith('--')) ?? '';
+
 const settings = config();
 const db = openDatabase(settings.database, { migrationsDir: settings.migrations });
 
 process.stdout.write(`\nDatabase: ${settings.database}\n`);
 
 try {
-  const token = mintGmToken(db, { note: process.argv[2] ?? '' });
+  const token = mintGmToken(db, { note, replace });
+  if (replace) {
+    process.stdout.write('\nThe previous GM link has been revoked and no longer works.\n');
+  }
   process.stdout.write(
     `\nGM link:\n\n  /gm/${token}\n\n`
     + 'This is shown once. Store it somewhere you will find it.\n\n',
@@ -31,7 +38,11 @@ try {
 } catch (error) {
   process.stderr.write(
     `\n${error.message}\n\n`
-    + 'If that is not the database you meant, set OFF_GUARD_DB -- in .env, or\n'
+    + 'If you still have that link, rotate it from the dashboard instead.\n'
+    + 'If it was lost -- it is shown once, and only its hash is stored -- replace it:\n\n'
+    + '  node tools/mint-gm-token.js --replace\n\n'
+    + 'That revokes the old one. Everything else in the database is untouched.\n\n'
+    + 'If this is not the database you meant, set OFF_GUARD_DB -- in .env, or\n'
     + 'for one command:\n\n'
     + '  OFF_GUARD_DB=/path/to/off-guard.sqlite node tools/mint-gm-token.js\n\n',
   );
