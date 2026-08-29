@@ -165,3 +165,90 @@ describe('the cross-campaign overview', () => {
     expect(tuesday.partyLevel).toBe(4);
   });
 });
+
+describe('the Pathbuilder import endpoints', () => {
+  const build = {
+    build: {
+      name: 'Kestrel Vane', class: 'Fighter', level: 6, ancestry: 'Human',
+      keyability: 'str',
+      abilities: { str: 18, dex: 14, con: 16, int: 10, wis: 12, cha: 8 },
+      attributes: { ancestryhp: 8, classhp: 10, bonushp: 0, bonushpPerLevel: 0, speed: 25 },
+      proficiencies: { perception: 6, fortitude: 6, reflex: 4, will: 4, athletics: 6 },
+      weapons: [], lores: [], spellCasters: [],
+    },
+  };
+
+  const post = (token, path, payload) => app.inject({
+    method: 'POST', url: `/api/c/${token}${path}`, payload,
+  });
+
+  it('previews without writing anything', async () => {
+    const res = await post(world.tuesday.characterToken, '/import/preview', { json: build });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.changes.some((c) => c.path === 'name' && c.to === 'Kestrel Vane')).toBe(true);
+
+    const stored = db.prepare('SELECT sheet FROM character WHERE id = ?')
+      .get(world.tuesday.characters.kestrel.id);
+    expect(JSON.parse(stored.sheet)).toEqual({});
+  });
+
+  it('applies only the changes it is given', async () => {
+    const preview = (await post(world.tuesday.characterToken, '/import/preview', { json: build })).json();
+    const chosen = preview.changes.filter((c) => c.path === 'name' || c.path === 'level');
+
+    const applied = await post(world.tuesday.characterToken, '/import/apply', { changes: chosen });
+    expect(applied.statusCode).toBe(200);
+
+    const sheet = applied.json().character.sheet;
+    expect(sheet.name).toBe('Kestrel Vane');
+    expect(sheet.level).toBe(6);
+    // Everything unchecked stayed out.
+    expect(sheet.ancestry).toBeUndefined();
+    expect(sheet.skills).toBeUndefined();
+  });
+
+  it('does not overwrite what the player typed by hand', async () => {
+    await patchSheet(world.tuesday.characterToken, [
+      { path: 'notes', value: 'Owes the innkeeper 4 gp' },
+      { path: 'feats', value: 'Power Attack' },
+    ]);
+
+    const preview = (await post(world.tuesday.characterToken, '/import/preview', { json: build })).json();
+    expect(preview.changes.map((c) => c.path)).not.toContain('notes');
+    expect(preview.changes.map((c) => c.path)).not.toContain('feats');
+
+    await post(world.tuesday.characterToken, '/import/apply', { changes: preview.changes });
+    const sheet = (await app.inject({
+      method: 'GET', url: `/api/c/${world.tuesday.characterToken}`,
+    })).json().character.sheet;
+    expect(sheet.notes).toBe('Owes the innkeeper 4 gp');
+    expect(sheet.feats).toBe('Power Attack');
+    expect(sheet.name).toBe('Kestrel Vane');
+  });
+
+  it('marks an import as an import in the field history', async () => {
+    const preview = (await post(world.tuesday.characterToken, '/import/preview', { json: build })).json();
+    const result = await post(world.tuesday.characterToken, '/import/apply', { changes: preview.changes });
+    expect(result.json().versions.name.updatedBy).toBe('import');
+  });
+
+  it('refuses a request with neither a file nor a build id', async () => {
+    const res = await post(world.tuesday.characterToken, '/import/preview', {});
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('says what the import can actually do on this server', async () => {
+    const res = await app.inject({
+      method: 'GET', url: `/api/c/${world.tuesday.characterToken}/import/capabilities`,
+    });
+    const body = res.json();
+    expect(body.fileUpload).toBe(true);
+    expect(typeof body.buildIdNote).toBe('string');
+  });
+
+  it('is not reachable from a table token', async () => {
+    const res = await post(world.tuesday.tableToken, '/import/preview', { json: build });
+    expect(res.statusCode).toBe(404);
+  });
+});

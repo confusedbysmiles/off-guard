@@ -1,0 +1,144 @@
+/**
+ * Design tokens.
+ *
+ * Dark is the default because this gets used at a table in the evening. The
+ * light theme is not an afterthought: both are checked against WCAG AA by
+ * `npm run check:contrast`, which fails the build rather than trusting a
+ * palette that looks fine on the machine it was designed on.
+ *
+ * The brief's three colours are the primary #667EEA, the accent #764BA2 and the
+ * deep ground #1A1033. Neither #667EEA nor #764BA2 reaches AA as *text* on
+ * either ground, so each has a tint for text and keeps its stated value for
+ * fills, borders and the gradient. That is the usual shape of this problem and
+ * the reason `--primary` and `--primary-ink` are separate tokens.
+ */
+
+:root {
+  color-scheme: dark;
+
+  /* Ground */
+  --bg:            #1A1033;
+  --surface:       #241844;
+  --surface-2:     #2E2055;
+  --surface-sunk:  #150D2B;
+  --border:        #3D2E68;
+  --border-strong: #7660A8;
+
+  /* Ink */
+  --ink:        #F3EFFB;
+  --ink-dim:    #BCB0D8;
+  --ink-faint:  #8E82AC;
+
+  /* Brand */
+  --primary:        #667EEA;
+  --primary-ink:    #A7B4F4;  /* the primary, as text */
+  --primary-sunk:   #2A2A66;
+  --accent:         #764BA2;
+  --accent-ink:     #C39BE4;  /* the accent, as text */
+  --gradient: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+
+  /* State */
+  --good:      #34D399;
+  --good-ink:  #6EE7B7;
+  --warn:      #FBBF24;
+  --warn-ink:  #FCD34D;
+  --bad:       #F87171;
+  --bad-ink:   #FCA5A5;
+
+  --focus: #A7B4F4;
+
+  /* Type. Jost is self-hosted; the stack behind it is what a phone shows
+     while the font loads, chosen so the reflow is small. */
+  --font: 'Jost', 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, monospace;
+
+  --step--2: 0.75rem;
+  --step--1: 0.875rem;
+  --step-0:  1rem;
+  --step-1:  1.15rem;
+  --step-2:  1.35rem;
+  --step-3:  1.7rem;
+  --step-4:  2.2rem;
+
+  /* Space */
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-5: 1.5rem;
+  --sp-6: 2rem;
+
+  --radius:    10px;
+  --radius-sm: 6px;
+  --radius-lg: 16px;
+
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.25);
+
+  /* Touch targets. The sheet is used one-handed on a phone at a table. */
+  --tap: 44px;
+}
+
+/*
+ * Light. The default `:root` above is dark, so light is applied both by the
+ * explicit toggle and by the system preference -- and the toggle must be able
+ * to win in *both* directions, hence the two selectors rather than a media
+ * query alone.
+ */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) { color-scheme: light; }
+}
+
+:root[data-theme='light'] { color-scheme: light; }
+:root[data-theme='dark']  { color-scheme: dark; }
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    --bg:            #F6F4FB;
+    --surface:       #FFFFFF;
+    --surface-2:     #EFEBF8;
+    --surface-sunk:  #E7E1F4;
+    --border:        #D5CCEA;
+    --border-strong: #8C7DB0;
+
+    --ink:       #1A1033;
+    --ink-dim:   #4B3F66;
+    --ink-faint: #6B5F86;
+
+    --primary-ink:  #4351C4;
+    --primary-sunk: #E4E7FB;
+    --accent-ink:   #6B3F96;
+
+    --good-ink: #047857;
+    --warn-ink: #92620A;
+    --bad-ink:  #B91C1C;
+
+    --focus: #4351C4;
+
+    --shadow: 0 1px 2px rgb(26 16 51 / 0.08), 0 8px 24px rgb(26 16 51 / 0.08);
+  }
+}
+
+:root[data-theme='light'] {
+  --bg:            #F6F4FB;
+  --surface:       #FFFFFF;
+  --surface-2:     #EFEBF8;
+  --surface-sunk:  #E7E1F4;
+  --border:        #D5CCEA;
+  --border-strong: #8C7DB0;
+
+  --ink:       #1A1033;
+  --ink-dim:   #4B3F66;
+  --ink-faint: #6B5F86;
+
+  --primary-ink:  #4351C4;
+  --primary-sunk: #E4E7FB;
+  --accent-ink:   #6B3F96;
+
+  --good-ink: #047857;
+  --warn-ink: #92620A;
+  --bad-ink:  #B91C1C;
+
+  --focus: #4351C4;
+
+  --shadow: 0 1px 2px rgb(26 16 51 / 0.08), 0 8px 24px rgb(26 16 51 / 0.08);
+}

@@ -1,0 +1,234 @@
+/**
+ * Elements, and the things every surface shares.
+ *
+ * Written as plain CSS with tokens and a light BEM-ish naming convention. No
+ * build step means no nesting, no preprocessor variables and no utility
+ * framework -- what is in the file is what the browser gets, which is the point.
+ */
+
+@font-face {
+  font-family: 'Jost';
+  src: url('../fonts/jost-normal.woff2') format('woff2-variations');
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Jost';
+  src: url('../fonts/jost-italic.woff2') format('woff2-variations');
+  font-weight: 300 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: var(--step-0);
+  line-height: 1.5;
+  /* Safe areas, because this lives on a phone in a case at a table. */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+           env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+h1, h2, h3, h4 { margin: 0; font-weight: 600; line-height: 1.2; }
+h1 { font-size: var(--step-3); }
+h2 { font-size: var(--step-2); }
+h3 { font-size: var(--step-1); }
+h4 { font-size: var(--step-0); }
+p  { margin: 0 0 var(--sp-3); }
+
+a { color: var(--primary-ink); }
+
+/* Focus is visible everywhere, and never removed. */
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+:focus:not(:focus-visible) { outline: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Visible to a screen reader, not to the eye. */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.skip-link {
+  position: absolute;
+  top: var(--sp-2);
+  left: var(--sp-2);
+  z-index: 100;
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  transform: translateY(-200%);
+}
+.skip-link:focus { transform: none; }
+
+/* --- Controls ---------------------------------------------------------- */
+
+button, input, select, textarea {
+  font: inherit;
+  color: inherit;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+
+.field__label {
+  font-size: var(--step--1);
+  color: var(--ink-dim);
+  letter-spacing: 0.02em;
+}
+
+.input, .select, .textarea {
+  min-height: var(--tap);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--surface-sunk);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  width: 100%;
+}
+
+.input:hover, .select:hover, .textarea:hover { border-color: var(--border-strong); }
+
+.textarea { min-height: calc(var(--tap) * 2); resize: vertical; line-height: 1.5; }
+
+.input--number {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-size: var(--step-1);
+}
+
+.input--compact { min-height: 36px; padding: var(--sp-1) var(--sp-2); }
+
+/* A field the player has overridden, rather than one the engine computed.
+   Marked, never hidden: PF2e has more exceptions than a calculator can hold,
+   and a locked field is worse than a spreadsheet. */
+.is-overridden {
+  border-color: var(--warn);
+  background:
+    linear-gradient(var(--surface-sunk), var(--surface-sunk)) padding-box,
+    var(--surface-sunk);
+}
+
+.override-mark {
+  color: var(--warn-ink);
+  font-size: var(--step--2);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  min-height: var(--tap);
+  padding: var(--sp-2) var(--sp-4);
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.btn:hover { background: var(--surface); border-color: var(--primary); }
+.btn[aria-pressed='true'] { background: var(--primary-sunk); border-color: var(--primary); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn--primary {
+  background: var(--primary-sunk);
+  border-color: var(--primary);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.btn--quiet { background: transparent; border-color: transparent; }
+.btn--quiet:hover { background: var(--surface-2); border-color: var(--border); }
+
+.btn--icon {
+  min-width: var(--tap);
+  padding: var(--sp-2);
+}
+
+.icon {
+  width: 1.25em;
+  height: 1.25em;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* --- Surfaces ---------------------------------------------------------- */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--sp-4);
+}
+
+.card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+
+/* The gradient is for headers and the current-turn indicator. Not wallpaper. */
+.banner {
+  background: var(--gradient);
+  color: #FFFFFF;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: 2px var(--sp-2);
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
+  font-size: var(--step--1);
+  white-space: nowrap;
+}
+
+.pill--good { color: var(--good-ink); border-color: var(--good); }
+.pill--warn { color: var(--warn-ink); border-color: var(--warn); }
+.pill--bad  { color: var(--bad-ink);  border-color: var(--bad); }
+
+.muted { color: var(--ink-dim); }
+.faint { color: var(--ink-faint); }
+.tabular { font-variant-numeric: tabular-nums; }

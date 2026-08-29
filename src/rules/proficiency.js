@@ -110,6 +110,10 @@ export function armorClass({
     components: {
       base: 10,
       dexMod: Number(dexMod),
+      // What the cap actually let through. The sheet shows this rather than the
+      // raw modifier: "+2 dex (capped)" beside a total that used +1 is the kind
+      // of detail that costs ten minutes at a table hunting a missing point.
+      dexApplied: cappedDex,
       dexCapped: cappedDex !== Number(dexMod),
       proficiency: base.components.proficiency,
       rank: base.components.rank,

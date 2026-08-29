@@ -1,0 +1,338 @@
+/**
+ * The character sheet.
+ *
+ * Mobile first: the single-column layout below is the real one, and the wider
+ * grids are progressive enhancement at breakpoints. Everything that is tapped
+ * is at least 44px, because this is used one-handed while holding dice.
+ */
+
+.sheet-bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--gradient);
+  color: #FFFFFF;
+  box-shadow: var(--shadow);
+}
+
+.sheet-bar__identity { min-width: 0; flex: 1; }
+
+.sheet-bar__campaign {
+  display: block;
+  font-size: var(--step--2);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sheet-bar__name {
+  font-size: var(--step-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sheet-bar__tools { display: flex; align-items: center; gap: var(--sp-1); }
+.sheet-bar .btn { color: #FFFFFF; border-color: rgb(255 255 255 / 0.35); }
+.sheet-bar .btn:hover { background: rgb(255 255 255 / 0.15); border-color: #FFFFFF; }
+.sheet-bar :focus-visible { outline-color: #FFFFFF; }
+
+.save-state {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: var(--step--1);
+  padding: 2px var(--sp-2);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.18);
+  white-space: nowrap;
+}
+.save-state[data-status='offline'],
+.save-state[data-status='error'] { background: var(--bad); }
+.save-state[data-status='conflict'] { background: var(--warn); color: #1A1033; }
+
+.notices { display: grid; gap: var(--sp-2); padding: var(--sp-3) var(--sp-3) 0; }
+.notices:empty { padding: 0; }
+
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  border: 1px solid var(--warn);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.notice__body { flex: 1; min-width: 0; }
+.notice__actions { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+
+.sheet {
+  display: grid;
+  gap: var(--sp-4);
+  padding: var(--sp-3);
+  max-width: 1180px;
+  margin: 0 auto;
+}
+.sheet:focus { outline: none; }
+
+@media (min-width: 60rem) {
+  .sheet {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+  .section--wide { grid-column: 1 / -1; }
+}
+
+.section__title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-3);
+  padding-bottom: var(--sp-2);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--step-1);
+}
+
+.grid { display: grid; gap: var(--sp-3); }
+.grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.grid--auto { grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); }
+
+/* --- The statistic block: computed, with a visible override ------------- */
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding: var(--sp-2);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.stat__label {
+  font-size: var(--step--1);
+  color: var(--ink-dim);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.stat__value {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.stat__total {
+  font-size: var(--step-2);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  min-width: 2.5ch;
+}
+
+.stat__working {
+  font-size: var(--step--2);
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.stat__override {
+  width: 4.5rem;
+  min-height: var(--tap);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  background: var(--surface-sunk);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-1);
+}
+
+/* --- Skills ------------------------------------------------------------ */
+
+.skills { display: grid; gap: var(--sp-2); }
+
+.skill {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  min-height: var(--tap);
+}
+
+.skill__name { font-size: var(--step-0); }
+.skill__total {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  min-width: 3ch;
+  text-align: right;
+}
+
+.rank-select {
+  min-height: var(--tap);
+  padding: 2px var(--sp-2);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunk);
+  border: 1px solid var(--border);
+}
+
+/*
+ * Full tap targets everywhere by default, and the compact ones only where a
+ * mouse is doing the pointing on a wide screen. The sheet is used one-handed
+ * on a phone while holding dice, which is the case that decides the default.
+ */
+@media (min-width: 60rem) and (pointer: fine) {
+  .rank-select, .stat__override, .input--compact { min-height: 36px; }
+}
+
+/* --- Hit points -------------------------------------------------------- */
+
+.hp {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--sp-3);
+  align-items: end;
+}
+
+/* A <progress> element, which needs both vendor pseudo-elements to be styled
+   and cannot inherit the fill colour, so the three states are spelled out. */
+.hp-bar {
+  grid-column: 1 / -1;
+  appearance: none;
+  width: 100%;
+  height: 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--surface-sunk);
+}
+.hp-bar::-webkit-progress-bar { background: var(--surface-sunk); }
+.hp-bar::-webkit-progress-value { background: var(--good); transition: width 200ms ease; }
+.hp-bar::-moz-progress-bar { background: var(--good); }
+.hp-bar[data-hurt='some']::-webkit-progress-value  { background: var(--warn); }
+.hp-bar[data-hurt='some']::-moz-progress-bar       { background: var(--warn); }
+.hp-bar[data-hurt='badly']::-webkit-progress-value { background: var(--bad); }
+.hp-bar[data-hurt='badly']::-moz-progress-bar      { background: var(--bad); }
+
+.damage-entry { display: flex; gap: var(--sp-2); align-items: stretch; }
+.damage-entry .input { flex: 1; }
+
+/* --- Repeating rows (strikes, lores, conditions) ------------------------ */
+
+.rows { display: grid; gap: var(--sp-2); }
+
+.row {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.row__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.row__head .input { flex: 1; }
+
+.chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+
+.slot-track { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; }
+
+.slot {
+  width: var(--tap);
+  height: var(--tap);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-sunk);
+  cursor: pointer;
+}
+.slot[aria-pressed='true'] { background: var(--primary-sunk); border-color: var(--primary); }
+
+.sheet-footer {
+  padding: var(--sp-5) var(--sp-3);
+  text-align: center;
+  font-size: var(--step--2);
+}
+
+/* --- The import dialog ------------------------------------------------- */
+
+.modal {
+  width: min(52rem, 94vw);
+  max-height: 88vh;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0;
+}
+.modal::backdrop { background: rgb(10 6 20 / 0.7); }
+.modal__form { display: flex; flex-direction: column; max-height: 88vh; padding: var(--sp-4); gap: var(--sp-3); }
+.modal__actions { display: flex; justify-content: flex-end; gap: var(--sp-2); margin: 0; padding: 0; }
+
+.diff { display: grid; gap: var(--sp-1); overflow-y: auto; }
+
+.diff__row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--sp-3);
+  align-items: start;
+  padding: var(--sp-2);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+.diff__path { font-family: var(--font-mono); font-size: var(--step--2); color: var(--ink-dim); }
+.diff__from { color: var(--bad-ink); text-decoration: line-through; }
+.diff__to   { color: var(--good-ink); }
+.diff__values { font-size: var(--step--1); overflow-wrap: anywhere; }
+
+/* --- Layout utilities --------------------------------------------------
+ *
+ * The Content-Security-Policy has no `unsafe-inline`, which blocks `style`
+ * attributes as well as `<style>` blocks. That is the right policy for an
+ * application whose credential is in the URL, so spacing that would otherwise
+ * be a one-off inline style lives here instead.
+ */
+.stack-sm  { margin-top: var(--sp-2); }
+.stack-md  { margin-top: var(--sp-3); }
+.stack-lg  { margin-top: var(--sp-4); }
+.heading-inline { margin: var(--sp-3) 0 var(--sp-2); }
+.heading-spaced { margin: var(--sp-4) 0 var(--sp-2); }
+
+.row-inline { display: flex; gap: var(--sp-2); align-items: center; }
+.row-inline--wrap { flex-wrap: wrap; }
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+  min-height: var(--tap);
+}
+.checkbox-row input[type='checkbox'] { width: 22px; height: 22px; }
+
+.slot-track__label { min-width: 5.5rem; }
+.condition-value { width: 3.5rem; }
+
+.centred-page {
+  max-width: 34rem;
+  margin: 15vh auto;
+  padding: 0 var(--sp-4);
+}

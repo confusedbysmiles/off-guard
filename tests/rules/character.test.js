@@ -59,6 +59,15 @@ describe('a level 1 dwarf fighter', () => {
     const ac = armorClass({ dexMod: 2, dexCap: 1, rank: 'trained', level, itemBonus: 6 });
     expect(ac.total).toBe(20);
     expect(ac.components.dexCapped).toBe(true);
+    // The sheet shows what the cap let through, not the raw modifier.
+    expect(ac.components.dexApplied).toBe(1);
+    expect(ac.components.dexMod).toBe(2);
+  });
+
+  it('reports Dexterity as applied when nothing caps it', () => {
+    const ac = armorClass({ dexMod: 2, dexCap: null, rank: 'trained', level, itemBonus: 1 });
+    expect(ac.components.dexApplied).toBe(2);
+    expect(ac.components.dexCapped).toBe(false);
   });
 
   it('adds a raised shield and not an unraised one', () => {

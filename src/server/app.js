@@ -12,8 +12,12 @@
  * and refuses anything of the wrong kind, so a character token cannot reach a
  * GM route even if the route forgot to check.
  */
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import Fastify, { LogController } from 'fastify';
 import rateLimit from '@fastify/rate-limit';
+import fastifyStatic from '@fastify/static';
 
 import { resolveScope, ScopeError, NotFoundError } from './scope.js';
 import { isWellFormed, normalizeToken, tokenFingerprint } from './tokens.js';
@@ -22,6 +26,12 @@ import { ROBOTS_TXT, securityHeaders } from './security.js';
 import { registerGmRoutes } from './routes/gm.js';
 import { registerCharacterRoutes } from './routes/character.js';
 import { registerTableRoutes } from './routes/table.js';
+import { registerPageRoutes } from './routes/pages.js';
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const PUBLIC_DIR = resolve(HERE, '../../public');
+const RULES_DIR = resolve(HERE, '../rules');
+const SHARED_DIR = resolve(HERE, '../shared');
 
 /**
  * The token is in the path, so Fastify must not log the path. The framework's
@@ -52,6 +62,46 @@ export async function buildApp({ db, logger = false, trustProxy = true } = {}) {
     return payload;
   });
 
+  // Static assets only. The HTML shells are served by named routes so a wrong
+  // token gets a refusal rather than an empty sheet, and so no directory of
+  // pages is browsable.
+  /**
+   * Caching, with no build step to hash filenames into.
+   *
+   * Scripts and stylesheets are revalidated every time (`no-cache` still uses
+   * the ETag, so an unchanged file is a 304 and a few bytes). A timed cache
+   * would be cheaper and would also let a client run a mix of old and new ES
+   * modules after a deploy, which fails in ways nobody can reproduce.
+   *
+   * Fonts are the exception: they change only when `npm run build:fonts` is
+   * run deliberately, and refetching 56 KB on every page load on a phone at a
+   * table is exactly what a cache is for.
+   */
+  const setAssetHeaders = (reply, path) => {
+    const cacheable = /\.(woff2?|png|svg|jpe?g|ico)$/i.test(path);
+    reply.header('cache-control', cacheable ? 'public, max-age=86400' : 'no-cache');
+  };
+
+  await app.register(fastifyStatic, {
+    root: resolve(PUBLIC_DIR, 'assets'),
+    prefix: '/assets/',
+    index: false,
+    cacheControl: false,
+    setHeaders: setAssetHeaders,
+  });
+
+  // The rules engine, served to the browser as the same files the server and
+  // the tests import. Copying it into public/ would be a build step, and two
+  // copies of the arithmetic is exactly what the engine exists to prevent.
+  // `src/rules` imports `../shared/...`, so the two mounts have to sit under a
+  // common prefix for that relative path to resolve.
+  for (const [prefix, root] of [['/engine/rules/', RULES_DIR], ['/engine/shared/', SHARED_DIR]]) {
+    await app.register(fastifyStatic, {
+      root, prefix, index: false, cacheControl: false, decorateReply: false,
+      setHeaders: setAssetHeaders,
+    });
+  }
+
   app.get('/robots.txt', async (request, reply) => {
     reply.type('text/plain');
     return ROBOTS_TXT;
@@ -67,6 +117,8 @@ export async function buildApp({ db, logger = false, trustProxy = true } = {}) {
     }
     return reply.status(status).send({ error: error.message });
   });
+
+  await registerPageRoutes(app, { publicDir: PUBLIC_DIR });
 
   await app.register(scopedRoutes('gm', registerGmRoutes), { prefix: '/api/gm/:token' });
   await app.register(scopedRoutes('character', registerCharacterRoutes), { prefix: '/api/c/:token' });

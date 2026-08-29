@@ -9,16 +9,16 @@ Multiple concurrent campaigns are first-class. A character belongs to exactly
 one campaign; an encounter belongs to one campaign but can be copied to another;
 creature data, reference tables and homebrew are global.
 
-**Status: milestone 3 of 9.** Data pipeline, rules engine, and a running
-campaign-scoped API. There is no interface yet.
+**Status: milestone 4 of 9.** Data pipeline, rules engine, campaign-scoped API,
+and a working player character sheet.
 
 | # | Milestone | State |
 |---|-----------|-------|
 | 1 | Data pipeline, normalized creature format, inline-markup resolver | done |
 | 2 | Rules engine + tests | done |
 | 3 | Server, schema, migrations, token access, campaign-scoped API | done |
-| 4 | Player character sheet, Pathbuilder import | next |
-| 5 | GM dashboard: campaigns, party panel, encounter builder, XP budget | |
+| 4 | Player character sheet, Pathbuilder import | done |
+| 5 | GM dashboard: campaigns, party panel, encounter builder, XP budget | next |
 | 6 | Initiative tracker | |
 | 7 | Shared screen over SSE | |
 | 8 | Reference drawer, dice roller, Recall Knowledge helper | |
@@ -32,8 +32,10 @@ npm test             # no data build required
 npm run mint-gm      # prints your GM link, once
 npm start            # http://127.0.0.1:8787
 
-npm run build:data   # ~7 minutes on a cold cache, ~6 seconds after
-npm run build:tables # regenerates src/rules/tables/ from the pinned checkout
+npm run build:data    # ~7 minutes on a cold cache, ~6 seconds after
+npm run build:tables  # regenerates src/rules/tables/ from the pinned checkout
+npm run build:fonts   # refetches Jost into public/assets/fonts/
+npm run check:contrast
 ```
 
 Configuration is documented in `.env.example`; every value has a working
@@ -136,6 +138,70 @@ bundled creatures. It reproduces the printed "moderate" column wherever that can
 be checked by hand, but it describes what Paizo published rather than what the
 tables prescribe, which is why anything built on it is labelled an approximation.
 Replacing it with transcribed values needs no code change.
+
+## The character sheet
+
+Mobile first, because it is used one-handed on a phone while holding dice.
+Every write lands locally before the network is touched: the store applies the
+change in memory, mirrors it into `localStorage`, and only then queues a
+debounced request. Losing signal, closing the tab and reloading offline all keep
+what was typed, and the queue is replayed on top of the server's copy when the
+connection comes back rather than being discarded by the reload.
+
+Fields are versioned individually, so the GM pushing a condition and a player
+typing a note do not collide — different paths, both applied. A genuine
+same-path conflict adopts the server's value, because that is the one the rest
+of the table can see, and hands the local value back so the player can put it
+back deliberately instead of watching it vanish.
+
+Every derived number is computed by the rules engine and every one accepts a
+manual override that shows a marker and keeps the computed value visible in the
+tooltip. PF2e has more exceptions than a calculator can hold, and a locked field
+is worse than a spreadsheet.
+
+The browser loads `src/rules/` directly, served at `/engine/`. Copying it into
+`public/` would be a build step, and two copies of the arithmetic is exactly what
+the engine exists to prevent.
+
+### Pathbuilder import
+
+Two paths, and only one of them is reliable.
+
+**The JSON export file works, always, offline.** Export from Pathbuilder, upload
+the file, review the diff, apply what you accept.
+
+**By build id, probably not.** `pathbuilder2e.com/json.php?id=…` sits behind
+Cloudflare's bot protection, which answers a server-side request with a
+challenge page rather than JSON — verified, it returns 403. Off-Guard does not
+try to defeat that: it identifies itself honestly as Off-Guard, and when the
+answer is not a build it says so and points at the export file. Set
+`OFF_GUARD_PATHBUILDER_FETCH=off` to remove the outbound request entirely. It is
+the application's only one.
+
+A re-import at level-up is safe by construction. The mapper produces a fixed set
+of paths and nothing else, so the free-text feats, features, reactions, items
+and notes sections are invisible to it; play state — current and temporary hit
+points, conditions, hero points, spent slots and focus — is produced but never
+proposed, because levelling up should not heal the character.
+
+## Look
+
+Dark by default, light on toggle, and `prefers-color-scheme` respected in both
+directions. `npm run check:contrast` reads the tokens out of the stylesheet and
+checks every ink-on-ground pair the interface uses against WCAG AA in all three
+states (dark, light by toggle, light by system preference); it exits non-zero on
+a failure. Jost is self-hosted as two variable woff2 files, latin subset, 56 KB
+total, fetched once by `npm run build:fonts` and committed.
+
+There is no emoji anywhere in the interface. Icons are SVG paths on
+`currentColor`, so they follow the theme and a screen reader reads the button's
+label rather than a Unicode character name.
+
+The Content-Security-Policy has no `unsafe-inline`, which forbids `style`
+attributes as well as `<style>` blocks — including ones set from script. The
+hit-point bar is therefore a real `<progress>` element and the per-campaign
+accent colour is applied through a constructed stylesheet. The page loads with
+zero CSP violations, which is what makes a violation report worth reading.
 
 ## Data
 

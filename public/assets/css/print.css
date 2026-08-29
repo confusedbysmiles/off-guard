@@ -1,0 +1,56 @@
+/**
+ * The print view.
+ *
+ * A player asked for a paper copy is asking for the numbers, not the controls,
+ * so every input prints as its value and everything interactive disappears.
+ */
+@page { margin: 12mm; }
+
+:root {
+  --bg: #FFFFFF; --surface: #FFFFFF; --surface-2: #FFFFFF; --surface-sunk: #FFFFFF;
+  --ink: #000000; --ink-dim: #333333; --ink-faint: #555555;
+  --border: #999999; --border-strong: #666666;
+}
+
+body { background: #FFFFFF; color: #000000; font-size: 10pt; }
+
+.sheet-bar, .notices, .modal, .sheet-bar__tools, .skip-link,
+.btn, .damage-entry, .stat__override { display: none !important; }
+
+.sheet-bar { display: block !important; background: none !important; color: #000 !important;
+  box-shadow: none; padding: 0 0 6mm; border-bottom: 1pt solid #000; }
+.sheet-bar__identity { display: block; }
+.sheet-bar__name { font-size: 18pt; }
+.sheet-bar__campaign { color: #333; }
+
+.sheet {
+  display: block;
+  max-width: none;
+  padding: 0;
+  columns: 2;
+  column-gap: 8mm;
+}
+
+.card {
+  break-inside: avoid;
+  border: 1pt solid #999;
+  margin: 0 0 4mm;
+  padding: 3mm;
+}
+
+.stat, .skill, .row { background: none; border-color: #bbb; break-inside: avoid; }
+
+/* Inputs print as their value: a printed box is not a sheet. */
+.input, .select, .textarea, .rank-select {
+  border: none;
+  background: none;
+  padding: 0;
+  min-height: 0;
+  font-size: inherit;
+}
+.textarea { resize: none; height: auto; }
+
+.slot { width: 4mm; height: 4mm; border: 1pt solid #000; }
+.slot[aria-pressed='true'] { background: #000; }
+
+a { color: inherit; text-decoration: none; }
