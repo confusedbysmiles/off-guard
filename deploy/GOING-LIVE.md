@@ -81,6 +81,22 @@ sudo pmset -a sleep 0 disksleep 0
 ```bash
 brew install cloudflared
 cloudflared tunnel login
+```
+
+**`login` is interactive and has to finish before anything else works.** It
+opens a browser; log in, then pick `drseim.com` from the zone list. It writes
+`~/.cloudflared/cert.pem`, and nothing below works until that file exists.
+
+If you skip it, the next command fails with
+
+```
+Cannot determine default origin certificate path. No file cert.pem in [...]
+```
+
+which is a complete description of the problem that never mentions `login`.
+`ls ~/.cloudflared/cert.pem` is the check.
+
+```bash
 cloudflared tunnel create off-guard
 cloudflared tunnel route dns off-guard offguard.drseim.com
 ```
