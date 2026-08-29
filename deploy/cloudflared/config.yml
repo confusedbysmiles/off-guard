@@ -1,0 +1,42 @@
+# Cloudflare Tunnel for Off-Guard.
+#
+# Copy to ~/.cloudflared/config.yml and fill in the two values marked below.
+# The tunnel makes an outbound connection to Cloudflare, so the machine running
+# Off-Guard needs no public address, no port forwarding and no inbound firewall
+# rule at all.
+#
+# Setup, once:
+#
+#   brew install cloudflared
+#   cloudflared tunnel login                       # opens a browser
+#   cloudflared tunnel create off-guard            # prints the tunnel's UUID
+#   cloudflared tunnel route dns off-guard offguard.drseim.com
+#   cloudflared tunnel run off-guard               # to try it
+#   sudo cloudflared service install                # to keep it running
+#
+# A subdomain, not drseim.com/off-guard. A tunnel becomes the origin for a whole
+# hostname: pointing www.drseim.com at it would take the rest of the site --
+# which is GitHub Pages -- away with it. Path-splitting one hostname across two
+# origins needs a Cloudflare Worker in front of both, which is a third moving
+# part between the table and the application. The subdomain costs a DNS record.
+
+tunnel: off-guard
+# Written by `cloudflared tunnel create`. The UUID is in the filename it prints.
+credentials-file: /Users/YOU/.cloudflared/REPLACE-WITH-TUNNEL-UUID.json
+
+# Off-Guard's own SSE heartbeat is every 25 seconds, comfortably inside
+# Cloudflare's idle timeout, so the shared screen's stream stays open between
+# turns without any tuning here.
+ingress:
+  - hostname: offguard.drseim.com
+    service: http://127.0.0.1:8787
+    originRequest:
+      # A fight can sit quiet for a long time between turns, and the shared
+      # screen holds one response open the whole session.
+      connectTimeout: 10s
+      # No response buffering: the television has to update as the GM types,
+      # not in batches when a buffer fills.
+      disableChunkedEncoding: false
+
+  # Anything else that reaches this tunnel is not Off-Guard.
+  - service: http_status:404

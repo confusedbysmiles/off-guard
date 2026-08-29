@@ -9,8 +9,9 @@ Multiple concurrent campaigns are first-class. A character belongs to exactly
 one campaign; an encounter belongs to one campaign but can be copied to another;
 creature data, reference tables and homebrew are global.
 
-**Status: complete.** All nine milestones are done: 513 unit tests and 39
-end-to-end tests, run at a host root and at a subdirectory.
+**Status: complete, and ready to deploy.** 524 unit tests and 43 end-to-end
+tests, run at a host root and at a subdirectory. See
+[deploy/GOING-LIVE.md](deploy/GOING-LIVE.md).
 
 | # | Milestone | State |
 |---|-----------|-------|
@@ -261,7 +262,14 @@ readable in two years' time. A clone that has not run `npm run build:data` still
 starts; the dashboard says the catalogue is missing rather than failing in a way
 that looks like a bug.
 
-**Links are made and unmade from the party tab.** One shared-screen link per
+**The Setup tab (`S`) is everything about a campaign that is not a fight**: its
+name, adventure, chapter, party level, next session and accent colour; the
+roster, and adding to it; the links; and the session log. All of it had an API
+from milestone 3 and no interface until milestone 9, which meant setting an
+accent colour meant curl — a poor answer for the one feature the whole
+multi-campaign design rests on.
+
+**Links are made and unmade there.** One shared-screen link per
 campaign, one per player, and your own. Nothing there can show you a link that
 already exists — only its hash is stored — so a fresh one is shown once, large,
 with a copy button and a sentence saying it will not be shown again. Rotating a
@@ -410,6 +418,20 @@ hit-point bar is therefore a real `<progress>` element and the per-campaign
 accent colour is applied through a constructed stylesheet. The page loads with
 zero CSP violations, which is what makes a violation report worth reading.
 
+### Reordering
+
+Initiative rows, encounters in a campaign, and creatures within an encounter all
+reorder the same way, through `public/assets/js/lib/reorder.js`. Dragging is the
+obvious gesture with a mouse and completely unavailable from a keyboard, so the
+handle also takes Arrow Up and Arrow Down.
+
+The keyboard path is worth its dozen lines twice over. The first version
+restored focus on the next animation frame, which looks right and is not — the
+save re-renders the list *after* that, focus falls to the body, and moving one
+item two places means finding the handle again in between. Focus is now restored
+by identity once the save has resolved, so an item can be walked to where it
+belongs.
+
 ### Accessibility
 
 Checked rather than asserted. `e2e/accessibility.spec.js` walks all three
@@ -501,6 +523,18 @@ hand.
 ## Deploying it
 
 Two supported shapes, and the browser needs no configuration for either.
+
+**Through a Cloudflare Tunnel**, which is the shape
+[deploy/GOING-LIVE.md](deploy/GOING-LIVE.md) walks through end to end:
+`deploy/macos/com.drseim.off-guard.plist` runs it under launchd and
+`deploy/cloudflared/config.yml` connects it outbound to a hostname. Nothing
+listens on a public port, there is no port forwarding and no VPS.
+
+That means a subdomain rather than `drseim.com/off-guard`: a tunnel becomes the
+origin for a whole hostname, and pointing `www` at it would take the GitHub
+Pages site with it. Splitting one hostname across two origins needs a Cloudflare
+Worker in front of both. The application supports either — this is a deployment
+choice, and the subdomain is the cheap one.
 
 **As a service.** `deploy/off-guard.service` is a systemd unit: a dedicated
 user, `ProtectSystem=strict`, one writable path, an empty capability bounding

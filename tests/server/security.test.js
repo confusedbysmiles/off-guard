@@ -180,3 +180,32 @@ describe('the shared screen cannot write', () => {
     }
   });
 });
+
+
+/**
+ * These two are here because both broke silently when the routes moved into a
+ * child plugin so the application could be mounted under a subdirectory. An
+ * error handler registered after that plugin does not reach it, and neither
+ * failure looks like anything from the outside until you read a response body.
+ */
+describe('errors say what this application says, and nothing more', () => {
+  it('reports a route’s own message, in this application’s shape', async () => {
+    const res = await get(
+      `/api/gm/${world.gmToken}/campaigns/${world.tuesday.campaign.id}/encounters/999999`,
+    );
+    expect(res.statusCode).toBe(404);
+    // `{ error: ... }`, which is what the client reads. Fastify's own shape puts
+    // the status text there instead, and every notice becomes "Not Found".
+    expect(res.json()).toEqual({ error: 'No such encounter' });
+  });
+
+  it('never quotes the URL back, because the URL is the credential', async () => {
+    const token = world.tuesday.characterToken;
+    for (const url of [`/api/c/${token}/nonsense`, `/nonsense/${token}`, '/no/such/path']) {
+      const res = await get(url);
+      expect(res.statusCode).toBe(404);
+      expect(res.body, url).not.toContain(token);
+      expect(res.body, url).not.toContain('nonsense');
+    }
+  });
+});

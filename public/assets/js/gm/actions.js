@@ -189,6 +189,27 @@ export function createActions({
 
     renameEncounter: (name) => actions.updateEncounter({ name }),
 
+    /** The order encounters are planned in, which is the order a session runs. */
+    async reorderEncounters(order) {
+      try {
+        const { encounters } = await api.reorderEncounters(campaign(), order);
+        store.set({ encounters });
+        refresh();
+      } catch (error) {
+        notices.error(`Could not reorder: ${error.message}`);
+      }
+    },
+
+    /**
+     * The order creatures sit in within one encounter.
+     *
+     * No endpoint of its own: the whole creature list is saved on every edit
+     * anyway, so a reorder is that same save with the array in a new order.
+     */
+    reorderRows(order) {
+      updateRows((rows) => order.map((index) => rows[index]).filter(Boolean));
+    },
+
     async updateEncounter(fields) {
       const { encounter } = store.get();
       if (!encounter) return;
@@ -571,6 +592,105 @@ export function createActions({
         showLink('gm', token.token, 'you', { final: true });
       } catch (error) {
         notices.error(`Could not rotate your link: ${error.message}`);
+      }
+    },
+
+    // --- the campaign itself, its roster and its log --------------------------
+
+    async loadSessions() {
+      if (!campaign()) return;
+      try {
+        store.set({ sessions: (await api.sessions(campaign())).sessions });
+      } catch (error) {
+        notices.error(`Could not load the session log: ${error.message}`);
+      }
+    },
+
+    /**
+     * Save a change to the campaign.
+     *
+     * The switcher, the accents and the overview all read from the same list,
+     * so the saved row is written back into it rather than refetched -- an
+     * accent colour that only appears after a reload is worse than none.
+     */
+    async saveCampaign(fields) {
+      const id = campaign();
+      if (!id) return;
+      try {
+        const { campaign: saved } = await api.updateCampaign(id, fields);
+        store.set({
+          campaigns: store.get().campaigns.map((c) => (c.id === id ? saved : c)),
+        });
+        refresh();
+      } catch (error) {
+        notices.error(`Could not save: ${error.message}`);
+      }
+    },
+
+    async archiveCampaign(archived) {
+      const id = campaign();
+      if (!id) return;
+      try {
+        const { campaign: saved } = await api.archiveCampaign(id, archived);
+        store.set({
+          campaigns: store.get().campaigns.map((c) => (c.id === id ? saved : c)),
+        });
+        refresh();
+        notices.info(archived ? 'Archived. Nothing was deleted.' : 'Unarchived.', {
+          actions: [[archived ? 'Undo' : 'Re-archive', () => actions.archiveCampaign(!archived)]],
+        });
+      } catch (error) {
+        notices.error(`Could not archive: ${error.message}`);
+      }
+    },
+
+    async addCharacter(fields) {
+      const id = campaign();
+      if (!id) return;
+      try {
+        await api.createCharacter(id, fields);
+        await Promise.all([actions.loadParty(), actions.loadTokens()]);
+        refresh();
+        notices.info(`Added ${fields.name}. Make their link below when you are ready.`);
+      } catch (error) {
+        notices.error(`Could not add that character: ${error.message}`);
+      }
+    },
+
+    async addSession(fields) {
+      const id = campaign();
+      if (!id) return;
+      try {
+        const { session } = await api.createSession(id, fields);
+        store.set({ sessions: [session, ...store.get().sessions] });
+        // Writing up a session marks the campaign as played, which is what the
+        // overview and the opening campaign are chosen by.
+        await actions.loadOverview();
+        refresh();
+      } catch (error) {
+        notices.error(`Could not save that session: ${error.message}`);
+      }
+    },
+
+    async removeSession(session) {
+      const id = campaign();
+      try {
+        await api.deleteSession(id, session.id);
+        store.set({ sessions: store.get().sessions.filter((s) => s.id !== session.id) });
+        refresh();
+        // Undo rather than a confirmation: the whole row is still in hand, and
+        // a dialog to delete a note is more interruption than the note is worth.
+        notices.warn(`Deleted “${session.title || 'that session'}”.`, {
+          actions: [['Undo', async () => {
+            await api.createSession(id, {
+              title: session.title, body: session.body, playedAt: session.playedAt,
+            });
+            await actions.loadSessions();
+            refresh();
+          }]],
+        });
+      } catch (error) {
+        notices.error(`Could not delete that: ${error.message}`);
       }
     },
 

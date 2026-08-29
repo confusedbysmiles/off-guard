@@ -45,6 +45,18 @@ export const api = {
 
   party: (id) => request(`/campaigns/${id}/party`),
 
+  characters: (id) => request(`/campaigns/${id}/characters`),
+  createCharacter: (id, fields) =>
+    request(`/campaigns/${id}/characters`, { method: 'POST', body: fields }),
+
+  sessions: (id) => request(`/campaigns/${id}/sessions`),
+  createSession: (id, fields) =>
+    request(`/campaigns/${id}/sessions`, { method: 'POST', body: fields }),
+  updateSession: (id, sessionId, fields) =>
+    request(`/campaigns/${id}/sessions/${sessionId}`, { method: 'PATCH', body: fields }),
+  deleteSession: (id, sessionId) =>
+    request(`/campaigns/${id}/sessions/${sessionId}`, { method: 'DELETE' }),
+
   tokens: (id) => request(`/campaigns/${id}/tokens`),
   mintCharacterToken: (id, characterId) =>
     request(`/campaigns/${id}/tokens/character/${characterId}`, { method: 'POST', body: {} }),

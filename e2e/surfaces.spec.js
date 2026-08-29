@@ -70,8 +70,7 @@ test.describe('the GM dashboard', () => {
     await page.getByLabel('Search creatures by name').fill('goblin warrior');
     await expect(page.locator('.result').first()).toContainText('Goblin Warrior');
 
-    await page.getByLabel('Encounter', { exact: true })
-      .selectOption({ label: 'Ambush in the stairwell' });
+    await page.locator('.encounter-item__open', { hasText: 'Ambush in the stairwell' }).click();
 
     // Two level -1 goblins against a level 5 party are off the encounter table,
     // so the builder must refuse a difficulty rather than invent one.
@@ -321,6 +320,7 @@ test.describe('Recall Knowledge', () => {
 test.describe('the links panel', () => {
   test('shows a new link once, and never again', async ({ page }) => {
     await page.goto(`/gm/${world.gmToken}`);
+    await page.locator('body').press('s');
 
     const row = page.locator('.link-row', { hasText: 'Shared screen' });
     await row.getByRole('button', { name: 'Rotate' }).click();
@@ -347,6 +347,7 @@ test.describe('the links panel', () => {
 
   test('rotating kills the link it replaced', async ({ page }) => {
     await page.goto(`/gm/${world.gmToken}`);
+    await page.locator('body').press('s');
 
     const row = page.locator('.link-row', { hasText: 'Kestrel Vane' });
     await row.getByRole('button', { name: /Rotate|Make a link/ }).click();
@@ -366,10 +367,114 @@ test.describe('the links panel', () => {
 
   test('never renders a token it was not just given', async ({ page }) => {
     await page.goto(`/gm/${world.gmToken}`);
+    await page.locator('body').press('s');
     await expect(page.locator('.links')).toBeVisible();
     const html = await page.content();
     // The listing says what exists, not what it is.
     expect(html).not.toContain(world.tableToken);
     expect(html).not.toContain(world.characterToken);
+  });
+});
+
+test.describe('the setup tab', () => {
+  test('sets a campaign’s accent colour, and the chrome follows', async ({ page }) => {
+    await page.goto(`/gm/${world.gmToken}`);
+    await page.locator('body').press('s');
+
+    await page.locator('.accent[data-accent="#F59E0B"]').click();
+    await expect(page.locator('.accent[aria-pressed="true"]'))
+      .toHaveAttribute('data-accent', '#F59E0B');
+
+    // The accent is what tells two campaigns apart at a glance, so it has to
+    // reach the chrome and survive a reload rather than just the swatch.
+    await expect(async () => {
+      const accent = await page.evaluate(() => getComputedStyle(document.documentElement)
+        .getPropertyValue('--campaign-accent').trim());
+      expect(accent).toBe('#F59E0B');
+    }).toPass({ timeout: 5000 });
+
+    await page.reload();
+    await page.locator('body').press('s');
+    await expect(page.locator('.accent[aria-pressed="true"]'))
+      .toHaveAttribute('data-accent', '#F59E0B');
+  });
+
+  test('adds a character, who then appears in the party and the links', async ({ page }) => {
+    await page.goto(`/gm/${world.gmToken}`);
+    await page.locator('body').press('s');
+
+    await page.locator('#new-character-name').fill('Vashti');
+    await page.locator('#new-character-player').fill('Robin');
+    await page.locator('.roster__add').getByRole('button', { name: 'Add' }).click();
+
+    await expect(page.locator('.roster__row', { hasText: 'Vashti' })).toBeVisible();
+    await expect(page.locator('.link-row', { hasText: 'Vashti' })).toContainText('no link yet');
+
+    await page.locator('body').press('t');
+    await expect(page.locator('.pc', { hasText: 'Vashti' })).toBeVisible();
+  });
+
+  test('writes a session up, and marks the campaign played', async ({ page }) => {
+    await page.goto(`/gm/${world.gmToken}`);
+    await page.locator('body').press('s');
+
+    await page.locator('#session-title').fill('The sealed door');
+    await page.locator('#session-body').fill('Nobody expected the drakes.');
+    await page.getByRole('button', { name: 'Save this session' }).click();
+
+    const entry = page.locator('.session', { hasText: 'The sealed door' });
+    await expect(entry).toBeVisible();
+    await expect(entry).toContainText('drakes');
+
+    // Deleting offers an undo rather than a confirmation, and the undo works.
+    await entry.getByRole('button', { name: /Delete the session/ }).click();
+    await expect(page.locator('.session', { hasText: 'The sealed door' })).toHaveCount(0);
+    await page.locator('.notice').getByRole('button', { name: 'Undo' }).click();
+    await expect(page.locator('.session', { hasText: 'The sealed door' })).toBeVisible();
+  });
+});
+
+test.describe('reordering', () => {
+  /**
+   * Dragging is untestable in a way that matters here -- Playwright can
+   * synthesise it, but a real HTML5 drag is a different code path. The keyboard
+   * route is the one that can be asserted honestly, and it is also the one that
+   * would otherwise never have been written.
+   */
+  test('moves an encounter with the keyboard, and it stays moved', async ({ page }) => {
+    await page.goto(`/gm/${world.gmToken}`);
+    await page.locator('body').press('e');
+
+    // Two more encounters, so there is an order to change.
+    for (const name of ['Second', 'Third']) {
+      await page.getByRole('button', { name: 'New' }).first().click();
+      await page.locator('input[aria-label="Encounter name"]').fill(name);
+      await page.locator('input[aria-label="Encounter name"]').blur();
+      await expect(page.locator('.encounter-item', { hasText: name })).toBeVisible();
+    }
+
+    const names = () => page.locator('.encounter-item__open').allTextContents();
+    const before = await names();
+    expect(before.length).toBeGreaterThanOrEqual(3);
+
+    const last = page.locator('.encounter-item').last().locator('[data-reorder-handle]');
+    await last.focus();
+    await last.press('ArrowUp');
+
+    await expect(async () => {
+      expect(await names()).not.toEqual(before);
+    }).toPass({ timeout: 5000 });
+
+    // Focus stays on the handle, so a second press moves the same item again
+    // without hunting for it. This is what makes keyboard reordering usable
+    // rather than merely present.
+    await expect(page.locator(':focus')).toHaveAttribute('data-reorder-handle', '');
+
+    const moved = await names();
+    await page.reload();
+    await page.locator('body').press('e');
+    await expect(async () => {
+      expect(await names()).toEqual(moved);
+    }).toPass({ timeout: 5000 });
   });
 });

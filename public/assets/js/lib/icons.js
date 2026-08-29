@@ -35,6 +35,9 @@ const PATHS = {
   // Persistent damage, which is the only thing in the tracker that keeps
   // happening after the turn that caused it.
   flame:      'M12 22a6 6 0 0 0 6-6c0-4-3-5-3-9 0 0-3 1.5-3 5 0-2-1.5-3-1.5-3S9 11 9 13c0-1.5-1-2-1-2a6.6 6.6 0 0 0-2 5 6 6 0 0 0 6 6z',
+  // The grip on a draggable row. Six dots is the convention, and it reads as
+  // "grab me" at a glance in a way an arrow pair does not.
+  grip:       'M9 5h.01M15 5h.01M9 12h.01M15 12h.01M9 19h.01M15 19h.01',
 };
 
 export const ICON_NAMES = Object.keys(PATHS);

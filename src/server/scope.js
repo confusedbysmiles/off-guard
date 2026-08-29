@@ -23,6 +23,15 @@ export class ScopeError extends Error {
   }
 }
 
+/** The request was understood and is wrong. Not a refusal, not a 500. */
+export class InvalidError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'InvalidError';
+    this.statusCode = 400;
+  }
+}
+
 export class NotFoundError extends Error {
   constructor(message = 'Not found') {
     super(message);

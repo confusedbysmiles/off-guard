@@ -10,6 +10,7 @@
  * one hand while holding dice in the other.
  */
 import { $, el } from '../lib/dom.js';
+import { makeSortable } from '../lib/reorder.js';
 import { icon } from '../lib/icons.js';
 import { setUpTheme } from '../lib/theme.js';
 import { createNotices } from '../lib/notices.js';
@@ -22,12 +23,16 @@ import { builderView } from './views/builder.js';
 import { initiativeView, persistentDamageForm, promptList } from './views/initiative.js';
 import { statBlock } from './views/statblock.js';
 import { linkReveal, linksPanel } from './views/links.js';
+import { campaignPanel, rosterPanel, sessionsPanel } from './views/campaign.js';
 import { createDrawer, drawerShell } from './drawer.js';
 
 const TABS = [
   ['table', 'Table', 'T'],
   ['initiative', 'Initiative', 'I'],
   ['encounters', 'Encounters', 'E'],
+  // Everything about this campaign that is not a fight: its settings, who is
+  // in it, their links, and what happened last week.
+  ['setup', 'Setup', 'S'],
   ['overview', 'All campaigns', 'A'],
 ];
 
@@ -214,50 +219,53 @@ function render() {
       actions,
     }));
     setUpEncounterFileInput();
+    setUpEncounterReorder();
+    setUpCreatureReorder();
     return;
   }
 
-  main.replaceChildren(el('div', { class: 'panels' },
-    partyPanel(state.party),
-    state.tokens
-      ? linksPanel({
-        tokens: state.tokens,
-        characters: state.party?.characters ?? [],
-        actions,
-      })
-      : null));
+  if (state.tab === 'setup') {
+    main.replaceChildren(el('div', { class: 'panels' },
+      campaignPanel({ campaign: store.currentCampaign(), actions }),
+      rosterPanel({ characters: state.party?.characters ?? [], actions }),
+      state.tokens
+        ? linksPanel({
+          tokens: state.tokens,
+          characters: state.party?.characters ?? [],
+          actions,
+        })
+        : null,
+      sessionsPanel({ sessions: state.sessions, actions })));
+    return;
+  }
+
+  main.replaceChildren(el('div', { class: 'panels' }, partyPanel(state.party)));
 }
 
 /** Dragging a row is how a tie gets broken; the rules give no tiebreak. */
 function setUpDragToReorder() {
-  const list = $('#initiative-list');
-  if (!list) return;
-  let dragging = null;
-
-  list.addEventListener('dragstart', (event) => {
-    dragging = event.target.closest('.combatant');
-    dragging?.classList.add('combatant--dragging');
-    event.dataTransfer.effectAllowed = 'move';
+  makeSortable($('#initiative-list'), {
+    key: 'combatant',
+    itemSelector: '.combatant',
+    onDrop: (order) => actions.reorder(order),
   });
+}
 
-  list.addEventListener('dragend', () => {
-    dragging?.classList.remove('combatant--dragging');
-    dragging = null;
+/** The order encounters are planned in, which is the order a session runs. */
+function setUpEncounterReorder() {
+  makeSortable($('#encounter-list'), {
+    key: 'encounter',
+    itemSelector: '.encounter-item',
+    onDrop: (order) => actions.reorderEncounters(order),
   });
+}
 
-  list.addEventListener('dragover', (event) => {
-    if (!dragging) return;
-    event.preventDefault();
-    const over = event.target.closest('.combatant');
-    if (!over || over === dragging) return;
-    const { top, height } = over.getBoundingClientRect();
-    const after = event.clientY > top + height / 2;
-    list.insertBefore(dragging, after ? over.nextSibling : over);
-  });
-
-  list.addEventListener('drop', (event) => {
-    event.preventDefault();
-    actions.reorder([...list.children].map((node) => Number(node.dataset.combatant)));
+/** The order creatures sit in within one encounter. */
+function setUpCreatureReorder() {
+  makeSortable($('#encounter-rows'), {
+    key: 'row',
+    itemSelector: '.encounter-row',
+    onDrop: (order) => actions.reorderRows(order),
   });
 }
 
@@ -284,12 +292,12 @@ async function selectCampaign(id) {
   // nothing from Tuesday's game may still be on screen once Saturday's is.
   store.set({
     campaignId: id, encounter: null, encounterId: null, budget: null, combat: null,
-    rolls: [], recall: null,
+    rolls: [], recall: null, sessions: [], tokens: null,
   });
   store.writeLocation({ campaignId: id, tab: store.get().tab });
   await Promise.all([
     actions.loadParty(), actions.loadEncounters(), actions.loadCombat(),
-    actions.loadRolls(), actions.loadTokens(),
+    actions.loadRolls(), actions.loadTokens(), actions.loadSessions(),
   ]);
   render();
   drawer.render();

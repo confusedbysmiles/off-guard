@@ -774,3 +774,150 @@
   border-radius: var(--radius-sm);
   font-weight: 600;
 }
+
+/* --- Reordering ----------------------------------------------------------- */
+
+.reorder-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  min-height: 32px;
+  padding: 0;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--ink-faint);
+  cursor: grab;
+}
+.reorder-handle:hover { color: var(--ink); border-color: var(--border); }
+.reorder-handle:active { cursor: grabbing; }
+
+.is-dragging { opacity: 0.4; }
+
+/* --- The encounters in a campaign, in the order they will run -------------- */
+
+.encounter-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+  max-height: 22vh;
+  overflow-y: auto;
+}
+
+.encounter-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+}
+.encounter-item:hover { border-color: var(--border); }
+
+.encounter-item__open {
+  flex: 1;
+  min-width: 0;
+  padding: var(--sp-2) var(--sp-2);
+  text-align: left;
+  background: none;
+  border: none;
+  border-left: 3px solid transparent;
+  color: var(--ink);
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.encounter-item__open[aria-current='true'] {
+  border-left-color: var(--campaign-accent, var(--primary));
+  background: var(--primary-sunk);
+  font-weight: 600;
+}
+
+.encounter-row { cursor: grab; }
+
+/* --- Campaign setup -------------------------------------------------------- */
+
+.settings {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--sp-3);
+  margin-top: var(--sp-3);
+}
+
+.accents { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; }
+
+/* The six offered accents are a fixed set, so their swatches are static rules
+   rather than a constructed stylesheet -- the policy forbids the style
+   attribute this would otherwise be, and there is nothing dynamic here. */
+.accent {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.accent[data-accent='#667EEA' i] { background: #667EEA; }
+.accent[data-accent='#34D399' i] { background: #34D399; }
+.accent[data-accent='#F59E0B' i] { background: #F59E0B; }
+.accent[data-accent='#EC4899' i] { background: #EC4899; }
+.accent[data-accent='#06B6D4' i] { background: #06B6D4; }
+.accent[data-accent='#A78BFA' i] { background: #A78BFA; }
+.accent[aria-pressed='true'] {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 2px var(--bg);
+}
+.accent--custom {
+  background: none;
+  border: 1px dashed var(--border-strong);
+  inline-size: 34px;
+  block-size: 34px;
+}
+
+.roster { list-style: none; margin: var(--sp-3) 0 0; padding: 0; display: grid; gap: 2px; }
+.roster__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+}
+.roster__row .faint { display: block; font-size: var(--step--2); }
+
+.roster__add {
+  display: grid;
+  grid-template-columns: 1fr 1fr 5rem auto;
+  gap: var(--sp-2);
+  align-items: end;
+  margin-top: var(--sp-3);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 45rem) {
+  .roster__add { grid-template-columns: 1fr 1fr; }
+}
+
+/* --- The session log ------------------------------------------------------- */
+
+.session-add { display: grid; gap: var(--sp-2); margin-top: var(--sp-3); }
+.session-add__head { display: grid; grid-template-columns: 1fr 10rem; gap: var(--sp-2); }
+.session-add .btn { justify-self: start; }
+
+.sessions { list-style: none; margin: var(--sp-4) 0 0; padding: 0; display: grid; gap: var(--sp-2); }
+.session {
+  padding: var(--sp-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--campaign-accent, var(--primary));
+  border-radius: var(--radius-sm);
+}
+.session__head { display: flex; align-items: baseline; gap: var(--sp-3); }
+.session__head strong { flex: 1; min-width: 0; }
+.session__body { margin: var(--sp-2) 0 0; white-space: pre-wrap; font-size: var(--step--1); }

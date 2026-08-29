@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Off-Guard as a launchd agent on macOS.
+
+    cp deploy/macos/com.drseim.off-guard.plist ~/Library/LaunchAgents/
+    # edit the three paths marked YOU below, then:
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.drseim.off-guard.plist
+    launchctl kickstart -k gui/$(id -u)/com.drseim.off-guard
+
+  A LaunchAgent runs when you are logged in, which is the right fit for a Mac
+  that is also somebody's computer. For a machine that only does this, put the
+  same file in /Library/LaunchDaemons instead and bootstrap it into `system` --
+  it then starts at boot with nobody logged in.
+
+  The machine has to stay awake for players to reach their sheets between
+  sessions:
+
+    sudo pmset -a sleep 0 disksleep 0
+
+  The display can still sleep; that is `displaysleep`, and it is unaffected.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.drseim.off-guard</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <!-- `which node`, absolute. A launchd agent gets almost no PATH, so a bare
+         `node` here fails with a message that says nothing. This is the path on
+         the machine this was written on; Homebrew on Apple silicon puts it at
+         /opt/homebrew/bin/node instead, so check before bootstrapping. -->
+    <string>/usr/local/bin/node</string>
+    <string>src/server/index.js</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/YOU/Documents/VSCode/off-guard</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <!-- Loopback only. The Cloudflare tunnel connects to it from this machine;
+         nothing else needs to reach it, and nothing else should be able to. -->
+    <key>OFF_GUARD_HOST</key>
+    <string>127.0.0.1</string>
+    <key>OFF_GUARD_PORT</key>
+    <string>8787</string>
+    <key>OFF_GUARD_DB</key>
+    <string>/Users/YOU/Library/Application Support/off-guard/off-guard.sqlite</string>
+    <key>OFF_GUARD_LOG_LEVEL</key>
+    <string>info</string>
+    <!-- Served from a host of its own through the tunnel, so no base path. -->
+    <key>OFF_GUARD_BASE_PATH</key>
+    <string></string>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+
+  <!-- These carry no request paths: Fastify's own request logging is off,
+       because the path is the credential. What lands here is startup, errors
+       and refused-access lines with a four-character token fingerprint. -->
+  <key>StandardOutPath</key>
+  <string>/Users/YOU/Library/Logs/off-guard.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/YOU/Library/Logs/off-guard.log</string>
+
+  <key>ProcessType</key>
+  <string>Background</string>
+</dict>
+</plist>

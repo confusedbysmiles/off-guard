@@ -8,6 +8,7 @@
  */
 import { debounce, el, titleCase } from '../../lib/dom.js';
 import { icon } from '../../lib/icons.js';
+import { reorderHandle } from '../../lib/reorder.js';
 
 const RARITIES = ['common', 'uncommon', 'rare', 'unique'];
 const SIZES = [['tiny', 'Tiny'], ['sm', 'Small'], ['med', 'Medium'], ['lg', 'Large'],
@@ -154,15 +155,32 @@ function resultRow(row, actions) {
       })));
 }
 
+/**
+ * The encounters in this campaign, in the order they are planned to run.
+ *
+ * A list rather than the dropdown this used to be, for two reasons: the order
+ * is the session plan and a dropdown hides all of it but one line, and an
+ * `<option>` cannot be dragged, so the reorder endpoint had nothing to attach
+ * to.
+ */
+function encounterList({ encounters, encounter, actions }) {
+  if (!encounters.length) return null;
+  return el('ol', { class: 'encounter-list', id: 'encounter-list' },
+    ...encounters.map((e) => el('li', {
+      class: 'encounter-item',
+      draggable: 'true',
+      dataset: { encounter: String(e.id) },
+    },
+    reorderHandle(el, icon, e.name),
+    el('button', {
+      class: 'encounter-item__open', type: 'button',
+      'aria-current': encounter?.id === e.id ? 'true' : null,
+      onclick: () => actions.openEncounter(e.id),
+    }, e.name))));
+}
+
 function encounterPanel({ encounters, encounter, actions, campaigns, campaignId }) {
-  const picker = el('select', {
-    class: 'select', 'aria-label': 'Encounter',
-    onchange: (event) => actions.openEncounter(Number(event.target.value) || null),
-  },
-  el('option', { value: '' }, 'Choose an encounter…'),
-  ...encounters.map((e) => el('option', {
-    value: String(e.id), selected: encounter?.id === e.id,
-  }, e.name)));
+  const picker = encounterList({ encounters, encounter, actions });
 
   if (!encounter) {
     return el('section', { class: 'panel' },
@@ -209,7 +227,7 @@ function encounterPanel({ encounters, encounter, actions, campaigns, campaignId 
     }),
 
     rows.length
-      ? el('div', { class: 'encounter-rows stack-md' },
+      ? el('div', { class: 'encounter-rows stack-md', id: 'encounter-rows' },
         ...rows.map((row, index) => encounterRow(row, index, actions)))
       : el('p', { class: 'empty stack-md' }, 'Nothing in this encounter yet.'),
 
@@ -241,8 +259,15 @@ function copyMenu({ campaigns, campaignId, actions }) {
 function encounterRow(row, index, actions) {
   const scale = Number(row.levelScale ?? 0);
 
-  return el('div', { class: 'encounter-row' },
-    el('div', {},
+  return el('div', {
+    class: 'encounter-row',
+    draggable: 'true',
+    // The index is the identity here: these rows have no id of their own until
+    // they are saved, and the order is what is being edited.
+    dataset: { row: String(index) },
+  },
+  reorderHandle(el, icon, row.displayName || 'this entry'),
+  el('div', {},
       el('input', {
         class: 'input input--compact', type: 'text', value: row.displayName ?? '',
         'aria-label': `Display name for entry ${index + 1}`,

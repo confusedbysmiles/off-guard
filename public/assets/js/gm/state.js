@@ -35,6 +35,7 @@ const state = {
   rolls: [],
   recall: null,
   tokens: null,
+  sessions: [],
 };
 
 export function subscribe(listener) {

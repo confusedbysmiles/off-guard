@@ -83,6 +83,37 @@ export async function buildApp({
     return payload;
   });
 
+  /**
+   * Errors, in this application's shape rather than Fastify's.
+   *
+   * Registered *before* the site plugin below, which is not a style choice: an
+   * error handler set afterwards does not reach routes already registered in a
+   * child context, and the symptom is subtle -- every message the dashboard
+   * shows in a notice silently becomes "Not Found" instead of "No such
+   * encounter", because the client reads `body.error` and Fastify's default
+   * shape puts the status text there.
+   */
+  app.setErrorHandler((error, request, reply) => {
+    const status = error.statusCode ?? 500;
+    if (status >= 500) {
+      request.log.error({ err: error, route: request.routeOptions?.url }, 'request failed');
+      return reply.status(500).send({ error: 'Something went wrong' });
+    }
+    return reply.status(status).send({ error: error.message });
+  });
+
+  /**
+   * Nothing here.
+   *
+   * Fastify's default 404 body quotes the URL it could not route -- and the URL
+   * is the credential. This says the same thing as every other refusal and says
+   * nothing else, which is also what keeps a wrong link indistinguishable from
+   * an unrouted one.
+   */
+  app.setNotFoundHandler((request, reply) => {
+    reply.status(404).send({ error: 'Not found' });
+  });
+
   // Static assets only. The HTML shells are served by named routes so a wrong
   // token gets a refusal rather than an empty sheet, and so no directory of
   // pages is browsable.
@@ -146,15 +177,6 @@ export async function buildApp({
     await site.register(scopedRoutes('character', registerCharacterRoutes), { prefix: '/api/c/:token' });
     await site.register(scopedRoutes('table', registerTableRoutes), { prefix: '/api/table/:token' });
   }, mount ? { prefix: mount } : {});
-
-  app.setErrorHandler((error, request, reply) => {
-    const status = error.statusCode ?? 500;
-    if (status >= 500) {
-      request.log.error({ err: error, route: request.routeOptions?.url }, 'request failed');
-      return reply.status(500).send({ error: 'Something went wrong' });
-    }
-    return reply.status(status).send({ error: error.message });
-  });
 
   return app;
 }
