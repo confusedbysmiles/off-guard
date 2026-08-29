@@ -3,10 +3,14 @@
 <!--
   Off-Guard as a launchd agent on macOS.
 
-    cp deploy/macos/com.drseim.off-guard.plist ~/Library/LaunchAgents/
-    # edit the three paths marked YOU below, then:
-    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.drseim.off-guard.plist
-    launchctl kickstart -k gui/$(id -u)/com.drseim.off-guard
+  A template. Use the installer beside it rather than copying this by hand:
+
+    ./deploy/macos/install.sh
+
+  It substitutes the real paths, refuses to install if a placeholder survives,
+  and waits for /healthz to answer before claiming success. Copying this file
+  as-is loads an agent that cannot start, and says so only in a log file it
+  also cannot open.
 
   A LaunchAgent runs when you are logged in, which is the right fit for a Mac
   that is also somebody's computer. For a machine that only does this, put the

@@ -15,9 +15,18 @@ this is a deployment choice, and the subdomain is the cheap one.
 
 ## 1. On the machine that will run it
 
+If you already have a checkout, use it — skip to `npm ci`. Otherwise clone it
+somewhere that is *not* inside an existing copy:
+
 ```bash
+cd ~/Documents          # or wherever you keep code, but not inside a checkout
 git clone https://github.com/confusedbysmiles/off-guard.git
 cd off-guard
+```
+
+Then, in the checkout:
+
+```bash
 npm ci
 npm test                      # 524 unit tests, no data build needed
 ```
@@ -36,8 +45,10 @@ creature search and stat blocks need it.
 
 ## 2. Somewhere for the database to live
 
-```bash
-mkdir -p ~/Library/Application\ Support/off-guard
+The installer in step 3 creates this, but it is worth knowing where it is:
+
+```
+~/Library/Application Support/off-guard/off-guard.sqlite
 ```
 
 Everything is in that one file: every campaign, every sheet, every token hash.
@@ -45,16 +56,19 @@ Everything is in that one file: every campaign, every sheet, every token hash.
 ## 3. Run it under launchd
 
 ```bash
-cp deploy/macos/com.drseim.off-guard.plist ~/Library/LaunchAgents/
+./deploy/macos/install.sh
 ```
 
-Edit the three `/Users/YOU/...` paths and check the `node` path matches
-`which node`. Then:
+It finds your `node`, fills the paths into the plist, loads the agent and does
+not return until `/healthz` actually answers — then prints where everything
+ended up. `./deploy/macos/install.sh --uninstall` undoes it and leaves the
+database alone.
 
-```bash
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.drseim.off-guard.plist
-curl -s localhost:8787/healthz     # {"ok":true}
-```
+The plist beside it is a template with `/Users/YOU/...` placeholders. Copying it
+by hand and forgetting to edit those is worth knowing about, because the failure
+is silent: launchd reports `EX_CONFIG` into a log file it also could not open,
+so there is nothing on screen and nothing on disk. The installer refuses to
+install a plist with a placeholder left in it.
 
 Stop it sleeping, or players cannot reach their sheets between sessions:
 
