@@ -307,3 +307,99 @@ button, input, select, textarea {
   color: var(--bad-ink);
   margin: var(--sp-1) 0 0;
 }
+
+/* --- Guides -----------------------------------------------------------------
+ *
+ * The Start here pages, on both surfaces. Prose rather than controls, so the
+ * measure is capped: a help page set to the full width of a desktop dashboard
+ * is a help page nobody finishes a paragraph of.
+ */
+
+.guide { display: grid; gap: var(--sp-4); }
+
+.guide__intro .panel__title { font-size: var(--step-2); }
+
+.guide__p,
+.guide__list { max-width: 68ch; line-height: 1.6; }
+
+.guide__p + .guide__p,
+.guide__p + .guide__list,
+.guide__list + .guide__p { margin-top: var(--sp-3); }
+
+.guide__list { padding-left: var(--sp-5); list-style: disc; }
+.guide__list li + li { margin-top: var(--sp-2); }
+
+.guide__h3 {
+  font-size: var(--step-0);
+  margin-top: var(--sp-4);
+  margin-bottom: var(--sp-2);
+  color: var(--ink);
+}
+.guide__h3:first-child { margin-top: 0; }
+
+/* The contents list, generated from the sections themselves. */
+.guide__toc { margin-top: var(--sp-4); }
+.guide__toc-label { margin-bottom: var(--sp-2); }
+.guide__toc-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-4);
+  list-style: none;
+  padding: 0;
+}
+.guide__toc-list a { color: var(--primary-ink); }
+
+/* An anchor jump should not land the heading under the sticky header. */
+.guide__section { scroll-margin-top: var(--sp-6); }
+
+/* Keys and what they do. Two columns on anything wider than a phone; on a
+ * phone the key sits above its description rather than squeezing both. */
+.guide__keys { display: grid; gap: var(--sp-5); margin-top: var(--sp-3); }
+
+.keys { display: grid; gap: var(--sp-2) var(--sp-4); align-items: baseline; }
+.keys__key { white-space: nowrap; }
+.keys__what { display: grid; gap: var(--sp-1); }
+.keys__hint { font-size: var(--step--1); line-height: 1.5; max-width: 60ch; }
+
+@media (min-width: 40rem) {
+  .keys { grid-template-columns: max-content 1fr; }
+  .keys__key { grid-column: 1; }
+  .keys__what { grid-column: 2; }
+}
+
+.kbd {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  line-height: 1;
+  padding: 0.25em 0.45em;
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+/* A button that reads as a link: used where a guide points at a tab and may as
+ * well take you there. It is a button because it does something to this page. */
+.link-button {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--primary-ink);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.link-button:hover { text-decoration: none; }
+
+.code {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  background: var(--surface-sunk);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-3);
+  overflow-x: auto;
+  margin-top: var(--sp-3);
+}

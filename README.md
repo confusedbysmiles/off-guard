@@ -11,7 +11,7 @@ creature data, reference tables and homebrew are global.
 
 **Status: complete, and running.** It has been live since 29 August 2026 on a
 Mac under launchd, reached through a Cloudflare Tunnel, and has been played on
-from a laptop, a phone and an iPad. 637 unit tests and 47 end-to-end tests, run
+from a laptop, a phone and an iPad. 650 unit tests and 55 end-to-end tests, run
 at a host root and at a subdirectory, in Chromium and — for the parts where
 engines differ — in WebKit. See [deploy/GOING-LIVE.md](deploy/GOING-LIVE.md).
 
@@ -26,6 +26,15 @@ engines differ — in WebKit. See [deploy/GOING-LIVE.md](deploy/GOING-LIVE.md).
 | 7 | Shared screen over SSE | done |
 | 8 | Reference drawer, dice roller, Recall Knowledge helper | done |
 | 9 | Deployment, accessibility and security pass | done |
+
+Both the dashboard and the sheet have a **Start here** written for the person
+using them — `?` on the dashboard, a fold at the top of the sheet. Neither is a
+static page: the sections are assembled from what is true right now, so a
+dashboard with no campaign in it gets first steps and one with three campaigns
+does not, and a sheet that is already filled in is not told how to fill it in.
+The keyboard section is rendered from the same table the dashboard dispatches
+keystrokes from, and a test holds the two together in both directions — a help
+page naming a key that does nothing is worse than one that names no keys.
 
 ## Running it
 

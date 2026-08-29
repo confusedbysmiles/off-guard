@@ -294,3 +294,49 @@
   margin: 15vh auto;
   padding: 0 var(--sp-4);
 }
+
+/* --- Start here -------------------------------------------------------------
+ *
+ * A fold rather than a card, because it is the right length to read once and
+ * the wrong length to scroll past every session. Open the first time; after
+ * that it remembers being closed.
+ */
+
+.guide-card { padding: 0; }
+
+.guide-card__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sp-2) var(--sp-3);
+  padding: var(--sp-4);
+  cursor: pointer;
+  list-style: none;
+}
+.guide-card__summary::-webkit-details-marker { display: none; }
+
+/* A disclosure triangle that turns, drawn rather than relied on: Safari and
+ * Chromium disagree about the default one, and it is load-bearing here. */
+.guide-card__summary::before {
+  content: '';
+  width: 0.5em;
+  height: 0.5em;
+  border-right: 2px solid var(--ink-dim);
+  border-bottom: 2px solid var(--ink-dim);
+  transform: rotate(-45deg);
+  transition: transform 120ms ease;
+}
+.guide-card[open] .guide-card__summary::before { transform: rotate(45deg); }
+
+@media (prefers-reduced-motion: reduce) {
+  .guide-card__summary::before { transition: none; }
+}
+
+.guide-card__summary .section__title { margin: 0; }
+
+.guide-card > .guide { padding: 0 var(--sp-4) var(--sp-4); gap: var(--sp-5); }
+
+/* Inside the fold the sections are not cards of their own; the fold is one. */
+.guide-card__section { display: block; }
+.guide-card__section + .guide-card__section { border-top: 1px solid var(--border); padding-top: var(--sp-4); }
+.guide-card__section .panel__title { font-size: var(--step-0); margin-bottom: var(--sp-2); }

@@ -14,11 +14,12 @@ import { armorClass, classDc, statistic } from '../../../engine/rules/index.js';
 import { el, formatMod, titleCase } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
 import { readPath } from './store.js';
+import { guideCard } from './guide.js';
 import {
   ATTRIBUTES, CONDITIONS, NOTES_SECTIONS, RANKS, SAVES, SKILLS, VALUED_CONDITIONS,
 } from './fields.js';
 
-export function mount(root, store) {
+export function mount(root, store, { onImport = () => {} } = {}) {
   const updaters = [];
   const onUpdate = (fn) => updaters.push(fn);
 
@@ -520,7 +521,29 @@ export function mount(root, store) {
       }));
   }
 
+  // Rebuilt when the sheet's shape changes rather than on every keystroke: what
+  // it says depends on whether the sheet is blank and how many conditions are
+  // on it, and neither of those changes while somebody is typing a note.
+  const guideSlot = el('div', { class: 'section--wide' });
+  let guideKey = null;
+  onUpdate((state) => {
+    const sheet = state.sheet ?? {};
+    const key = [
+      Boolean((sheet.name ?? '').trim() || sheet.class || sheet.level),
+      (sheet.conditions ?? []).length,
+      (sheet.name ?? '').trim(),
+    ].join('|');
+    if (key === guideKey) return;
+    guideKey = key;
+    // A card the player has folded away stays folded through a re-render.
+    const wasOpen = guideSlot.firstElementChild?.open;
+    const card = guideCard(sheet, { onImport });
+    if (wasOpen !== undefined) card.open = wasOpen;
+    guideSlot.replaceChildren(card);
+  });
+
   root.replaceChildren(
+    guideSlot,
     identity, attributes, defence, proficiencies, skills,
     movement, strikes, spellcasting, conditions, notes,
   );

@@ -48,6 +48,33 @@ test.describe('the player’s character sheet', () => {
   });
 });
 
+test.describe('the sheet’s Start here', () => {
+  test('is open the first time and folds away for good', async ({ browser }) => {
+    // A fresh context, because whether it is open is remembered per browser.
+    const context = await browser.newContext();
+    const page = await context.newPage();
+
+    await page.goto(`/c/${world.characterToken}`);
+    const card = page.locator('.guide-card');
+    await expect(card).toHaveAttribute('open', '');
+    await expect(card).toContainText('Kestrel Vane');
+    await expect(card).toContainText('It works with no signal');
+
+    await card.locator('summary').click();
+    await expect(card).not.toHaveAttribute('open', '');
+
+    await page.reload();
+    await expect(page.locator('.guide-card')).not.toHaveAttribute('open', '');
+    await context.close();
+  });
+
+  test('does not offer to fill in a sheet that is filled in', async ({ page }) => {
+    await page.goto(`/c/${world.characterToken}`);
+    await expect(page.locator('#guide-fill')).toHaveCount(0);
+    await expect(page.locator('#guide-saving')).toHaveCount(1);
+  });
+});
+
 test.describe('the GM dashboard', () => {
   test('opens on the party, live from the sheets', async ({ page }) => {
     await page.goto(`/gm/${world.gmToken}`);
@@ -477,5 +504,68 @@ test.describe('reordering', () => {
     await expect(async () => {
       expect(await names()).toEqual(moved);
     }).toPass({ timeout: 5000 });
+  });
+});
+
+test.describe('Start here', () => {
+  test('opens on a keystroke, and its contents list matches its sections', async ({ page }) => {
+    await page.goto(`/gm/${world.gmToken}`);
+    await page.locator('body').press('?');
+
+    await expect(page.locator('.guide__intro .panel__title')).toHaveText('Start here');
+    // The whole reason the contents list is generated: it cannot say anything
+    // the page does not have.
+    const contents = await page.locator('.guide__toc-list a').allInnerTexts();
+    const headings = await page.locator('.guide__section > .panel__title').allInnerTexts();
+    expect(contents).toEqual(headings);
+    expect(contents.length).toBeGreaterThan(3);
+  });
+
+  test('says which campaign you are on, and takes you to a tab', async ({ page }) => {
+    await page.goto(`/gm/${world.gmToken}`);
+    await page.locator('body').press('?');
+    await expect(page.locator('.guide__intro')).toContainText('Abomination Vaults');
+
+    await page.locator('#tabs').getByText('Start here').click();
+    await page.locator('#tabs').getByText('Start here').click();
+    await page.locator('.guide__section').getByRole('button', { name: 'Initiative' }).click();
+    await expect(page.locator('#tabs button[aria-current="page"]')).toContainText('Initiative');
+  });
+
+  test('prints every key the dashboard actually listens for', async ({ page }) => {
+    await page.goto(`/gm/${world.gmToken}`);
+    await page.locator('body').press('?');
+    const keys = await page.locator('.guide__keys .kbd').allInnerTexts();
+    for (const key of ['T', 'I', 'E', 'S', 'A', '?', 'C', 'R', 'D', 'K', 'Esc', 'Space', 'P']) {
+      expect(keys, `the guide does not mention ${key}`).toContain(key);
+    }
+    // And the ones it names work. R opens the drawer on the reference tab.
+    await page.locator('body').press('r');
+    await expect(page.locator('#drawer')).toBeVisible();
+  });
+
+  test('tells a new campaign what to do next, and stops once it is done', async ({ page }) => {
+    // The point of assembling this page at render time: a campaign with nobody
+    // in it gets first steps, and the one that has been running for weeks does
+    // not have to scroll past them.
+    await page.goto(`/gm/${world.gmToken}`);
+    await page.locator('body').press('?');
+    await expect(page.locator('#first')).toHaveCount(0);
+
+    page.once('dialog', (dialog) => dialog.accept('Thursday: a brand new game'));
+    await page.locator('body').press('a');
+    await page.getByRole('button', { name: 'New campaign' }).click();
+    await expect(page.locator('#campaign-name')).toContainText('brand new game');
+
+    await page.locator('body').press('?');
+    await expect(page.locator('#first')).toContainText('add your players');
+  });
+
+  test('never renders a token, like every other panel', async ({ page }) => {
+    await page.goto(`/gm/${world.gmToken}`);
+    await page.locator('body').press('?');
+    const html = await page.content();
+    expect(html).not.toContain(world.tableToken);
+    expect(html).not.toContain(world.characterToken);
   });
 });

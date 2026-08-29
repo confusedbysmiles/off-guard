@@ -13,10 +13,12 @@
  *   - `<dialog>` and `showModal`
  *   - `EventSource`, which is the whole shared screen
  *   - `localStorage` inside a `try`, which is how the sheet survives a reload
+ *   - `<details>` with its default marker replaced, which is the Start here
+ *     card and the one place the two engines disagreed by default
  *
  * So this covers those, not the application again. WebKit is not Safari and a
- * headless tablet is not an iPad, but an engine-level regression in any of the
- * four would show up here rather than at the table.
+ * headless tablet is not an iPad, but an engine-level regression in any of them
+ * would show up here rather than at the table.
  */
 import { expect, test } from '@playwright/test';
 
@@ -40,6 +42,29 @@ test.describe('the character sheet', () => {
     await expect(page.locator('#save-state')).toHaveText('Saved', { timeout: 5000 });
     await page.reload();
     await expect(page.getByLabel('Notes', { exact: true })).toHaveValue('Rope, 50 feet');
+  });
+});
+
+test.describe('the Start here card', () => {
+  test('folds and unfolds, with its own marker', async ({ page }) => {
+    await page.goto(`/c/${world.characterToken}`);
+    const card = page.locator('.guide-card');
+    const summary = card.locator('summary');
+
+    // The default marker is suppressed and one is drawn instead, because the
+    // two engines disagree about the default and it is load-bearing here.
+    const marker = await summary.evaluate((el) => {
+      const style = getComputedStyle(el, '::before');
+      return { content: style.content, width: style.width };
+    });
+    expect(marker.content).not.toBe('none');
+    expect(parseFloat(marker.width)).toBeGreaterThan(0);
+
+    await summary.click();
+    await expect(card).not.toHaveAttribute('open', '');
+    await summary.click();
+    await expect(card).toHaveAttribute('open', '');
+    await expect(card).toContainText('It works with no signal');
   });
 });
 

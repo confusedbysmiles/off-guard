@@ -25,16 +25,8 @@ import { statBlock } from './views/statblock.js';
 import { linkReveal, linksPanel } from './views/links.js';
 import { campaignPanel, rosterPanel, sessionsPanel } from './views/campaign.js';
 import { createDrawer, drawerShell } from './drawer.js';
-
-const TABS = [
-  ['table', 'Table', 'T'],
-  ['initiative', 'Initiative', 'I'],
-  ['encounters', 'Encounters', 'E'],
-  // Everything about this campaign that is not a fight: its settings, who is
-  // in it, their links, and what happened last week.
-  ['setup', 'Setup', 'S'],
-  ['overview', 'All campaigns', 'A'],
-];
+import { startPanel } from './views/start.js';
+import { shortcutFor, TABS } from './shortcuts.js';
 
 const notices = createNotices($('#notices'));
 
@@ -239,6 +231,11 @@ function render() {
     return;
   }
 
+  if (state.tab === 'start') {
+    main.replaceChildren(startPanel(state, { onTab: selectTab }));
+    return;
+  }
+
   main.replaceChildren(el('div', { class: 'panels' }, partyPanel(state.party)));
 }
 
@@ -314,42 +311,56 @@ function selectTab(tab) {
 
 // --- keyboard -------------------------------------------------------------------
 
+/**
+ * What each shortcut in `shortcuts.js` does.
+ *
+ * Keyed by the same ids, so the table that documents the keyboard is the table
+ * that drives it. A test holds the two together in both directions.
+ */
+export const SHORTCUT_ACTIONS = {
+  ...Object.fromEntries(TABS.map(([id]) => [`tab:${id}`, () => selectTab(id)])),
+
+  'campaign:switcher': () => openSwitcher(),
+
+  // Handled by the digit branch below, which needs to know how many campaigns
+  // there are. Named here so the table and the actions stay in step.
+  'campaign:byNumber': null,
+
+  'drawer:reference': () => drawer.toggle('reference'),
+  'drawer:dice': () => drawer.toggle('dice'),
+  'drawer:recall': () => {
+    const { combat } = store.get();
+    const current = combat?.combatants[combat.turnIndex];
+    // On the Initiative tab, K asks about whoever's turn it is -- which is the
+    // creature a player has just asked about.
+    if (current && !current.characterId) {
+      drawer.recall(current.id, `Asked about ${current.displayName}.`);
+    } else {
+      drawer.toggle('recall');
+    }
+  },
+  'drawer:close': () => drawer.close(),
+
+  'combat:next': () => actions.advance(1),
+  'combat:previous': () => actions.advance(-1),
+};
+
 function setUpKeyboard() {
   addEventListener('keydown', (event) => {
     if (/^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName)) return;
     if (event.metaKey || event.ctrlKey || event.altKey) return;
 
+    // Escape belongs to whatever is open, before anything else looks at it.
     if (event.key === 'Escape' && !$('#switcher').hidden) { closeSwitcher(); return; }
-    if (event.key === 'Escape' && drawer.isOpen()) { drawer.close(); return; }
 
-    const key = event.key.toLowerCase();
-
-    // The drawer, from anywhere. R and D open it; K asks about whoever's turn
-    // it is, which is the creature a player has just asked about.
-    if (key === 'r') { event.preventDefault(); drawer.toggle('reference'); return; }
-    if (key === 'd') { event.preventDefault(); drawer.toggle('dice'); return; }
-    if (key === 'k') {
-      event.preventDefault();
-      const { combat } = store.get();
-      const current = combat?.combatants[combat.turnIndex];
-      if (current && !current.characterId) {
-        drawer.recall(current.id, `Asked about ${current.displayName}.`);
-      } else {
-        drawer.toggle('recall');
-      }
-      return;
+    const shortcut = shortcutFor(event, store.get().tab);
+    if (shortcut) {
+      // `drawer:close` is Escape, which must fall through to the browser when
+      // the drawer is not open rather than being swallowed.
+      if (shortcut.id === 'drawer:close' && !drawer.isOpen()) return;
+      const run = SHORTCUT_ACTIONS[shortcut.id];
+      if (run) { event.preventDefault(); run(); return; }
     }
-
-    // Turn advance, which is the key pressed most often in a session.
-    if (store.get().tab === 'initiative') {
-      if (event.key === ' ' || key === 'n') { event.preventDefault(); actions.advance(1); return; }
-      if (key === 'p') { event.preventDefault(); actions.advance(-1); return; }
-    }
-
-    if (key === 'c') { event.preventDefault(); openSwitcher(); return; }
-
-    const tab = TABS.find(([, , shortcut]) => shortcut.toLowerCase() === key);
-    if (tab) { event.preventDefault(); selectTab(tab[0]); return; }
 
     // Number keys jump straight to a campaign, which is the actual gesture:
     // "put me on the Tuesday game" rather than "open a menu".

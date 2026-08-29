@@ -127,7 +127,9 @@ async function start() {
   setUpThemeButton();
 
   const root = $('#sheet');
-  const update = mount(root, store);
+  const update = mount(root, store, {
+    onImport: () => openImportDialog({ store, endpoint }),
+  });
 
   $('#undo').addEventListener('click', () => store.undo());
   $('#print').addEventListener('click', () => window.print());
