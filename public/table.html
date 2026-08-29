@@ -36,6 +36,12 @@
   <p class="table-empty" id="empty">No fight running.</p>
 </main>
 
+<!-- Open rolls. Secret rolls never reach this page: the server drops them from
+     the payload rather than sending them with a flag, so there is nothing here
+     to hide and nothing to leak. Not a live region -- a roll landing should not
+     interrupt a screen reader mid-turn. -->
+<aside class="table-rolls" id="rolls" aria-label="Recent rolls" hidden></aside>
+
 <script type="module" src="/assets/js/table/main.js"></script>
 </body>
 </html>

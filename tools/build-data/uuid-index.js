@@ -65,6 +65,26 @@ export function buildUuidIndex(upstream, { onProgress } = {}) {
     onProgress?.(pack, count);
   }
 
+  // Journal *pages* are addressed by a second id after the journal's own, and
+  // the pack loop above only ever saw the journal. Without this, every link to
+  // a GM Screen page -- Track and Cover Tracks both point at Travel Speed --
+  // renders as dead text next to a reference drawer that has the page open.
+  let journalPages = 0;
+  for (const { doc } of readPack(upstream, 'journals')) {
+    for (const page of doc.pages ?? []) {
+      if (!page.name || !page._id) continue;
+      const entry = {
+        kind: 'table', id: slugify(page.name), name: page.name,
+        pack: 'journals', foundryId: page._id,
+      };
+      journalPages += 1;
+      for (const key of [`id:${page._id}`, `JournalEntryPage:${page._id}`]) {
+        if (!index.has(key)) index.set(key, entry);
+      }
+    }
+  }
+  stats.journalPages = journalPages;
+
   // Upstream keeps a redirect table for entries that were renamed or moved
   // between packs. Applying it turns otherwise-dead links back into live ones.
   const redirects = readJsonFromGit(upstream, 'build/uuid-redirects/pf2e.json') ?? {};

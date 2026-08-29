@@ -6,9 +6,10 @@
  * every campaign, which is exactly why the id cannot be inferred from the row.
  */
 import {
-  addCombatant, advanceTurn, damageCombatant, endCombat, getActiveCombat, removeCombatant,
-  reorderCombatants, sortByInitiative, startCombat, tableView, updateCombatant,
+  addCombatant, advanceTurn, damageCombatant, endCombat, getActiveCombat, getCombatant,
+  removeCombatant, reorderCombatants, sortByInitiative, startCombat, tableView, updateCombatant,
 } from '../../store/combat.js';
+import { recallKnowledge } from '../../../rules/index.js';
 import { rollInitiative } from '../../initiative.js';
 import { partyFor } from '../../party.js';
 import { publishCharacter, publishTable } from '../../publish.js';
@@ -127,6 +128,31 @@ export async function registerInitiativeRoutes(app) {
     publishTable(app, request.scope, request.params.campaignId);
     return result;
   });
+
+  /**
+   * Recall Knowledge against a combatant.
+   *
+   * The stat block stored on the row is the adjusted one -- elite, weak or
+   * scaled -- which is the creature the party is actually fighting and so the
+   * one a successful check should describe. `revealed` comes back marked so
+   * the helper can show what the table already knows.
+   */
+  app.get('/campaigns/:campaignId/combat/combatants/:combatantId/recall-knowledge',
+    async (request, reply) => {
+      const { campaignId, combatantId } = request.params;
+      const combatant = getCombatant(db, request.scope, combatantId, campaignId);
+      const creature = combatant.statBlock
+        ?? (combatant.creatureId ? catalogue.get(combatant.creatureId) : null);
+      if (!creature) {
+        reply.status(404);
+        return { error: 'This combatant has no stat block to recall anything about' };
+      }
+      const helper = recallKnowledge(creature, {
+        revealed: (combatant.revealed ?? []).map((f) => (typeof f === 'string' ? f : f.key)),
+        difficulty: request.query?.difficulty ?? null,
+      });
+      return { ...helper, combatantId: Number(combatantId) };
+    });
 
   /** What the table is seeing right now, so the GM can check before revealing. */
   app.get('/campaigns/:campaignId/table-view', async (request) => tableView(

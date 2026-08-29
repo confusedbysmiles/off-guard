@@ -11,6 +11,9 @@
 import { debounce } from '../lib/dom.js';
 import { assignDisplayNames } from './views/builder.js';
 
+/** A revealed fact was stored as a bare key by an earlier build; accept both. */
+const keyOf = (fact) => (typeof fact === 'string' ? fact : fact.key);
+
 export function createActions({ api, store, notices, refresh, showStatBlock, showPrompts }) {
   /** Names for creatures on screen, so display names can be generated. */
   const creatureNames = new Map();
@@ -91,6 +94,9 @@ export function createActions({ api, store, notices, refresh, showStatBlock, sho
   const actions = {
     creatureNames,
     get searchQuery() { return searchQuery; },
+
+    /** The dialog, so a view can open a stat block it already has in hand. */
+    showStatBlock,
 
     loadParty, loadEncounters, loadCombat, loadOverview, loadBudget,
 
@@ -394,6 +400,107 @@ export function createActions({ api, store, notices, refresh, showStatBlock, sho
       store.set({ combat: null });
       refresh();
       notices.info('Fight ended.');
+    },
+
+    // --- the drawer: reference, dice and Recall Knowledge -------------------
+
+    /** The corpus. Fetched once; the drawer caches the index it builds. */
+    loadReference: () => api.reference(),
+
+    async loadRolls() {
+      if (!campaign()) return;
+      try {
+        store.set({ rolls: (await api.rolls(campaign())).rolls });
+      } catch (error) {
+        notices.error(`Could not load the dice log: ${error.message}`);
+      }
+    },
+
+    async roll({ expression, label, secret }) {
+      try {
+        const { roll } = await api.roll(campaign(), { expression, label, secret });
+        store.set({ rolls: [roll, ...store.get().rolls] });
+        return roll;
+      } catch (error) {
+        notices.error(error.message);
+        return null;
+      }
+    },
+
+    async deriveRoll(rollId, derivation) {
+      try {
+        const { roll } = await api.deriveRoll(campaign(), rollId, derivation);
+        store.set({ rolls: [roll, ...store.get().rolls] });
+      } catch (error) {
+        notices.error(`Could not ${derivation} that: ${error.message}`);
+      }
+    },
+
+    async clearRolls() {
+      const previous = store.get().rolls;
+      try {
+        await api.clearRolls(campaign());
+        store.set({ rolls: [] });
+        notices.info(`Cleared ${previous.length} roll(s).`);
+      } catch (error) {
+        notices.error(`Could not clear the log: ${error.message}`);
+      }
+    },
+
+    /**
+     * Recall Knowledge against a combatant.
+     *
+     * `subject` is the sentence shown above the panel -- who is being asked
+     * about -- and is kept on the state so re-rendering the drawer after a
+     * reveal does not lose it.
+     */
+    async openRecall(combatantId, subject = null) {
+      try {
+        const recall = await api.recallCombatant(campaign(), combatantId);
+        store.set({ recall: { ...recall, subject, difficulty: null } });
+      } catch (error) {
+        store.set({ recall: null });
+        notices.error(`Could not work that out: ${error.message}`);
+      }
+    },
+
+    async reloadRecall(difficulty) {
+      const { recall } = store.get();
+      if (!recall) return;
+      try {
+        const next = await api.recallCombatant(campaign(), recall.combatantId, { difficulty });
+        store.set({ recall: { ...next, subject: recall.subject, difficulty } });
+      } catch (error) {
+        notices.error(`Could not adjust the DC: ${error.message}`);
+      }
+    },
+
+    /**
+     * Show or hide one fact on the shared screen.
+     *
+     * The whole fact is stored, not just its key: the screen has to render the
+     * label and the value, and it has no stat block to look them up in.
+     */
+    async revealFact(fact, revealed) {
+      const { recall, combat } = store.get();
+      if (!recall) return;
+      const current = combat?.combatants.find((c) => c.id === recall.combatantId)?.revealed ?? [];
+      const next = revealed
+        ? [...current.filter((f) => keyOf(f) !== fact.key),
+          { key: fact.key, label: fact.label, value: fact.value }]
+        : current.filter((f) => keyOf(f) !== fact.key);
+      await actions.updateCombatant(recall.combatantId, { revealed: next });
+      await actions.reloadRecall(recall.difficulty ?? null);
+    },
+
+    async revealAllFacts(revealed) {
+      const { recall } = store.get();
+      if (!recall) return;
+      const next = revealed
+        ? recall.facts.map((f) => ({ key: f.key, label: f.label, value: f.value }))
+        : [];
+      await actions.updateCombatant(recall.combatantId, { revealed: next });
+      await actions.reloadRecall(recall.difficulty ?? null);
     },
 
     // --- campaigns ----------------------------------------------------------

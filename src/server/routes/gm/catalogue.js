@@ -6,7 +6,7 @@
  * GM, not to a table, and the GM token is the only one that reaches these
  * routes at all.
  */
-import { adjustCreature, scaleCreature } from '../../../rules/index.js';
+import { adjustCreature, recallKnowledge, scaleCreature } from '../../../rules/index.js';
 
 const asArray = (value) => {
   if (value === undefined || value === null || value === '') return [];
@@ -56,6 +56,25 @@ export async function registerCatalogueRoutes(app) {
       limit: Math.min(Number(query.limit ?? 50), 200),
       offset: Number(query.offset ?? 0),
     });
+  });
+
+  /**
+   * Recall Knowledge against a creature that is not in a fight.
+   *
+   * No reveal state: nothing has been shown to anyone yet. The combatant route
+   * is the one that carries what the GM has already given away.
+   */
+  app.get('/catalogue/:id/recall-knowledge', async (request, reply) => {
+    const creature = catalogue.get(request.params.id);
+    if (!creature) {
+      reply.status(404);
+      return { error: 'No such creature' };
+    }
+    const adjusted = present(creature, {
+      scale: Number(request.query?.scale ?? 0),
+      adjustment: request.query?.adjustment ?? null,
+    });
+    return recallKnowledge(adjusted, { difficulty: request.query?.difficulty ?? null });
   });
 
   app.get('/catalogue/:id', async (request, reply) => {

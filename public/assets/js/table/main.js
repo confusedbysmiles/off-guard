@@ -40,6 +40,7 @@ function setConnection(state) {
 
 function render(view) {
   $('#round').textContent = view.round ? `Round ${view.round}` : 'Not in combat';
+  renderRolls(view.rolls ?? []);
 
   const order = $('#order');
   if (!view.combatants?.length) {
@@ -50,6 +51,20 @@ function render(view) {
 
   order.replaceChildren(...view.combatants.map((combatant) => turnRow(combatant, view.activeId)));
   announceTurn(view);
+}
+
+/** The last few open rolls, newest first. */
+function renderRolls(rolls) {
+  const strip = $('#rolls');
+  strip.hidden = rolls.length === 0;
+  strip.replaceChildren(...rolls.map((roll) => el('div', { class: 'table-roll' },
+    el('span', { class: 'table-roll__total' }, String(roll.total)),
+    el('span', { class: 'table-roll__label' },
+      roll.label || roll.expression,
+      roll.derivation
+        ? el('span', { class: 'table-roll__note' },
+          roll.derivation === 'half' ? ' halved' : ' doubled')
+        : null))));
 }
 
 function turnRow(combatant, activeId) {

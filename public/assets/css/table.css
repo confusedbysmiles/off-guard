@@ -192,3 +192,41 @@
   .order { padding: var(--sp-3); }
   .table-bar { padding: var(--sp-2) var(--sp-3); }
 }
+
+/* --- Open rolls ------------------------------------------------------------
+ *
+ * A strip along the bottom, so the room can see what was rolled without the
+ * GM reading it out. Secret rolls are not here to be hidden: the payload this
+ * page receives never contains one.
+ */
+.table-rolls[hidden] { display: none; }
+
+.table-rolls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  border-top: 1px solid var(--border);
+  background: var(--surface-sunk);
+}
+
+.table-roll {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--primary);
+  border-radius: var(--radius-sm);
+}
+.table-roll__total {
+  font-size: var(--step-2);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.table-roll__label { color: var(--ink-dim); }
+.table-roll__note { color: var(--ink-faint); }
+
+[data-density='tv'] .table-roll__total { font-size: var(--step-4); }
+[data-density='tv'] .table-roll__label { font-size: var(--step-1); }

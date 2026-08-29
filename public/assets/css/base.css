@@ -266,3 +266,44 @@ button, input, select, textarea {
 
 .notice--info { border-left-color: var(--primary); }
 .notice--bad { border-left-color: var(--bad); }
+
+/* --- Layout utilities --------------------------------------------------
+ *
+ * The Content-Security-Policy has no `unsafe-inline`, which blocks `style`
+ * attributes as well as `<style>` blocks. That is the right policy for an
+ * application whose credential is in the URL, so spacing that would otherwise
+ * be a one-off inline style lives here instead.
+ *
+ * In base.css rather than sheet.css: the dashboard uses `row-inline`,
+ * `condition-value` and the stack utilities too, and gm.html does not load
+ * sheet.css, so half the initiative tracker's spacing was silently absent.
+ */
+.stack-sm  { margin-top: var(--sp-2); }
+.stack-md  { margin-top: var(--sp-3); }
+.stack-lg  { margin-top: var(--sp-4); }
+.heading-inline { margin: var(--sp-3) 0 var(--sp-2); }
+.heading-spaced { margin: var(--sp-4) 0 var(--sp-2); }
+
+.row-inline { display: flex; gap: var(--sp-2); align-items: center; }
+.row-inline--wrap { flex-wrap: wrap; }
+
+.chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+  min-height: var(--tap);
+}
+.checkbox-row input[type='checkbox'] { width: 22px; height: 22px; }
+
+.condition-value { width: 3.5rem; }
+
+/* An inline validation message, next to the field it is about. Not a
+   `.notice`: that is the floating strip at the top of the page. */
+.field-error {
+  font-size: var(--step--1);
+  color: var(--bad-ink);
+  margin: var(--sp-1) 0 0;
+}

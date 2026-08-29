@@ -195,6 +195,12 @@ export function createMarkupResolver({ uuidIndex = new Map(), glossary = new Map
         unresolved.push(uuid);
         return `<span class="og-ref og-ref--unresolved">${escapeHtml(text)}</span>`;
       }
+      // Upstream writes an action's own roll button inside its own text --
+      // Demoralize says `[[/act demoralize]]{Intimidation}` -- and a link back
+      // to the entry you are already reading is worse than no link at all.
+      if (ctx.self && ctx.self === `${target.kind}/${target.id}`) {
+        return `<span class="og-ref og-ref--self">${escapeHtml(text)}</span>`;
+      }
       links.push({ kind: target.kind, id: target.id, label: text });
       return `<a class="og-ref" href="#/ref/${target.kind}/${target.id}">${escapeHtml(text)}</a>`;
     }

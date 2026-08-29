@@ -26,6 +26,14 @@ const state = {
   catalogue: null,
   vocabulary: { traits: [], sources: [] },
   error: null,
+
+  // The drawer: reference, dice and Recall Knowledge. It lives outside `#main`
+  // in the DOM and re-renders on its own, so a dashboard re-render does not
+  // close a table the GM is reading from.
+  drawer: { open: false, tab: 'reference', entryId: null, query: '' },
+  reference: null,
+  rolls: [],
+  recall: null,
 };
 
 export function subscribe(listener) {

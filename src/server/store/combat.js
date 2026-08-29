@@ -8,6 +8,7 @@
  */
 import { applyDamage, endOfTurn, applyAutomatic, startOfTurn } from '../../rules/conditions.js';
 import { applyPatch } from './characters.js';
+import { visibleRolls } from './rolls.js';
 import { assertWritable, campaignFor, isGm, NotFoundError, ScopeError } from '../scope.js';
 
 const COMBAT_COLUMNS = `
@@ -328,8 +329,11 @@ export function endCombat(db, scope, combatId, requestedCampaignId = null) {
 
 export function tableView(db, scope, requestedCampaignId = null) {
   const campaignId = campaignFor(scope, requestedCampaignId);
+  // The rolls the table may see. Secret rolls are dropped inside `visibleRolls`
+  // rather than filtered here, so there is one place that decides.
+  const rolls = visibleRolls(db, campaignId);
   const combat = getActiveCombat(db, scope, campaignId);
-  if (!combat) return { round: null, turnIndex: null, combatants: [] };
+  if (!combat) return { round: null, turnIndex: null, combatants: [], rolls };
 
   const characters = new Map(
     db.prepare('SELECT id, name, player_name AS playerName, sheet FROM character WHERE campaign_id = ?')
@@ -367,5 +371,6 @@ export function tableView(db, scope, requestedCampaignId = null) {
     round: combat.round,
     activeId: combatants.some((c) => c.id === activeId) ? activeId : null,
     combatants,
+    rolls,
   };
 }

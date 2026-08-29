@@ -44,10 +44,14 @@ export const api = {
   party: (id) => request(`/campaigns/${id}/party`),
   tokens: (id) => request(`/campaigns/${id}/tokens`),
 
+  reference: () => request('/reference'),
+
   catalogue: () => request('/catalogue'),
   vocabulary: () => request('/catalogue/traits'),
   search: (params) => request(`/catalogue/search${query(params)}`),
   creature: (id, params = {}) => request(`/catalogue/${encodeURIComponent(id)}${query(params)}`),
+  recallCreature: (id, params = {}) =>
+    request(`/catalogue/${encodeURIComponent(id)}/recall-knowledge${query(params)}`),
 
   encounters: (id) => request(`/campaigns/${id}/encounters`),
   encounter: (id, encounterId) => request(`/campaigns/${id}/encounters/${encounterId}`),
@@ -86,6 +90,15 @@ export const api = {
     request(`/campaigns/${id}/combat/${combatId}/advance`, { method: 'POST', body: { direction } }),
   endCombat: (id, combatId) =>
     request(`/campaigns/${id}/combat/${combatId}/end`, { method: 'POST', body: {} }),
+  recallCombatant: (id, combatantId, params = {}) =>
+    request(`/campaigns/${id}/combat/combatants/${combatantId}/recall-knowledge${query(params)}`),
+
+  rolls: (id, limit = 50) => request(`/campaigns/${id}/rolls${query({ limit })}`),
+  roll: (id, body) => request(`/campaigns/${id}/rolls`, { method: 'POST', body }),
+  deriveRoll: (id, rollId, derivation) =>
+    request(`/campaigns/${id}/rolls/${rollId}/${derivation}`, { method: 'POST', body: {} }),
+  clearRolls: (id) => request(`/campaigns/${id}/rolls`, { method: 'DELETE' }),
+
   tableView: (id) => request(`/campaigns/${id}/table-view`),
   budget: (id, encounterId) => request(`/campaigns/${id}/encounters/${encounterId}/budget`),
 };

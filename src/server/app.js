@@ -28,6 +28,7 @@ import { registerCharacterRoutes } from './routes/character.js';
 import { registerTableRoutes } from './routes/table.js';
 import { registerPageRoutes } from './routes/pages.js';
 import { openCatalogue } from './catalogue.js';
+import { loadReference } from './reference.js';
 import { createEventBus } from './events.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -43,7 +44,7 @@ const SHARED_DIR = resolve(HERE, '../shared');
  * option, which is deprecated in Fastify 5.
  */
 export async function buildApp({
-  db, catalogue = null, bus = null, logger = false, trustProxy = true,
+  db, catalogue = null, reference = null, bus = null, logger = false, trustProxy = true,
 } = {}) {
   const app = Fastify({
     logger,
@@ -55,6 +56,8 @@ export async function buildApp({
   // The catalogue is global across campaigns and read-only, so it is a
   // process-wide value rather than something a request builds.
   app.decorate('catalogue', catalogue ?? openCatalogue());
+  // Same reasoning for the reference corpus: checked in, read-only, one copy.
+  app.decorate('reference', reference ?? loadReference({ log: app.log }));
   app.decorate('bus', bus ?? createEventBus());
   app.addHook('onClose', async () => { app.bus.close(); });
 

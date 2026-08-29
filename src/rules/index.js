@@ -21,6 +21,8 @@
  *   conditions.js        RAW where the rules state it plainly, and a prompt
  *                        everywhere else. Only frightened decreases on its own
  *                        at the end of a turn; everything ambiguous is asked.
+ *   dice.js              RAW for halving and doubling; the expression syntax
+ *                        is this application's, and deliberately small.
  *   scale.js             NOT RAW. An approximation, labelled as one everywhere
  *                        it surfaces.
  */
@@ -45,6 +47,10 @@ export {
 export {
   factsFor, recallKnowledge, skillsFor,
 } from './recall-knowledge.js';
+
+export {
+  DiceError, DIE_FACES, double, format as formatDice, halve, parseDice, rollDice,
+} from './dice.js';
 
 export {
   armorClass, classDc, PROFICIENCY_BONUS, PROFICIENCY_RANKS,

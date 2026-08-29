@@ -173,3 +173,147 @@ test.describe('two clients', () => {
     await gm.close();
   });
 });
+
+test.describe('the drawer', () => {
+  test('opens on a keystroke and searches the reference', async ({ page }) => {
+    await page.goto(`/gm/${world.gmToken}`);
+    await page.locator('body').press('r');
+
+    const drawer = page.locator('#drawer');
+    await expect(drawer).toBeVisible();
+    // The level DC calculator is the first thing in it, and it is live.
+    await expect(drawer.locator('.ref-dc__value')).toHaveText('DC 15');
+    await drawer.locator('#ref-dc-level').selectOption('7');
+    await expect(drawer.locator('.ref-dc__value')).toHaveText('DC 23');
+    await drawer.locator('#ref-dc-rarity').selectOption('rare');
+    await expect(drawer.locator('.ref-dc__value')).toHaveText('DC 28');
+
+    await drawer.locator('#ref-search').fill('demoralize');
+    await drawer.locator('.ref-row', { hasText: 'Demoralize' }).click();
+    await expect(drawer.locator('.ref-entry h3')).toHaveText('Demoralize');
+    await expect(drawer.locator('.ref-entry')).toContainText('Player Core');
+  });
+
+  test('follows a link from one entry to another', async ({ page }) => {
+    await page.goto(`/gm/${world.gmToken}`);
+    await page.locator('body').press('r');
+    const drawer = page.locator('#drawer');
+
+    await drawer.locator('#ref-search').fill('demoralize');
+    await drawer.locator('.ref-row', { hasText: 'Demoralize' }).click();
+    await drawer.locator('a.og-ref', { hasText: 'Frightened' }).first().click();
+
+    await expect(drawer.locator('.ref-entry h3')).toHaveText('Frightened');
+    // The hash is the dashboard's own routing; a reference link must not touch it.
+    expect(page.url()).not.toContain('/ref/');
+  });
+
+  test('closes on Escape and puts the drawer’s width back', async ({ page }) => {
+    await page.goto(`/gm/${world.gmToken}`);
+    await page.locator('body').press('r');
+    await expect(page.locator('#drawer')).toBeVisible();
+    await page.locator('body').press('Escape');
+    await expect(page.locator('#drawer')).toBeHidden();
+  });
+
+  test('rolls, and halves the result', async ({ page }) => {
+    await page.goto(`/gm/${world.gmToken}`);
+    await page.locator('body').press('d');
+    const drawer = page.locator('#drawer');
+
+    await drawer.locator('#dice-expression').fill('2d6+3');
+    await drawer.locator('#dice-label').fill('Goblin Warrior A, jaws');
+    await drawer.getByRole('button', { name: 'Roll' }).click();
+
+    const first = drawer.locator('.roll').first();
+    await expect(first).toContainText('Goblin Warrior A, jaws');
+    const total = Number(await first.locator('.roll__total').textContent());
+    expect(total).toBeGreaterThanOrEqual(5);
+    expect(total).toBeLessThanOrEqual(15);
+
+    await first.getByRole('button', { name: 'Half' }).click();
+    await expect(drawer.locator('.roll').first().locator('.roll__total'))
+      .toHaveText(String(Math.floor(total / 2)));
+  });
+
+  test('refuses a die that is not a die, before it is sent', async ({ page }) => {
+    await page.goto(`/gm/${world.gmToken}`);
+    await page.locator('body').press('d');
+    await page.locator('#dice-expression').fill('1d7');
+    await expect(page.locator('#dice-error')).toContainText('d7');
+    await expect(page.getByRole('button', { name: 'Roll' })).toBeDisabled();
+  });
+});
+
+test.describe('Recall Knowledge', () => {
+  test('names the skills and the DC for the creature whose turn it is', async ({ page }) => {
+    await page.goto(`/gm/${world.gmToken}`);
+    await page.locator('body').press('i');
+    const row = page.locator('.combatant', { hasText: 'Goblin Warrior A' });
+    await row.getByRole('button', { name: /Recall Knowledge/ }).click();
+
+    const drawer = page.locator('#drawer');
+    await expect(drawer.locator('.recall__head h3')).toContainText('Goblin Warrior');
+    // A level -1 creature: DC 13 by the printed table.
+    await expect(drawer.locator('.recall__dc-value')).toHaveText('DC 13');
+    await expect(drawer.locator('.recall__skills')).toContainText('Society');
+    await expect(drawer.locator('.recall')).toContainText('not a printed rule');
+  });
+
+  test('a revealed fact reaches the shared screen', async ({ browser }) => {
+    const table = await browser.newPage();
+    const gm = await browser.newPage();
+
+    await table.goto(`/table/${world.tableToken}`);
+    await expect(table.locator('#connection')).toHaveAttribute('data-state', 'live');
+    await expect(table.locator('.turn', { hasText: 'Goblin Warrior A' }).locator('.turn__fact'))
+      .toHaveCount(0);
+
+    await gm.goto(`/gm/${world.gmToken}`);
+    await gm.locator('body').press('i');
+    await gm.locator('.combatant', { hasText: 'Goblin Warrior A' })
+      .getByRole('button', { name: /Recall Knowledge/ }).click();
+    await gm.getByRole('button', { name: 'Reveal AC' }).click();
+
+    await expect(table.locator('.turn', { hasText: 'Goblin Warrior A' }).locator('.turn__fact'))
+      .toContainText('AC', { timeout: 8000 });
+
+    await table.close();
+    await gm.close();
+  });
+
+  test('an open roll reaches the shared screen and a secret one does not', async ({ browser }) => {
+    const table = await browser.newPage();
+    const gm = await browser.newPage();
+
+    await table.goto(`/table/${world.tableToken}`);
+    await expect(table.locator('#connection')).toHaveAttribute('data-state', 'live');
+
+    await gm.goto(`/gm/${world.gmToken}`);
+    await gm.locator('body').press('d');
+    await gm.locator('#dice-expression').fill('1d20+7');
+    await gm.locator('#dice-label').fill('Everyone hears this');
+    await gm.getByRole('button', { name: 'Roll' }).click();
+
+    await expect(table.locator('.table-roll', { hasText: 'Everyone hears this' }))
+      .toBeVisible({ timeout: 8000 });
+
+    await gm.getByLabel('Secret').check();
+    await gm.locator('#dice-label').fill('Nobody hears this');
+    await gm.getByRole('button', { name: 'Roll' }).click();
+
+    // Wait for a roll that must never arrive by waiting for one that must:
+    // the open roll above is already on screen, so a further update would
+    // have landed by the time the second assertion runs.
+    await gm.locator('#dice-label').fill('And this one they hear');
+    await gm.getByLabel('Secret').uncheck();
+    await gm.getByRole('button', { name: 'Roll' }).click();
+    await expect(table.locator('.table-roll', { hasText: 'And this one they hear' }))
+      .toBeVisible({ timeout: 8000 });
+
+    await expect(table.locator('#rolls')).not.toContainText('Nobody hears this');
+
+    await table.close();
+    await gm.close();
+  });
+});

@@ -15,7 +15,53 @@ import { CONDITIONS, CONDITION_SLUGS, isValued } from '/engine/rules/conditions.
 const SKILLS = ['perception', 'stealth', 'acrobatics', 'athletics', 'deception', 'intimidation',
   'nature', 'occultism', 'religion', 'society', 'survival'];
 
-export function initiativeView({ combat, encounters, party, actions }) {
+/** Damage types that come up as persistent damage. Bleed and fire, mostly. */
+const DAMAGE_TYPES = ['bleed', 'fire', 'acid', 'cold', 'electricity', 'poison', 'sonic',
+  'mental', 'spirit', 'vitality', 'void', 'force', 'bludgeoning', 'piercing', 'slashing'];
+
+/**
+ * The form for adding persistent damage.
+ *
+ * The DC defaults to 15, which is the flat check the rules print, and is
+ * editable because an effect can specify otherwise -- and because the
+ * assisted-recovery rules lower it to 10.
+ */
+export function persistentDamageForm(combatant, { onAdd }) {
+  const formula = el('input', {
+    class: 'input', id: 'pd-formula', type: 'text', placeholder: '1d6', autocomplete: 'off',
+  });
+  const type = el('select', { class: 'select', id: 'pd-type' },
+    ...DAMAGE_TYPES.map((t) => el('option', { value: t }, titleCase(t))));
+  const dc = el('input', {
+    class: 'input', id: 'pd-dc', type: 'number', inputmode: 'numeric', value: '15',
+  });
+
+  return el('form', {
+    class: 'stack-md',
+    onsubmit: (event) => {
+      event.preventDefault();
+      const value = formula.value.trim();
+      if (!value) return;
+      onAdd({ formula: value, type: type.value, dc: Number(dc.value) || 15 });
+    },
+  },
+  el('h2', {}, `Persistent damage on ${combatant.displayName}`),
+  el('p', { class: 'muted' },
+    'Rolled at the end of this creature’s turn, followed by a flat check to end it.'),
+  el('div', { class: 'filters__row' },
+    el('div', { class: 'field' },
+      el('label', { class: 'field__label', for: 'pd-formula' }, 'Damage'),
+      formula),
+    el('div', { class: 'field' },
+      el('label', { class: 'field__label', for: 'pd-type' }, 'Type'),
+      type),
+    el('div', { class: 'field' },
+      el('label', { class: 'field__label', for: 'pd-dc' }, 'Flat check DC'),
+      dc)),
+  el('button', { class: 'btn btn--primary', type: 'submit' }, 'Add'));
+}
+
+export function initiativeView({ combat, encounters, party, actions, onRecall, onPersistent }) {
   if (!combat) return startPanel({ encounters, actions });
 
   return el('div', { class: 'panels' },
@@ -53,6 +99,7 @@ export function initiativeView({ combat, encounters, party, actions }) {
       el('ol', { class: 'initiative', id: 'initiative-list' },
         ...combat.combatants.map((combatant, index) => combatantRow({
           combatant, index, active: index === combat.turnIndex, actions, combat,
+          onRecall, onPersistent,
         })))));
 }
 
@@ -91,7 +138,7 @@ function startPanel({ encounters, actions }) {
     }));
 }
 
-function combatantRow({ combatant, index, active, actions }) {
+function combatantRow({ combatant, index, active, actions, onRecall, onPersistent }) {
   const isPlayer = Boolean(combatant.characterId);
   const fraction = combatant.hpMax > 0
     ? Math.max(0, Math.min(1, (combatant.hpCurrent ?? 0) / combatant.hpMax))
@@ -132,8 +179,9 @@ function combatantRow({ combatant, index, active, actions }) {
       combatant.state !== 'normal' ? el('span', { class: 'pill pill--warn' }, titleCase(combatant.state)) : null,
       combatant.dying ? el('span', { class: 'pill pill--bad' }, `Dying ${combatant.dying}`) : null,
       combatant.wounded ? el('span', { class: 'pill pill--warn' }, `Wounded ${combatant.wounded}`) : null,
-      combatant.heroPoints ? el('span', { class: 'pill' }, `${combatant.heroPoints} hero`) : null),
-    conditionChips(combatant, actions)),
+      isPlayer ? heroPoints(combatant, actions) : null),
+    conditionChips(combatant, actions),
+    persistentChips(combatant, actions)),
 
   el('div', { class: 'combatant__hp' },
     el('div', { class: 'row-inline' },
@@ -149,7 +197,38 @@ function combatantRow({ combatant, index, active, actions }) {
     })),
 
   el('div', { class: 'combatant__tools' },
-    conditionPicker(combatant, actions),
+    el('div', { class: 'combatant__selects' },
+      conditionPicker(combatant, actions),
+      el('select', {
+        class: 'select input--compact', 'aria-label': `State for ${combatant.displayName}`,
+        onchange: (event) => actions.updateCombatant(combatant.id, { state: event.target.value }),
+      },
+      ...['normal', 'delayed', 'ready'].map((state) => el('option', {
+        value: state, selected: combatant.state === state,
+      }, titleCase(state))))),
+    el('div', { class: 'combatant__icons' },
+    !isPlayer && combatant.statBlock
+      ? el('button', {
+        class: 'btn btn--icon btn--quiet', type: 'button',
+        title: 'Stat block',
+        html: `${icon('book')}<span class="sr-only">Stat block for ${combatant.displayName}</span>`,
+        onclick: () => actions.showStatBlock(combatant.statBlock),
+      })
+      : null,
+    !isPlayer
+      ? el('button', {
+        class: 'btn btn--icon btn--quiet', type: 'button',
+        title: 'Recall Knowledge',
+        html: `${icon('question')}<span class="sr-only">Recall Knowledge about ${combatant.displayName}</span>`,
+        onclick: () => onRecall?.(combatant),
+      })
+      : null,
+    el('button', {
+      class: 'btn btn--icon btn--quiet', type: 'button',
+      title: 'Persistent damage',
+      html: `${icon('flame')}<span class="sr-only">Add persistent damage to ${combatant.displayName}</span>`,
+      onclick: () => onPersistent?.(combatant),
+    }),
     el('button', {
       class: 'btn btn--icon', type: 'button',
       'aria-pressed': String(Boolean(combatant.visible)),
@@ -169,18 +248,11 @@ function combatantRow({ combatant, index, active, actions }) {
         onclick: () => actions.updateCombatant(combatant.id, { hpNumeric: !combatant.hpNumeric }),
       })
       : null,
-    el('select', {
-      class: 'select input--compact', 'aria-label': `State for ${combatant.displayName}`,
-      onchange: (event) => actions.updateCombatant(combatant.id, { state: event.target.value }),
-    },
-    ...['normal', 'delayed', 'ready'].map((state) => el('option', {
-      value: state, selected: combatant.state === state,
-    }, titleCase(state)))),
     el('button', {
       class: 'btn btn--icon btn--quiet', type: 'button',
       html: `${icon('x')}<span class="sr-only">Remove ${combatant.displayName}</span>`,
       onclick: () => actions.removeCombatant(combatant.id),
-    })),
+    }))),
 
   el('input', {
     class: 'input input--compact combatant__note', type: 'text',
@@ -216,6 +288,50 @@ function conditionChips(combatant, actions) {
       html: `${icon('x')}<span class="sr-only">Remove ${titleCase(condition.slug)}</span>`,
       onclick: () => actions.updateCombatant(combatant.id, {
         conditions: conditions.filter((c) => c.slug !== condition.slug),
+      }),
+    }),
+  )));
+}
+
+/**
+ * Hero points, on the row rather than only on the sheet.
+ *
+ * A hero point is spent out loud -- "I'm rerolling that" -- and the GM is the
+ * one keeping count, so the tracker has to be able to change it and not just
+ * report it.
+ */
+function heroPoints(combatant, actions) {
+  return el('label', { class: 'pill hero-points' },
+    el('span', {}, 'Hero'),
+    el('input', {
+      class: 'input input--compact', type: 'number', inputmode: 'numeric', min: '0',
+      value: String(combatant.heroPoints ?? 0),
+      'aria-label': `Hero points for ${combatant.displayName}`,
+      onchange: (event) => actions.updateCombatant(combatant.id, {
+        heroPoints: Math.max(0, Number(event.target.value) || 0),
+      }),
+    }));
+}
+
+/**
+ * Persistent damage, as chips that can be taken off.
+ *
+ * The end of the turn is where these are rolled and where the flat check is
+ * offered; this is only the list, and the way off it.
+ */
+function persistentChips(combatant, actions) {
+  const entries = combatant.persistentDamage ?? [];
+  if (!entries.length) return null;
+  return el('div', { class: 'chips stack-sm' }, ...entries.map((entry, index) => el(
+    'span', { class: 'pill pill--bad' },
+    `${entry.formula} persistent ${entry.type}`,
+    entry.dc && entry.dc !== 15 ? el('span', { class: 'faint' }, ` DC ${entry.dc}`) : null,
+    el('button', {
+      class: 'btn btn--icon btn--quiet', type: 'button',
+      html: `${icon('x')}<span class="sr-only">Remove ${entry.formula} persistent ${entry.type}`
+        + ` from ${combatant.displayName}</span>`,
+      onclick: () => actions.updateCombatant(combatant.id, {
+        persistentDamage: entries.filter((unused, i) => i !== index),
       }),
     }),
   )));
@@ -275,6 +391,21 @@ function promptActions(prompt, actions) {
     });
     return el('div', { class: 'row-inline' },
       amount,
+      // Rolling it here puts the dice in the campaign's log and on the shared
+      // screen, which is where persistent damage should be seen: the players
+      // watched it start, and they should watch it land.
+      el('button', {
+        class: 'btn btn--quiet', type: 'button',
+        html: `${icon('dice')}<span>Roll</span>`,
+        onclick: async () => {
+          const rolled = await actions.roll({
+            expression: prompt.formula,
+            label: `${prompt.name}, persistent ${prompt.damageType}`,
+            secret: false,
+          });
+          if (rolled) amount.value = String(rolled.total);
+        },
+      }),
       el('button', {
         class: 'btn', type: 'button',
         onclick: () => {

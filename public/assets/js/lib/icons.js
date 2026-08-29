@@ -30,6 +30,11 @@ const PATHS = {
   book:       'M4 4h11a3 3 0 0 1 3 3v13H7a3 3 0 0 1-3-3zM18 7h2v13H7',
   screen:     'M3 4h18v12H3z M8 20h8 M12 16v4',
   phone:      'M8 2h8a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z M11 18h2',
+  // Recall Knowledge: what the party knows about the thing in front of them.
+  question:   'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z M9.2 9.2a3 3 0 0 1 5.8 1c0 2-3 2.5-3 4 M12 17h.01',
+  // Persistent damage, which is the only thing in the tracker that keeps
+  // happening after the turn that caused it.
+  flame:      'M12 22a6 6 0 0 0 6-6c0-4-3-5-3-9 0 0-3 1.5-3 5 0-2-1.5-3-1.5-3S9 11 9 13c0-1.5-1-2-1-2a6.6 6.6 0 0 0-2 5 6 6 0 0 0 6 6z',
 };
 
 export const ICON_NAMES = Object.keys(PATHS);

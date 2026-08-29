@@ -400,6 +400,9 @@
    damage and check markers the rules engine rewrites in place. */
 .og-ref { color: var(--primary-ink); text-decoration: underline dotted; }
 .og-ref--unresolved { color: var(--ink-faint); text-decoration: underline dotted; cursor: help; }
+/* An entry's link to itself, which upstream writes as a roll button. Not a
+   link, so it must not look like one. */
+.og-ref--self { color: var(--ink); text-decoration: none; font-style: italic; }
 .og-dmg, .og-chk { font-variant-numeric: tabular-nums; }
 .og-dmg { color: var(--bad-ink); }
 .og-chk { color: var(--primary-ink); }
@@ -464,7 +467,9 @@
 .combatant__identity strong { display: block; }
 .combatant__hp { grid-area: hp; display: grid; gap: var(--sp-1); }
 .combatant__damage { width: 5rem; }
-.combatant__tools { grid-area: tools; display: flex; flex-wrap: wrap; gap: var(--sp-1); align-items: center; }
+.combatant__tools { grid-area: tools; display: grid; gap: var(--sp-1); justify-items: end; }
+.combatant__selects { display: flex; gap: var(--sp-1); }
+.combatant__icons { display: flex; gap: var(--sp-1); align-items: center; }
 .combatant__note { grid-area: note; }
 
 @media (max-width: 60rem) {
@@ -503,3 +508,220 @@
   border-radius: var(--radius-sm);
 }
 .prompt p { margin: var(--sp-1) 0 0; font-size: var(--step--1); }
+
+/* --- The drawer ----------------------------------------------------------- */
+
+/* Same reason as the switcher: a class that sets `display` beats the user
+   agent's `[hidden] { display: none }`. */
+.drawer[hidden] { display: none; }
+
+.drawer {
+  position: fixed;
+  inset: 0 0 0 auto;
+  z-index: 40;
+  width: min(34rem, 100vw);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-left: 1px solid var(--border-strong);
+  box-shadow: var(--shadow);
+}
+
+.drawer__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--border);
+}
+.drawer__head .tabs { flex: 1; }
+.drawer__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--sp-4);
+  display: grid;
+  /* A single explicitly-bounded column. Without it a wide reference table --
+     Party Treasure by Level is nine columns -- sizes the grid to its own
+     content and pushes half the drawer off the side of the screen. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--sp-4);
+  align-content: start;
+}
+
+/*
+ * Wide enough for both: the dashboard gives up the width the drawer takes.
+ * Narrow enough that it cannot, the drawer covers the page and the GM closes
+ * it to get back -- which on a phone-sized window is the right trade.
+ */
+@media (min-width: 64rem) {
+  .gm.with-drawer { padding-right: 34rem; }
+}
+
+@media (max-width: 40rem) {
+  .drawer { width: 100vw; }
+}
+
+/* --- Reference ------------------------------------------------------------ */
+
+.ref { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-4); }
+
+.ref-dc {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.ref-dc__controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-2); }
+.ref-dc__result { display: flex; align-items: baseline; gap: var(--sp-3); flex-wrap: wrap; }
+.ref-dc__value { font-size: var(--step-3); font-variant-numeric: tabular-nums; }
+.ref-dc__simple { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+
+.ref-results, .ref-groups { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; }
+
+.ref-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  width: 100%;
+  padding: var(--sp-2) var(--sp-3);
+  text-align: left;
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  cursor: pointer;
+}
+.ref-row:hover { border-color: var(--border-strong); }
+.ref-row[aria-current='true'] {
+  border-color: var(--campaign-accent, var(--primary));
+  background: var(--primary-sunk);
+}
+.ref-row__meta { font-size: var(--step--2); color: var(--ink-dim); white-space: nowrap; }
+
+.ref-group__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  padding: var(--sp-2) var(--sp-3);
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--ink);
+  font-weight: 600;
+  cursor: pointer;
+}
+.ref-group__head > span:first-child { flex: 1; text-align: left; }
+.ref-group__head svg { transition: transform 120ms ease; }
+.ref-group__head[aria-expanded='true'] svg { transform: rotate(180deg); }
+.ref-group__body { display: grid; gap: 2px; padding: var(--sp-2) 0; }
+
+.ref-detail { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-2); justify-items: start; }
+/* The back chevron points forward everywhere else; turn it round here. */
+.ref-detail > .btn svg { transform: rotate(180deg); }
+
+.ref-entry {
+  width: 100%;
+  min-width: 0;
+  padding: var(--sp-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--campaign-accent, var(--primary));
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: var(--sp-2);
+}
+.ref-entry__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-3); }
+.ref-entry__head h3 { font-size: var(--step-1); }
+.ref-entry__traits { display: flex; flex-wrap: wrap; gap: var(--sp-1); }
+.ref-entry__source { margin-top: var(--sp-2); }
+
+.ref-body { min-width: 0; font-size: var(--step--1); line-height: 1.55; }
+.ref-body p { margin: var(--sp-2) 0; }
+.ref-body h2, .ref-body h3, .ref-body h4 { font-size: var(--step-0); margin: var(--sp-3) 0 var(--sp-1); }
+.ref-body ul, .ref-body ol { margin: var(--sp-2) 0; padding-left: var(--sp-5); }
+.ref-body hr { border: none; border-top: 1px solid var(--border); margin: var(--sp-2) 0; }
+.ref-body a.og-ref { cursor: pointer; }
+/* Wide reference tables scroll inside the drawer rather than widening it. */
+.ref-body table { display: block; overflow-x: auto; border-collapse: collapse; max-width: 100%; }
+.ref-body th, .ref-body td {
+  padding: var(--sp-1) var(--sp-2);
+  border: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+  white-space: nowrap;
+}
+.ref-body thead th { background: var(--surface-sunk); position: sticky; top: 0; }
+
+/* --- Dice ----------------------------------------------------------------- */
+
+.dice { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-3); }
+.dice__quick { display: flex; flex-wrap: wrap; gap: var(--sp-1); }
+.dice__form { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); }
+.dice__actions { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
+.dice__log-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
+.dice__log-head h3 { font-size: var(--step-0); }
+
+.rolls { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
+
+.roll {
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--campaign-accent, var(--primary));
+  border-radius: var(--radius-sm);
+}
+.roll--secret { border-left-color: var(--warn); }
+.roll--derived { border-left-style: dashed; }
+.roll__total { font-size: var(--step-2); font-weight: 600; text-align: center; }
+.roll__what { min-width: 0; display: grid; gap: 2px; font-size: var(--step--2); }
+.roll__what strong { font-size: var(--step--1); }
+.roll__what > span { overflow: hidden; text-overflow: ellipsis; }
+.roll__tools { display: flex; gap: var(--sp-1); align-items: center; flex-wrap: wrap; }
+
+/* --- Recall Knowledge ------------------------------------------------------ */
+
+.recall { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-3); }
+.recall__head { display: flex; align-items: baseline; gap: var(--sp-3); flex-wrap: wrap; }
+.recall__head h3 { font-size: var(--step-2); }
+.recall__dc {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  padding: var(--sp-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.recall__dc-value { font-size: var(--step-3); font-variant-numeric: tabular-nums; }
+.recall__dc .field { margin-left: auto; }
+.recall__skills h4, .recall__facts h4 { font-size: var(--step-0); }
+.recall__degree { font-size: var(--step--1); margin: var(--sp-1) 0; color: var(--ink-dim); }
+
+.facts { list-style: none; margin: var(--sp-2) 0 0; padding: 0; display: grid; gap: 2px; }
+.fact {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid transparent;
+  border-radius: var(--radius-sm);
+}
+.fact--revealed { border-left-color: var(--good); background: var(--primary-sunk); }
+.fact__body { flex: 1; min-width: 0; display: grid; gap: 2px; font-size: var(--step--1); }
+.fact__body span { color: var(--ink-dim); }
+
+/* --- Additions to the initiative row --------------------------------------- */
+
+.hero-points { gap: var(--sp-1); }
+.hero-points .input { width: 3rem; text-align: center; }

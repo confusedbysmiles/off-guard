@@ -10,12 +10,13 @@
   "scripts": {
     "build:data": "node tools/build-data/build.js",
     "build:data:fetch": "node tools/build-data/upstream.js",
-    "test": "vitest run",
-    "build:tables": "node tools/build-tables/build.js",
-    "start": "node src/server/index.js",
-    "mint-gm": "node tools/mint-gm-token.js",
     "build:fonts": "node tools/build-fonts/build.js",
+    "build:reference": "node tools/build-reference/build.js",
+    "build:tables": "node tools/build-tables/build.js",
     "check:contrast": "node tools/check-contrast.js",
+    "mint-gm": "node tools/mint-gm-token.js",
+    "start": "node src/server/index.js",
+    "test": "vitest run",
     "test:e2e": "playwright test"
   },
   "devDependencies": {

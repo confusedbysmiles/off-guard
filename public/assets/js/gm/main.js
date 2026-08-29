@@ -19,8 +19,9 @@ import { createActions } from './actions.js';
 import { partyPanel } from './views/party.js';
 import { applyAccents, applyCurrentAccent, overviewPanel } from './views/overview.js';
 import { builderView } from './views/builder.js';
-import { initiativeView, promptList } from './views/initiative.js';
+import { initiativeView, persistentDamageForm, promptList } from './views/initiative.js';
 import { statBlock } from './views/statblock.js';
+import { createDrawer, drawerShell } from './drawer.js';
 
 const TABS = [
   ['table', 'Table', 'T'],
@@ -30,6 +31,9 @@ const TABS = [
 ];
 
 const notices = createNotices($('#notices'));
+
+// The drawer lives outside `#main` so a dashboard re-render does not close it.
+document.body.insertBefore(drawerShell(), $('.gm-footer'));
 
 function fragment(html) {
   const template = document.createElement('template');
@@ -55,6 +59,18 @@ function showDialog(id, ...content) {
 
 const showStatBlock = (creature) => showDialog('statblock-dialog', statBlock(creature));
 
+function showPersistentDamage(combatant) {
+  const dialog = showDialog('persistent-dialog', persistentDamageForm(combatant, {
+    onAdd: (entry) => {
+      actions.updateCombatant(combatant.id, {
+        persistentDamage: [...(combatant.persistentDamage ?? []), entry],
+      });
+      dialog.close();
+    },
+  }));
+  dialog.querySelector('#pd-formula')?.focus();
+}
+
 const showPrompts = (prompts) => showDialog('prompt-dialog',
   el('h2', {}, 'The turn ended'),
   el('p', { class: 'muted' },
@@ -67,6 +83,8 @@ const showPrompts = (prompts) => showDialog('prompt-dialog',
 const actions = createActions({
   api, store, notices, refresh: render, showStatBlock, showPrompts,
 });
+
+const drawer = createDrawer({ store, actions, notices });
 
 // --- the campaign switcher --------------------------------------------------
 
@@ -148,7 +166,12 @@ function render() {
 
   if (state.tab === 'initiative') {
     main.replaceChildren(initiativeView({
-      combat: state.combat, encounters: state.encounters, party: state.party, actions,
+      combat: state.combat,
+      encounters: state.encounters,
+      party: state.party,
+      actions,
+      onRecall: (combatant) => drawer.recall(combatant.id, `Asked about ${combatant.displayName}.`),
+      onPersistent: showPersistentDamage,
     }));
     setUpDragToReorder();
     return;
@@ -224,10 +247,19 @@ function setUpEncounterFileInput() {
 // --- routing ------------------------------------------------------------------
 
 async function selectCampaign(id) {
-  store.set({ campaignId: id, encounter: null, encounterId: null, budget: null, combat: null });
+  // The dice log and any open Recall Knowledge belong to the campaign being
+  // left. Clearing them here is the same rule the accent colour exists for:
+  // nothing from Tuesday's game may still be on screen once Saturday's is.
+  store.set({
+    campaignId: id, encounter: null, encounterId: null, budget: null, combat: null,
+    rolls: [], recall: null,
+  });
   store.writeLocation({ campaignId: id, tab: store.get().tab });
-  await Promise.all([actions.loadParty(), actions.loadEncounters(), actions.loadCombat()]);
+  await Promise.all([
+    actions.loadParty(), actions.loadEncounters(), actions.loadCombat(), actions.loadRolls(),
+  ]);
   render();
+  drawer.render();
 }
 
 function selectTab(tab) {
@@ -247,8 +279,25 @@ function setUpKeyboard() {
     if (event.metaKey || event.ctrlKey || event.altKey) return;
 
     if (event.key === 'Escape' && !$('#switcher').hidden) { closeSwitcher(); return; }
+    if (event.key === 'Escape' && drawer.isOpen()) { drawer.close(); return; }
 
     const key = event.key.toLowerCase();
+
+    // The drawer, from anywhere. R and D open it; K asks about whoever's turn
+    // it is, which is the creature a player has just asked about.
+    if (key === 'r') { event.preventDefault(); drawer.toggle('reference'); return; }
+    if (key === 'd') { event.preventDefault(); drawer.toggle('dice'); return; }
+    if (key === 'k') {
+      event.preventDefault();
+      const { combat } = store.get();
+      const current = combat?.combatants[combat.turnIndex];
+      if (current && !current.characterId) {
+        drawer.recall(current.id, `Asked about ${current.displayName}.`);
+      } else {
+        drawer.toggle('recall');
+      }
+      return;
+    }
 
     // Turn advance, which is the key pressed most often in a session.
     if (store.get().tab === 'initiative') {

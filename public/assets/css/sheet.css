@@ -235,8 +235,6 @@
 }
 .row__head .input { flex: 1; }
 
-.chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
-
 .slot-track { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; }
 
 .slot {
@@ -289,33 +287,7 @@
 .diff__to   { color: var(--good-ink); }
 .diff__values { font-size: var(--step--1); overflow-wrap: anywhere; }
 
-/* --- Layout utilities --------------------------------------------------
- *
- * The Content-Security-Policy has no `unsafe-inline`, which blocks `style`
- * attributes as well as `<style>` blocks. That is the right policy for an
- * application whose credential is in the URL, so spacing that would otherwise
- * be a one-off inline style lives here instead.
- */
-.stack-sm  { margin-top: var(--sp-2); }
-.stack-md  { margin-top: var(--sp-3); }
-.stack-lg  { margin-top: var(--sp-4); }
-.heading-inline { margin: var(--sp-3) 0 var(--sp-2); }
-.heading-spaced { margin: var(--sp-4) 0 var(--sp-2); }
-
-.row-inline { display: flex; gap: var(--sp-2); align-items: center; }
-.row-inline--wrap { flex-wrap: wrap; }
-
-.checkbox-row {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  margin-top: var(--sp-2);
-  min-height: var(--tap);
-}
-.checkbox-row input[type='checkbox'] { width: 22px; height: 22px; }
-
 .slot-track__label { min-width: 5.5rem; }
-.condition-value { width: 3.5rem; }
 
 .centred-page {
   max-width: 34rem;
