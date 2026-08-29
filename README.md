@@ -73,12 +73,25 @@ off, because its log lines carry the URL and the URL is the credential. Rate
 limiting is per IP. Rotation revokes immediately and keeps the old row, so an
 old log line still means something.
 
-Tokens are stored in the clear. They protect data that lives in the same SQLite
-file, so hashing them would not raise the bar for anyone holding the file, and it
-would stop the dashboard re-showing a player their link — which is a real
-workflow, and rotation is the answer to compromise. The schema enforces scoping
-with CHECK constraints, so a bug in application code cannot produce a character
-token with no campaign or a GM token bound to one.
+**Tokens are stored hashed.** The database holds the SHA-256 of each link and
+never the link itself, so a copied database file — a backup, a stray WAL, a
+support dump — is a list of what exists rather than a set of working keys.
+
+A plain SHA-256, deliberately, and not bcrypt or argon2. Those exist to make
+guessing expensive when the secret is a human-chosen password with perhaps 30
+bits behind it. These tokens are 128 bits from `randomBytes`: there is no
+dictionary, no reuse and no shortcut, so a slow hash would buy nothing and would
+cost a measurable delay on every request, including every SSE reconnect.
+
+The cost of this, stated plainly: **a link can be shown once and never again.**
+It appears in the response that mints or rotates it, and after that the only way
+to give a player their link back is to rotate it and hand them a new one.
+`GET .../tokens` lists what links exist and what each is for, marked
+`retrievable: false`, so no interface can be written against a field that will
+always be absent.
+
+The schema enforces scoping with CHECK constraints, so a bug in application code
+cannot produce a character token with no campaign or a GM token bound to one.
 
 `build:data` clones the pinned `foundryvtt/pf2e` commit into `.cache/` (sparse,
 packs only) and writes `data/creatures/`, `data/hazards/`, `data/index.json` and
@@ -173,7 +186,7 @@ the engine exists to prevent.
 Two paths, and only one of them is reliable.
 
 **The JSON export file works, always, offline.** Export from Pathbuilder, upload
-the file, review the diff, apply what you accept.
+the file, review the diff, apply what you accept. This is the path to use.
 
 **By build id, probably not.** `pathbuilder2e.com/json.php?id=…` sits behind
 Cloudflare's bot protection, which answers a server-side request with a
@@ -188,6 +201,25 @@ of paths and nothing else, so the free-text feats, features, reactions, items
 and notes sections are invisible to it; play state — current and temporary hit
 points, conditions, hero points, spent slots and focus — is produced but never
 proposed, because levelling up should not heal the character.
+
+**The mapper is checked against a real export**, not only a synthetic one, and
+that mattered. A real level 6 rogue found four things a hand-written fixture
+never would have: a striking rune adds *dice* rather than a bonus, so every
+weapon above about level 4 was importing at half its damage; sneak attack
+arrives as free text in `extraDamage` and was being dropped; skill item bonuses
+live in a `mods` object keyed by display name and were dropped silently; and the
+sheet's traits field is `traitsText`, so the array the mapper emitted was never
+rendered at all. `tests/fixtures/pathbuilder/rogue-6.json` is that export with
+its identifying fields replaced — the mechanical shape is what the mapper reads,
+and a player's character is not this repository's to keep.
+
+What Pathbuilder does not export is said out loud rather than guessed at. A
+shield's AC has no field on the sheet; proficiency in a *specific* weapon has
+nowhere to go; and weapon traits are absent entirely, so whether Strength
+applies to a given weapon's damage is a judgement the import cannot make. Each
+of those produces a warning on the confirmation screen, and the last one only
+when it could actually be hiding something — a character with a positive
+Strength modifier and no damage bonus on any weapon.
 
 ## The GM dashboard
 
@@ -407,9 +439,34 @@ Content-Security-Policy would refuse anyway.
 
 The upstream data has none — its publication block is
 `{ license, remaster, title, authors }` on every entry. Page references come from
-the hand-maintained tables in `tools/build-data/pages/`, keyed by Off-Guard
-entry id and merged at build time, with typos reported rather than ignored. The
-tables ship empty; see that directory's README before adding to them.
+the tables in `tools/build-data/pages/`, keyed by Off-Guard entry id and merged
+at build time, with keys that match no entry reported rather than ignored.
+
+**1,146 of them are extracted from Paizo's own PDFs** by
+`tools/build-pages/extract.py`, covering Monster Core (95%), Monster Core 2
+(95%), Battlecry (89%), Howl of the Wild (86%), Rage of Elements (79%) and Book
+of the Dead (66%). That tool is local and one-off: it needs PDFs that are not in
+this repository and never will be, it is not wired into `npm run build:data`,
+and nothing in the application depends on it. Its output is checked in, and that
+is what the build reads.
+
+Three things make those numbers trustworthy rather than plausible:
+
+1. They come from each PDF's own bookmark outline, which is the book's statement
+   about where its contents are, not a guess.
+2. The printed page number is read off the pages rather than assumed to equal
+   the PDF index — the offset is worked out by vote across twenty sampled pages,
+   and a book whose folio cannot be read is skipped rather than guessed at.
+3. Every match is then verified against the page: the creature's whole name has
+   to appear in that page's text. An earlier version accepted the last word
+   alone, which quietly verified Conspirator Dragon against the Adamantine
+   Dragon's page, because "dragon" matches every dragon in the book.
+
+Everything failing any of those is left out, and `null` renders as "no page
+recorded" — honest, where a wrong number sends someone flipping through the
+wrong chapter mid-session. The remainder are creatures Paizo did not bookmark
+individually; see `tools/build-data/pages/README.md` before adding to them by
+hand.
 
 ## Licensing
 

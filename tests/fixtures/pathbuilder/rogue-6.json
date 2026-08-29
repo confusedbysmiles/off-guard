@@ -1,0 +1,563 @@
+{
+ "success": true,
+ "build": {
+  "name": "Rook Fastfingers",
+  "class": "Rogue",
+  "dualClass": null,
+  "level": 6,
+  "xp": 0,
+  "ancestry": "Goblin",
+  "heritage": "Aiuvarin",
+  "background": "Codebreaker",
+  "alignment": "N",
+  "gender": "",
+  "age": "",
+  "deity": "",
+  "size": 1,
+  "sizeName": "Small",
+  "keyability": "dex",
+  "languages": [
+   "Common",
+   "Draconic",
+   "Elven",
+   "Goblin"
+  ],
+  "rituals": [],
+  "resistances": [],
+  "inventorMods": [],
+  "abilities": {
+   "str": 10,
+   "dex": 16,
+   "con": 14,
+   "int": 14,
+   "wis": 12,
+   "cha": 12,
+   "breakdown": {
+    "ancestryFree": [
+     "Con"
+    ],
+    "ancestryBoosts": [
+     "Dex",
+     "Cha"
+    ],
+    "ancestryFlaws": [
+     "Wis"
+    ],
+    "backgroundBoosts": [
+     "Int",
+     "Wis"
+    ],
+    "classBoosts": [
+     "Dex"
+    ],
+    "mapLevelledBoosts": {
+     "1": [
+      "Wis",
+      "Dex",
+      "Int",
+      "Con"
+     ]
+    }
+   }
+  },
+  "attributes": {
+   "ancestryhp": 6,
+   "classhp": 8,
+   "bonushp": 0,
+   "bonushpPerLevel": 0,
+   "speed": 25,
+   "speedBonus": 0
+  },
+  "proficiencies": {
+   "classDC": 2,
+   "perception": 4,
+   "fortitude": 2,
+   "reflex": 4,
+   "will": 4,
+   "heavy": 0,
+   "medium": 0,
+   "light": 2,
+   "unarmored": 2,
+   "advanced": 0,
+   "martial": 4,
+   "simple": 4,
+   "unarmed": 4,
+   "castingArcane": 0,
+   "castingDivine": 0,
+   "castingOccult": 0,
+   "castingPrimal": 0,
+   "acrobatics": 2,
+   "arcana": 2,
+   "athletics": 0,
+   "crafting": 0,
+   "deception": 2,
+   "diplomacy": 4,
+   "intimidation": 2,
+   "medicine": 2,
+   "nature": 2,
+   "occultism": 4,
+   "performance": 0,
+   "religion": 4,
+   "society": 2,
+   "stealth": 2,
+   "survival": 2,
+   "thievery": 2,
+   "piloting": 0,
+   "computers": 0
+  },
+  "mods": {
+   "Diplomacy": {
+    "Item Bonus": 1
+   }
+  },
+  "feats": [
+   [
+    "Glean Contents",
+    null,
+    "Awarded Feat",
+    1
+   ],
+   [
+    "Aiuvarin",
+    null,
+    "Heritage",
+    1,
+    "Heritage Feat",
+    "standardChoice",
+    null
+   ],
+   [
+    "Assurance",
+    "Stealth",
+    "Skill Feat",
+    1,
+    "Skill Feat 1",
+    "standardChoice",
+    null
+   ],
+   [
+    "Nimble Dodge",
+    null,
+    "Class Feat",
+    1,
+    "Rogue Feat 1",
+    "standardChoice",
+    null
+   ],
+   [
+    "Goblin Scuttle",
+    null,
+    "Ancestry Feat",
+    1,
+    "Goblin Feat 1",
+    "standardChoice",
+    null
+   ],
+   [
+    "Assurance",
+    "Occultism",
+    "Skill Feat",
+    2,
+    "Skill Feat 2",
+    "standardChoice",
+    null
+   ],
+   [
+    "Mobility",
+    null,
+    "Class Feat",
+    2,
+    "Rogue Feat 2",
+    "standardChoice",
+    null
+   ],
+   [
+    "Incredible Initiative",
+    null,
+    "General Feat",
+    3,
+    "General Feat 3",
+    "standardChoice",
+    null
+   ],
+   [
+    "Battle Medicine",
+    null,
+    "Skill Feat",
+    3,
+    "Skill Feat 3",
+    "standardChoice",
+    null
+   ],
+   [
+    "Cognitive Crossover",
+    null,
+    "Skill Feat",
+    4,
+    "Skill Feat 4",
+    "standardChoice",
+    null
+   ],
+   [
+    "Trap Finder",
+    null,
+    "Class Feat",
+    4,
+    "Rogue Feat 4",
+    "standardChoice",
+    null
+   ],
+   [
+    "Assurance",
+    "Arcana",
+    "Skill Feat",
+    5,
+    "Skill Feat 5",
+    "standardChoice",
+    null
+   ],
+   [
+    "Very Sneaky",
+    null,
+    "Ancestry Feat",
+    5,
+    "Goblin Feat 5",
+    "standardChoice",
+    null
+   ],
+   [
+    "Slippery Prey",
+    null,
+    "Skill Feat",
+    6,
+    "Skill Feat 6",
+    "standardChoice",
+    null
+   ],
+   [
+    "Skirmish Strike",
+    null,
+    "Class Feat",
+    6,
+    "Rogue Feat 6",
+    "standardChoice",
+    null
+   ]
+  ],
+  "specials": [
+   "Mastermind Racket",
+   "Sneak Attack",
+   "Surprise Attack",
+   "Darkvision",
+   "Low-Light Vision",
+   "Deny Advantage",
+   "Weapon Tricks",
+   "Aiuvarin"
+  ],
+  "lores": [
+   [
+    "Cryptography",
+    2
+   ]
+  ],
+  "equipmentContainers": {
+   "8ff3b346-4a83-47c7-96ca-dbf136d6d3fd": {
+    "containerName": "Bag of Holding",
+    "bagOfHolding": true,
+    "backpack": false,
+    "augmentations": false
+   },
+   "361434cc-0f76-45cd-ae9a-00e47fd15ccd": {
+    "containerName": "Spacious Sleeves",
+    "bagOfHolding": true,
+    "backpack": false,
+    "augmentations": false
+   }
+  },
+  "equipment": [
+   [
+    "Healing Potion (Minor)",
+    3,
+    "8ff3b346-4a83-47c7-96ca-dbf136d6d3fd",
+    "Invested"
+   ],
+   [
+    "Healing Potion (Lesser)",
+    3,
+    "8ff3b346-4a83-47c7-96ca-dbf136d6d3fd",
+    "Invested"
+   ],
+   [
+    "Folding Ladder",
+    1,
+    "8ff3b346-4a83-47c7-96ca-dbf136d6d3fd",
+    "Invested"
+   ],
+   [
+    "Disguise Kit",
+    1,
+    "8ff3b346-4a83-47c7-96ca-dbf136d6d3fd",
+    "Invested"
+   ],
+   [
+    "Climbing Kit",
+    1,
+    "8ff3b346-4a83-47c7-96ca-dbf136d6d3fd",
+    "Invested"
+   ],
+   [
+    "Chalk",
+    1,
+    "8ff3b346-4a83-47c7-96ca-dbf136d6d3fd",
+    "Invested"
+   ],
+   [
+    "Caltrops",
+    1,
+    "8ff3b346-4a83-47c7-96ca-dbf136d6d3fd",
+    "Invested"
+   ],
+   [
+    "Arrows",
+    10,
+    "Invested"
+   ],
+   [
+    "Marked Playing Cards",
+    1,
+    "8ff3b346-4a83-47c7-96ca-dbf136d6d3fd",
+    "Invested"
+   ],
+   [
+    "Bedroll",
+    1,
+    "8ff3b346-4a83-47c7-96ca-dbf136d6d3fd",
+    "Invested"
+   ],
+   [
+    "Rations",
+    5,
+    "8ff3b346-4a83-47c7-96ca-dbf136d6d3fd",
+    "Invested"
+   ],
+   [
+    "Rope",
+    1,
+    "8ff3b346-4a83-47c7-96ca-dbf136d6d3fd",
+    "Invested"
+   ],
+   [
+    "Spyglass",
+    1,
+    "8ff3b346-4a83-47c7-96ca-dbf136d6d3fd",
+    "Invested"
+   ],
+   [
+    "Tack",
+    1,
+    "8ff3b346-4a83-47c7-96ca-dbf136d6d3fd",
+    "Invested"
+   ],
+   [
+    "Tent (Pup)",
+    1,
+    "8ff3b346-4a83-47c7-96ca-dbf136d6d3fd",
+    "Invested"
+   ],
+   [
+    "Waterskin",
+    1,
+    "8ff3b346-4a83-47c7-96ca-dbf136d6d3fd",
+    "Invested"
+   ],
+   [
+    "Wax Key Blank",
+    1,
+    "8ff3b346-4a83-47c7-96ca-dbf136d6d3fd",
+    "Invested"
+   ],
+   [
+    "Grappling Gun (Clockwork)",
+    1,
+    "8ff3b346-4a83-47c7-96ca-dbf136d6d3fd",
+    "Invested"
+   ],
+   [
+    "Sibling's Coin",
+    1,
+    "8ff3b346-4a83-47c7-96ca-dbf136d6d3fd",
+    "Invested"
+   ],
+   [
+    "Healer's Toolkit (Expanded)",
+    1,
+    "8ff3b346-4a83-47c7-96ca-dbf136d6d3fd",
+    "Invested"
+   ],
+   [
+    "Survey Map (Atlas)",
+    1,
+    "8ff3b346-4a83-47c7-96ca-dbf136d6d3fd",
+    "Invested"
+   ],
+   [
+    "Thieves' Toolkit (Infiltrator Picks)",
+    1,
+    "361434cc-0f76-45cd-ae9a-00e47fd15ccd",
+    "Invested"
+   ],
+   [
+    "Thieves' Toolkit (Infiltrator)",
+    1,
+    "361434cc-0f76-45cd-ae9a-00e47fd15ccd",
+    "Invested"
+   ],
+   [
+    "Memoir Map",
+    1,
+    "Invested"
+   ],
+   [
+    "Aerial Cloak",
+    1,
+    "Invested"
+   ],
+   [
+    "Glasses of Sociability",
+    1,
+    "Invested"
+   ],
+   [
+    "Reading Glyphs",
+    1,
+    "Invested"
+   ],
+   [
+    "Sleeves of Storage",
+    1,
+    "361434cc-0f76-45cd-ae9a-00e47fd15ccd",
+    "Invested"
+   ],
+   [
+    "Warding Tattoo",
+    1,
+    "Invested"
+   ]
+  ],
+  "specificProficiencies": {
+   "trained": [],
+   "expert": [],
+   "master": [],
+   "legendary": []
+  },
+  "weapons": [
+   {
+    "name": "Bloodletting Kukri",
+    "qty": 1,
+    "prof": "martial",
+    "die": "d6",
+    "pot": 1,
+    "str": "striking",
+    "mat": null,
+    "display": "Bloodletting Kukri",
+    "runes": [],
+    "damageType": "S",
+    "attack": 14,
+    "damageBonus": 0,
+    "extraDamage": [
+     "2d6 precision"
+    ],
+    "increasedDice": false,
+    "isInventor": false,
+    "grade": ""
+   },
+   {
+    "name": "Dagger",
+    "qty": 1,
+    "prof": "simple",
+    "die": "d4",
+    "pot": 1,
+    "str": "striking",
+    "mat": null,
+    "display": "+1 Striking Returning Dagger",
+    "runes": [
+     "Returning"
+    ],
+    "damageType": "P",
+    "attack": 14,
+    "damageBonus": 0,
+    "extraDamage": [],
+    "increasedDice": false,
+    "isInventor": false,
+    "grade": ""
+   },
+   {
+    "name": "Splithead Bow",
+    "qty": 1,
+    "prof": "martial",
+    "die": "d8",
+    "pot": 1,
+    "str": "striking",
+    "mat": null,
+    "display": "Splithead Bow",
+    "runes": [
+     "Hauling"
+    ],
+    "damageType": "P",
+    "attack": 14,
+    "damageBonus": 0,
+    "extraDamage": [
+     "2d6 precision"
+    ],
+    "increasedDice": false,
+    "isInventor": false,
+    "grade": ""
+   }
+  ],
+  "money": {
+   "cp": 2,
+   "sp": 1,
+   "gp": 187,
+   "pp": 0
+  },
+  "armor": [
+   {
+    "name": "Arachnid Harness",
+    "qty": 1,
+    "prof": "light",
+    "pot": 1,
+    "res": "",
+    "mat": null,
+    "display": "Arachnid Harness",
+    "worn": true,
+    "runes": [],
+    "grade": ""
+   },
+   {
+    "name": "Hide Shield",
+    "qty": 1,
+    "prof": "shield",
+    "pot": 0,
+    "res": "",
+    "mat": null,
+    "display": "",
+    "worn": true,
+    "runes": [],
+    "grade": ""
+   }
+  ],
+  "spellCasters": [],
+  "focusPoints": 0,
+  "focus": {},
+  "formula": [],
+  "acTotal": {
+   "acProfBonus": 8,
+   "acAbilityBonus": 3,
+   "acItemBonus": 2,
+   "acTotal": 23,
+   "shieldBonus": "2"
+  },
+  "pets": [],
+  "familiars": []
+ }
+}

@@ -13,6 +13,8 @@
  * merely returned something else.
  */
 
+import { hashToken } from './tokens.js';
+
 export class ScopeError extends Error {
   constructor(message) {
     super(message);
@@ -35,11 +37,13 @@ export class NotFoundError extends Error {
  * same way for both so a revoked token cannot be distinguished from a wrong one.
  */
 export function resolveScope(db, token) {
+  // The database holds the hash, never the link. A copied database file is
+  // therefore a list of what exists, not a set of working keys.
   const row = db.prepare(`
-    SELECT id, token, kind, campaign_id, character_id
+    SELECT id, kind, campaign_id, character_id
     FROM token
-    WHERE token = ? AND revoked_at IS NULL
-  `).get(token);
+    WHERE token_hash = ? AND revoked_at IS NULL
+  `).get(hashToken(token));
 
   if (!row) return null;
 

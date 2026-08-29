@@ -66,6 +66,7 @@ export function mapPathbuilder(exported) {
   const level = Number(build.level ?? 1);
   const prof = build.proficiencies ?? {};
   const attributes = build.attributes ?? {};
+  const itemBonuses = skillItemBonuses(build, warnings);
 
   // Pathbuilder gives the parts rather than the total, and Constitution is
   // applied per level, so the sum has to be done here.
@@ -94,6 +95,7 @@ export function mapPathbuilder(exported) {
     },
     skills: Object.fromEntries(SKILLS.map((skill) => [skill, {
       rank: rankFromBonus(prof[skill]),
+      ...(itemBonuses[skill] ?? {}),
     }])),
     lores: (build.lores ?? []).map(([name, bonus]) => ({
       name: String(name ?? ''),
@@ -110,6 +112,35 @@ export function mapPathbuilder(exported) {
     // Deliberately absent, and therefore preserved on a re-import: feats,
     // features, reactions, items, notes.
   };
+
+  const shieldBonus = Number(build.acTotal?.shieldBonus ?? 0);
+  if (shieldBonus) {
+    warnings.push(
+      `A shield worth +${shieldBonus} AC is equipped. The sheet has no shield field, `
+      + 'so raising it is a note rather than a number.',
+    );
+  }
+
+  const specific = build.specificProficiencies ?? {};
+  if (Object.values(specific).some((list) => (list ?? []).length)) {
+    warnings.push(
+      'Proficiencies in specific weapons or armour are not imported; the sheet '
+      + 'records one rank per category.',
+    );
+  }
+
+  // Pathbuilder gives `attack` as a full total, so `damageBonus` is most likely
+  // one too -- but nothing in the export says so, and a character who should be
+  // adding Strength to damage and is not would look merely unlucky rather than
+  // wrong. Say so, and only when it could actually be hiding something.
+  const weapons = build.weapons ?? [];
+  if (weapons.length && mods.str > 0 && weapons.every((w) => !Number(w.damageBonus))) {
+    warnings.push(
+      'No weapon has a damage bonus, though this character has a positive Strength '
+      + 'modifier. Pathbuilder does not export weapon traits, so whether Strength '
+      + 'applies to each weapon is a judgement only you can make -- check the damage.',
+    );
+  }
 
   if (build.dualClass) {
     warnings.push(`Dual class (${build.dualClass}) has no field on the sheet; it is noted here only.`);
@@ -134,14 +165,28 @@ function mapArmorClass(build, mods) {
   return {
     total: Number(ac.acTotal ?? 0) || null,
     itemBonus: Number(ac.acItemBonus ?? 0),
-    dexCap: ac.acCheckPenalty === undefined && ac.dexCap === undefined
-      ? null : Number(ac.dexCap ?? 0) || null,
+    dexCap: dexCapFrom(ac, mods),
     rank: rankFromBonus(ac.acProfBonus === undefined ? 0 : profFromAc(build, ac)),
     // The computed value is what the sheet shows; Pathbuilder's own total is
     // kept so a mismatch is visible rather than silently resolved.
     importedTotal: Number(ac.acTotal ?? 0) || null,
     dexMod: mods.dex,
   };
+}
+
+/**
+ * The armour's Dexterity cap.
+ *
+ * The export has no field for it -- but it has `acAbilityBonus`, which is the
+ * Dexterity that actually reached the AC. If that is less than the character's
+ * Dexterity modifier, the armour capped it, and by exactly that much. Deriving
+ * it is exact; assuming there is no cap silently gives a plate-armoured
+ * character with high Dexterity an AC two or three points too high.
+ */
+function dexCapFrom(ac, mods) {
+  if (ac.acAbilityBonus === undefined) return null;
+  const applied = Number(ac.acAbilityBonus);
+  return applied < mods.dex ? applied : null;
 }
 
 /** Which armour proficiency actually applied, from the armour Pathbuilder equipped. */
@@ -152,17 +197,81 @@ function profFromAc(build, ac) {
   return prof[group] ?? ac.acProfBonus ?? 0;
 }
 
+/**
+ * Striking runes, by the value Pathbuilder puts in `str`.
+ * A striking rune adds dice rather than a bonus, so a level 6 character's
+ * longsword is 2d8, not 1d8 -- getting this wrong halves everyone's damage.
+ */
+const STRIKING_DICE = {
+  '': 1, striking: 2, greaterStriking: 3, majorStriking: 4,
+};
+
+/** One step up the damage die ladder, for `increasedDice`. */
+const NEXT_DIE = { d4: 'd6', d6: 'd8', d8: 'd10', d10: 'd12', d12: 'd12' };
+
 function mapWeapon(weapon) {
-  const die = weapon.die ? String(weapon.die) : '';
+  let die = weapon.die ? String(weapon.die) : '';
+  if (die && weapon.increasedDice) die = NEXT_DIE[die] ?? die;
+
+  const count = STRIKING_DICE[String(weapon.str ?? '')] ?? 1;
   const bonus = Number(weapon.damageBonus ?? 0);
-  const formula = die ? `1${die}${bonus ? (bonus > 0 ? `+${bonus}` : bonus) : ''}` : '';
+  const base = die
+    ? `${count}${die}${bonus ? (bonus > 0 ? `+${bonus}` : bonus) : ''}`
+    : '';
+
+  // Sneak attack and rune damage come through as free text: `2d6 precision`.
+  const extra = (weapon.extraDamage ?? []).filter(Boolean).map(String);
+  const formula = [base, ...extra].filter(Boolean).join(' plus ');
+
+  // Runes and material live in the display name and in `runes`; the sheet has
+  // one free-text traits field, which is where a player would type them anyway.
+  const traits = [...(weapon.runes ?? []), weapon.mat].filter(Boolean).map(String);
+
   return {
-    name: weapon.name ?? '',
+    // `display` is what the player calls it -- "+1 Striking Returning Dagger" --
+    // and `name` is the bare weapon underneath it.
+    name: String(weapon.display || weapon.name || ''),
     mod: Number(weapon.attack ?? 0),
     damage: formula,
     damageType: DAMAGE_TYPES[weapon.damageType] ?? String(weapon.damageType ?? '').toLowerCase(),
-    traits: weapon.traits ?? [],
+    traitsText: traits.join(', '),
   };
+}
+
+/**
+ * Item bonuses, from Pathbuilder's `mods`.
+ *
+ * Shaped `{ "Diplomacy": { "Item Bonus": 1 } }`, keyed by display name. Dropping
+ * these silently makes the sheet disagree with Pathbuilder by a point or two on
+ * exactly the skills the player invested in an item for.
+ */
+function skillItemBonuses(build, warnings) {
+  const mods = build.mods ?? {};
+  const bonuses = {};
+  const unmapped = [];
+
+  for (const [name, entries] of Object.entries(mods)) {
+    const key = String(name).toLowerCase();
+    const item = Number(entries?.['Item Bonus'] ?? 0);
+    const other = Object.entries(entries ?? {})
+      .filter(([label]) => label !== 'Item Bonus')
+      .reduce((sum, [, value]) => sum + Number(value ?? 0), 0);
+
+    if (SKILLS.includes(key)) {
+      if (item) bonuses[key] = { ...(bonuses[key] ?? {}), itemBonus: item };
+      if (other) bonuses[key] = { ...(bonuses[key] ?? {}), other };
+    } else if (item || other) {
+      unmapped.push(name);
+    }
+  }
+
+  if (unmapped.length) {
+    warnings.push(
+      `Pathbuilder has bonuses on ${unmapped.join(', ')}, which the sheet has no field for. `
+      + 'Add them by hand.',
+    );
+  }
+  return bonuses;
 }
 
 function mapSpellcasting(build, warnings) {

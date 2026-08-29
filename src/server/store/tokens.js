@@ -4,12 +4,22 @@
  * Rotation revokes rather than deletes: the old row stays so a log line naming
  * its fingerprint still means something, and `revoked_at` makes the old link
  * dead on the next request.
+ *
+ * **The link is returned once and never again.** Only its SHA-256 is stored, so
+ * there is nothing to read back: `listTokens` returns what a link is for, not
+ * what it is. Every function here that creates a link returns `{ token, ... }`
+ * with the cleartext, and that is the only moment it exists outside the browser
+ * it is about to be pasted into. Losing it means rotating, which is the honest
+ * consequence of not keeping a copy.
  */
-import { mintToken } from '../tokens.js';
+import { hashToken, mintToken } from '../tokens.js';
 import { campaignFor, isGm, NotFoundError, ScopeError } from '../scope.js';
 
+// Deliberately no `token` and no `token_hash`. The first does not exist any
+// more and the second is a credential-equivalent: anything that can read it can
+// mint requests, so it never leaves this module.
 const COLUMNS = `
-  id, token, kind, campaign_id AS campaignId, character_id AS characterId, note,
+  id, kind, campaign_id AS campaignId, character_id AS characterId, note,
   created_at AS createdAt, last_used_at AS lastUsedAt, revoked_at AS revokedAt
 `;
 
@@ -22,7 +32,8 @@ export function mintGmToken(db, { note = '' } = {}) {
     throw new Error('A GM token already exists. Rotate it rather than minting a second.');
   }
   const token = mintToken();
-  db.prepare("INSERT INTO token (token, kind, note) VALUES (?, 'gm', ?)").run(token, note);
+  db.prepare("INSERT INTO token (token_hash, kind, note) VALUES (?, 'gm', ?)")
+    .run(hashToken(token), note);
   return token;
 }
 
@@ -44,11 +55,11 @@ export function mintCharacterToken(db, scope, characterId, requestedCampaignId =
   if (!character) throw new NotFoundError('No such character');
 
   const token = mintToken();
-  db.prepare(`
-    INSERT INTO token (token, kind, campaign_id, character_id)
+  const info = db.prepare(`
+    INSERT INTO token (token_hash, kind, campaign_id, character_id)
     VALUES (?, 'character', ?, ?)
-  `).run(token, campaignId, characterId);
-  return db.prepare(`SELECT ${COLUMNS} FROM token WHERE token = ?`).get(token);
+  `).run(hashToken(token), campaignId, characterId);
+  return { token, ...rowById(db, info.lastInsertRowid) };
 }
 
 /** One shared screen per campaign; a second mint rotates the first. */
@@ -61,11 +72,10 @@ export function mintTableToken(db, scope, requestedCampaignId = null) {
       UPDATE token SET revoked_at = datetime('now')
       WHERE campaign_id = ? AND kind = 'table' AND revoked_at IS NULL
     `).run(campaignId);
-    db.prepare("INSERT INTO token (token, kind, campaign_id) VALUES (?, 'table', ?)")
-      .run(token, campaignId);
+    return db.prepare("INSERT INTO token (token_hash, kind, campaign_id) VALUES (?, 'table', ?)")
+      .run(hashToken(token), campaignId).lastInsertRowid;
   });
-  write();
-  return db.prepare(`SELECT ${COLUMNS} FROM token WHERE token = ?`).get(token);
+  return { token, ...rowById(db, write()) };
 }
 
 /**
@@ -81,14 +91,16 @@ export function rotateToken(db, scope, tokenId) {
   const token = mintToken();
   const write = db.transaction(() => {
     db.prepare("UPDATE token SET revoked_at = datetime('now') WHERE id = ?").run(tokenId);
-    db.prepare(`
-      INSERT INTO token (token, kind, campaign_id, character_id, note)
+    return db.prepare(`
+      INSERT INTO token (token_hash, kind, campaign_id, character_id, note)
       VALUES (?, ?, ?, ?, ?)
-    `).run(token, existing.kind, existing.campaignId, existing.characterId, existing.note);
+    `).run(hashToken(token), existing.kind, existing.campaignId, existing.characterId, existing.note)
+      .lastInsertRowid;
   });
-  write();
-  return db.prepare(`SELECT ${COLUMNS} FROM token WHERE token = ?`).get(token);
+  return { token, ...rowById(db, write()) };
 }
+
+const rowById = (db, id) => db.prepare(`SELECT ${COLUMNS} FROM token WHERE id = ?`).get(id);
 
 export function touchToken(db, tokenId) {
   db.prepare("UPDATE token SET last_used_at = datetime('now') WHERE id = ?").run(tokenId);

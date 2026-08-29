@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildApp } from '../../src/server/app.js';
 import { resolveScope } from '../../src/server/scope.js';
 import { rotateToken } from '../../src/server/store/tokens.js';
-import { isWellFormed, mintToken, normalizeToken, tokenFingerprint } from '../../src/server/tokens.js';
+import { hashToken, isWellFormed, mintToken, normalizeToken, tokenFingerprint } from '../../src/server/tokens.js';
 import { contentSecurityPolicy } from '../../src/server/security.js';
 import { freshApp, freshDb, seed } from './helpers.js';
 
@@ -51,7 +51,8 @@ describe('refusals are indistinguishable', () => {
 
     const gm = resolveScope(db, world.gmToken);
     const original = world.tuesday.characterToken;
-    const tokenRow = db.prepare('SELECT id FROM token WHERE token = ?').get(original);
+    const tokenRow = db.prepare('SELECT id FROM token WHERE token_hash = ?')
+      .get(hashToken(original));
     rotateToken(db, gm, tokenRow.id);
     const revoked = await app.inject({ method: 'GET', url: `/api/c/${original}` });
 
@@ -64,7 +65,7 @@ describe('refusals are indistinguishable', () => {
   it('makes the rotated link work and the old one not', async () => {
     const gm = resolveScope(db, world.gmToken);
     const before = world.tuesday.characterToken;
-    const row = db.prepare('SELECT id FROM token WHERE token = ?').get(before);
+    const row = db.prepare('SELECT id FROM token WHERE token_hash = ?').get(hashToken(before));
     const after = rotateToken(db, gm, row.id).token;
 
     expect((await app.inject({ method: 'GET', url: `/api/c/${before}` })).statusCode).toBe(404);
@@ -164,8 +165,8 @@ describe('the schema refuses an unscoped token', () => {
   it('will not store a character token without a campaign', () => {
     const clean = freshDb();
     expect(() => clean.prepare(
-      "INSERT INTO token (token, kind) VALUES (?, 'character')",
-    ).run(mintToken())).toThrow(/CHECK constraint/);
+      "INSERT INTO token (token_hash, kind) VALUES (?, 'character')",
+    ).run(hashToken(mintToken()))).toThrow(/CHECK constraint/);
     clean.close();
   });
 
@@ -173,8 +174,69 @@ describe('the schema refuses an unscoped token', () => {
     const clean = freshDb();
     const world2 = seed(clean);
     expect(() => clean.prepare(
-      "INSERT INTO token (token, kind, campaign_id) VALUES (?, 'gm', ?)",
-    ).run(mintToken(), world2.tuesday.campaign.id)).toThrow(/CHECK constraint/);
+      "INSERT INTO token (token_hash, kind, campaign_id) VALUES (?, 'gm', ?)",
+    ).run(hashToken(mintToken()), world2.tuesday.campaign.id)).toThrow(/CHECK constraint/);
     clean.close();
+  });
+});
+
+
+describe('tokens at rest', () => {
+  it('stores the hash and not the link', () => {
+    const columns = db.prepare('PRAGMA table_info(token)').all().map((c) => c.name);
+    expect(columns).toContain('token_hash');
+    expect(columns).not.toContain('token');
+
+    // Belt and braces: the link itself appears nowhere in the table.
+    const stored = db.prepare('SELECT * FROM token').all();
+    expect(JSON.stringify(stored)).not.toContain(world.gmToken);
+    expect(JSON.stringify(stored)).not.toContain(world.tuesday.characterToken);
+  });
+
+  it('finds a token by its hash', () => {
+    const row = db.prepare('SELECT kind FROM token WHERE token_hash = ?')
+      .get(hashToken(world.gmToken));
+    expect(row.kind).toBe('gm');
+  });
+
+  it('never hands a stored link back', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/gm/${world.gmToken}/campaigns/${world.tuesday.campaign.id}/tokens`,
+    });
+    const body = res.json();
+    expect(body.retrievable).toBe(false);
+    expect(body.tokens.length).toBeGreaterThan(0);
+    for (const token of body.tokens) {
+      expect(token).not.toHaveProperty('token');
+      expect(token).not.toHaveProperty('tokenHash');
+    }
+    expect(JSON.stringify(body)).not.toContain(world.tuesday.characterToken);
+  });
+
+  it('shows a minted link exactly once, in the response that made it', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/gm/${world.gmToken}/campaigns/${world.tuesday.campaign.id}/tokens/table`,
+    });
+    const { token } = res.json();
+    expect(token.token).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/);
+    // It works...
+    expect((await app.inject({ method: 'GET', url: `/api/table/${token.token}` })).statusCode)
+      .toBe(200);
+    // ...and it is not in the listing that follows.
+    const listed = await app.inject({
+      method: 'GET',
+      url: `/api/gm/${world.gmToken}/campaigns/${world.tuesday.campaign.id}/tokens`,
+    });
+    expect(JSON.stringify(listed.json())).not.toContain(token.token);
+  });
+
+  it('hashes deterministically and differently per token', () => {
+    const a = mintToken();
+    const b = mintToken();
+    expect(hashToken(a)).toBe(hashToken(a));
+    expect(hashToken(a)).not.toBe(hashToken(b));
+    expect(hashToken(a)).toMatch(/^[0-9a-f]{64}$/);
   });
 });

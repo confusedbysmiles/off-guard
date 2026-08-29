@@ -1,10 +1,16 @@
 /**
  * Pathbuilder import.
  *
- * The fixture is a synthetic level 5 fighter in Pathbuilder's documented export
- * shape. It is synthetic on purpose: committing somebody's real build id would
- * put a stranger's character in the repository, and the mapping is about the
- * shape rather than the contents.
+ * Two fixtures. `fighter-5` is synthetic, written against Pathbuilder's
+ * documented export shape. `rogue-6` is the shape of a real export from a real
+ * game, renamed -- the mechanical fields are what the mapper reads, and a
+ * player's character is not this repository's to keep.
+ *
+ * The real one is here because it found four things the synthetic one could
+ * not: a striking rune adds dice rather than a bonus, sneak attack arrives as
+ * free text in `extraDamage`, item bonuses live in a `mods` object keyed by
+ * display name, and the sheet's traits field is `traitsText` rather than an
+ * array. Every one of those was silently wrong until a real file went through.
  */
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
@@ -15,6 +21,7 @@ import {
 import { statistic } from '../../src/rules/proficiency.js';
 
 const fixture = JSON.parse(readFileSync('tests/fixtures/pathbuilder/fighter-5.json', 'utf8'));
+const rogue = JSON.parse(readFileSync('tests/fixtures/pathbuilder/rogue-6.json', 'utf8'));
 
 describe('the two scales Pathbuilder uses', () => {
   it('reads proficiency as the bonus it adds, not as a rank index', () => {
@@ -159,5 +166,93 @@ describe('a file that is not a Pathbuilder export', () => {
     expect(sheet.name).toBe('Sparse');
     expect(sheet.strikes).toEqual([]);
     expect(sheet.skills.athletics.rank).toBe('untrained');
+  });
+});
+
+
+describe('a real export, from a real game', () => {
+  const { sheet, warnings } = mapPathbuilder(rogue);
+
+  it('reads the character', () => {
+    expect(sheet.level).toBe(6);
+    expect(sheet.class).toBe('Rogue');
+    expect(sheet.ancestry).toBe('Goblin');
+    expect(sheet.heritage).toBe('Aiuvarin');
+    expect(sheet.subclass).toBe('Mastermind Racket');
+    expect(sheet.abilities).toEqual({ str: 0, dex: 3, con: 2, int: 2, wis: 1, cha: 1 });
+  });
+
+  it('sums hit points from the parts, applying Constitution per level', () => {
+    // 6 ancestry + (8 class + 2 Con) x 6 levels.
+    expect(sheet.hp.max).toBe(66);
+  });
+
+  it('counts a striking rune as dice, not as a bonus', () => {
+    const kukri = sheet.strikes.find((s) => s.name.includes('Kukri'));
+    expect(kukri.damage).toContain('2d6');
+    expect(kukri.damage).not.toMatch(/^1d6/);
+  });
+
+  it('keeps the sneak attack that arrives as free text', () => {
+    const kukri = sheet.strikes.find((s) => s.name.includes('Kukri'));
+    expect(kukri.damage).toBe('2d6 plus 2d6 precision');
+  });
+
+  it('calls a weapon what the player calls it', () => {
+    expect(sheet.strikes.map((s) => s.name)).toContain('+1 Striking Returning Dagger');
+  });
+
+  it('puts runes in the field the sheet actually renders', () => {
+    const dagger = sheet.strikes.find((s) => s.name.includes('Dagger'));
+    expect(dagger.traitsText).toBe('Returning');
+    expect(dagger).not.toHaveProperty('traits');
+  });
+
+  it('carries an item bonus across from the mods object', () => {
+    expect(sheet.skills.diplomacy).toEqual({ rank: 'expert', itemBonus: 1 });
+    // And leaves the skills that have no bonus alone.
+    expect(sheet.skills.stealth).toEqual({ rank: 'trained' });
+  });
+
+  it('reproduces Pathbuilder’s own armour class through the rules engine', () => {
+    const ac = 10 + statistic({
+      attributeMod: Math.min(sheet.ac.dexMod, sheet.ac.dexCap ?? Infinity),
+      rank: sheet.ac.rank,
+      level: sheet.level,
+      itemBonus: sheet.ac.itemBonus,
+    }).total;
+    expect(ac).toBe(sheet.ac.importedTotal);
+    expect(ac).toBe(23);
+  });
+
+  it('leaves an uncapped Dexterity uncapped', () => {
+    // Light armour, Dexterity +3: Pathbuilder applied all of it.
+    expect(sheet.ac.dexCap).toBeNull();
+  });
+
+  it('says out loud that the shield is not a field', () => {
+    expect(warnings.join(' ')).toMatch(/shield/i);
+  });
+
+  it('does not propose play state', () => {
+    for (const path of PLAY_STATE_PATHS) {
+      expect(diffImport({}, sheet).map((c) => c.path)).not.toContain(path);
+    }
+  });
+});
+
+describe('the Dexterity cap, derived rather than assumed', () => {
+  it('caps when Pathbuilder applied less Dexterity than the character has', () => {
+    const heavy = {
+      build: {
+        ...rogue.build,
+        abilities: { ...rogue.build.abilities, dex: 18 },
+        // Full plate: +4 item, Dex cap 0.
+        acTotal: { acProfBonus: 8, acAbilityBonus: 0, acItemBonus: 6, acTotal: 24 },
+      },
+    };
+    const { sheet } = mapPathbuilder(heavy);
+    expect(sheet.ac.dexMod).toBe(4);
+    expect(sheet.ac.dexCap).toBe(0);
   });
 });

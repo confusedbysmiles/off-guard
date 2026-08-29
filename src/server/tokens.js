@@ -5,7 +5,7 @@
  * U so a token can be read aloud across a table without ambiguity. 128 bits is
  * 26 characters at 5 bits each, with the last character carrying 3 bits.
  */
-import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 
 const ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 export const TOKEN_LENGTH = 26;
@@ -57,6 +57,29 @@ export function tokensEqual(a, b) {
   const right = Buffer.from(String(b ?? ''), 'utf8');
   if (left.length !== right.length) return false;
   return timingSafeEqual(left, right);
+}
+
+/**
+ * The value stored in the database.
+ *
+ * A plain SHA-256, deliberately, and not bcrypt or argon2. Those exist to make
+ * guessing expensive when the secret is a human-chosen password with maybe 30
+ * bits of entropy behind it. A token here is 128 bits from `randomBytes`, so an
+ * attacker holding the database has nothing to guess at: there is no dictionary,
+ * no reuse, and no shortcut. A slow hash would buy nothing and would cost a
+ * measurable delay on every single request, including every SSE reconnect.
+ *
+ * What hashing does buy is that a leaked database file -- a backup, a copied
+ * WAL, a support dump -- no longer contains working links.
+ *
+ * The lookup is by indexed equality on the hash rather than a scan with a
+ * constant-time compare. An index probe is not constant time, but the value
+ * being probed is a 256-bit digest of a 128-bit secret; there is no practical
+ * way to walk that with timing. `tokensEqual` remains for comparisons the
+ * application makes itself.
+ */
+export function hashToken(token) {
+  return createHash('sha256').update(String(token ?? ''), 'utf8').digest('hex');
 }
 
 /**

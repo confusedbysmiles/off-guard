@@ -10,6 +10,8 @@ import Database from 'better-sqlite3';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { hashToken } from './tokens.js';
+
 export function openDatabase(file, { migrationsDir, verbose = null } = {}) {
   const db = new Database(file, { verbose });
 
@@ -21,6 +23,11 @@ export function openDatabase(file, { migrationsDir, verbose = null } = {}) {
   // and only at risk from a power cut mid-write, which is an acceptable trade
   // for a game table's notes.
   db.pragma('synchronous = NORMAL');
+
+  // Registered before migrations run, because the migration that hashes the
+  // existing tokens needs it. One definition of the hash, shared by the
+  // migration and by every lookup.
+  db.function('sha256', (value) => hashToken(value));
 
   if (migrationsDir) migrate(db, migrationsDir);
   return db;
