@@ -818,6 +818,40 @@ test.describe('the clock on the shared screen', () => {
     expect(html).not.toContain('Aspic in the');
   });
 
+  test('takes the whole screen between fights, and shares it during one', async ({ page, request }) => {
+    // A looping adventure is watched between fights as much as during them, so
+    // the clock and what the party knows have to stand on their own -- without
+    // "No fight running" being the loudest thing in the room.
+    await setSlot(request, 7);
+    await page.goto(`/table/${world.tableToken}`);
+    await expect(page.locator('#connection')).toHaveAttribute('data-state', 'live');
+
+    // A fight is running in the fixture: two columns.
+    await expect(page.locator('#columns')).toHaveClass(/has-loop/);
+    await expect(page.locator('#columns')).not.toHaveClass(/is-idle/);
+    await expect(page.locator('#order .turn').first()).toBeVisible();
+
+    await request.post(
+      `/api/gm/${world.gmToken}/campaigns/${world.campaignId}/combat/${world.combatId}/end`,
+    );
+
+    // No reload: the screen rearranges itself when the fight ends.
+    await expect(page.locator('#columns')).toHaveClass(/is-idle/, { timeout: 8000 });
+    await expect(page.locator('#clock-time')).toHaveText('7:57');
+    await expect(page.locator('#loop-room')).toBeVisible();
+    await expect(page.locator('#loop-room')).toContainText('The wine is a fake');
+
+    // The loop is now wider than it was beside the order, and the empty state
+    // has stopped shouting.
+    const loopWidth = await page.locator('#loop-room').evaluate((el) => el.clientWidth);
+    const screenWidth = await page.locator('#columns').evaluate((el) => el.clientWidth);
+    expect(loopWidth).toBeGreaterThan(screenWidth * 0.8);
+
+    const empty = await page.locator('.table-empty').evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+    const clock = await page.locator('#clock-time').evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+    expect(empty).toBeLessThan(clock / 3);
+  });
+
   test('is absent entirely for a campaign with no looping adventure', async ({ page, request }) => {
     // Almost every campaign. The screen has to look exactly as it did before.
     // The tests above ran this campaign's loop, so put it back to never-run.

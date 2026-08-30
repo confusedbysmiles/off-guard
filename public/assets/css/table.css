@@ -356,3 +356,31 @@
 @media (max-width: 60rem) {
   .loop-room { border-left: 0; border-top: 1px solid var(--border); }
 }
+
+/* Between fights, with a loop running.
+ *
+ * The order has nothing in it and the loop has everything, so the loop takes
+ * the width and the empty state stops being a headline -- the bar already says
+ * "Not in combat", which is as much as the room needs to be told twice. */
+@media (min-width: 60rem) {
+  .table-columns.has-loop.is-idle { grid-template-columns: 1fr; }
+}
+
+.has-loop.is-idle .table-empty {
+  /* `justify-self: center` on the base rule is what centres it in the grid;
+     overriding text-align alone would not move it. */
+  justify-self: start;
+  font-size: var(--step-0);
+  color: var(--ink-faint);
+}
+
+.has-loop.is-idle .order { padding-bottom: var(--sp-3); }
+
+.has-loop.is-idle .loop-room { border-left: 0; border-top: 1px solid var(--border); }
+
+/* Read from across a room rather than from a chair. */
+.has-loop.is-idle .loop-room__list { gap: var(--sp-3); }
+.has-loop.is-idle .loop-room__fault { font-size: var(--step-2); padding: var(--sp-3) var(--sp-4); }
+.has-loop.is-idle .loop-room__state { font-size: var(--step-0); }
+.has-loop.is-idle .loop-room__influence { font-size: var(--step-2); }
+.has-loop.is-idle .loop-room__title { font-size: var(--step-1); }

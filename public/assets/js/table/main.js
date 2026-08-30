@@ -41,10 +41,14 @@ function setConnection(state) {
 function render(view) {
   $('#round').textContent = view.round ? `Round ${view.round}` : 'Not in combat';
   renderRolls(view.rolls ?? []);
-  renderLoop(view.loop ?? null);
+  renderLoop(view.loop ?? null, !view.combatants?.length);
 
   const order = $('#order');
   if (!view.combatants?.length) {
+    // With a loop running this screen still has a job between fights -- the
+    // clock, and what the party has worked out -- so "No fight running" stops
+    // being the headline and the loop takes the width. Without one, nothing
+    // has changed: the empty state is still the whole message.
     order.replaceChildren(el('p', { class: 'table-empty' },
       view.round ? 'Nothing to show yet.' : 'No fight running.'));
     return;
@@ -69,10 +73,14 @@ let lastSlot = null;
  * cannot show a fault nobody has found, and there is nothing in its source for
  * a curious player to read.
  */
-function renderLoop(loop) {
+function renderLoop(loop, idle) {
   const clock = $('#clock');
   const panel = $('#loop-room');
-  $('#columns').classList.toggle('has-loop', Boolean(loop));
+  const columns = $('#columns');
+  columns.classList.toggle('has-loop', Boolean(loop));
+  // Between fights the loop is the only thing on this screen, so it stops
+  // being a column beside the order and becomes the screen.
+  columns.classList.toggle('is-idle', idle);
 
   if (!loop) {
     clock.hidden = true;
