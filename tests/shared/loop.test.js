@@ -141,3 +141,26 @@ describe('the database round trip', () => {
     expect(back.influence.discovered).toEqual([]);
   });
 });
+
+describe('beats', () => {
+  const WITH_BEATS = { ...ADVENTURE, beats: [{ id: 'soup' }, { id: 'burns' }] };
+
+  it('start un-landed', () => {
+    expect(blankState(WITH_BEATS).beats).toEqual({ soup: false, burns: false });
+  });
+
+  it('survive a reset, unlike a fix', () => {
+    const before = { ...blankState(WITH_BEATS), beats: { soup: true, burns: false } };
+    expect(resetLoop(before).beats).toEqual({ soup: true, burns: false });
+  });
+
+  it('round-trip through the database', () => {
+    const state = { ...blankState(WITH_BEATS), beats: { soup: true, burns: true } };
+    const row = toRow(state);
+    expect(fromRow({ ...row, detail: JSON.stringify(row.detail) }).beats).toEqual({ soup: true, burns: true });
+  });
+
+  it('read back as empty for an adventure that has none', () => {
+    expect(blankState({ faults: [] }).beats).toEqual({});
+  });
+});

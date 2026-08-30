@@ -1228,3 +1228,73 @@
 .loop__rk-line.is-false { border-left-color: var(--bad); }
 .loop__rk-line.is-false strong { color: var(--bad-ink); }
 .loop__rk-note { margin: 0; font-size: var(--step--2); }
+
+/* The beats. A landed beat is stated in --good like a fixed fault, because it
+   is the same kind of fact: something that happened and stays happened. */
+.loop__beat-count { font-size: var(--step--1); font-variant-numeric: tabular-nums; }
+.loop__beats { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.loop__act {
+  display: block;
+  font-size: var(--step--2);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: var(--sp-3) 0 var(--sp-1);
+}
+.loop__beat:first-child .loop__act { margin-top: 0; }
+.loop__beat-row { display: flex; align-items: flex-start; gap: var(--sp-2); }
+.loop__beat-tick {
+  flex: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink-faint);
+  font: inherit;
+  font-size: var(--step--1);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.loop__beat-tick:hover { border-color: var(--primary); }
+.loop__beat.is-landed .loop__beat-tick {
+  background: var(--good);
+  border-color: var(--good);
+  color: #1A1033;
+}
+.loop__beat.is-landed .loop__beat-tick .icon { width: 1em; height: 1em; stroke-width: 2.5; }
+.loop__beat-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--sp-2);
+  padding: var(--sp-1) 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.loop__beat-name:hover { color: var(--primary-ink); }
+.loop__beat.is-landed .loop__beat-name { color: var(--ink-dim); }
+.loop__beat-when { font-size: var(--step--2); }
+.loop__beat-detail { display: grid; gap: var(--sp-1); padding: var(--sp-1) 0 var(--sp-2) 2.25rem; }
+/* A class that sets `display` beats the user agent's `[hidden]`. */
+.loop__beat-detail[hidden] { display: none; }
+.loop__beat-line {
+  margin: 0;
+  font-size: var(--step--1);
+  color: var(--ink-dim);
+  padding: var(--sp-1) var(--sp-2);
+  border-left: 2px solid var(--good);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--surface-sunk);
+}
+.loop__beat-line strong { color: var(--good-ink); }
+.loop__beat-line.is-lever { border-left-color: var(--warn); }
+.loop__beat-line.is-lever strong { color: var(--warn-ink); }

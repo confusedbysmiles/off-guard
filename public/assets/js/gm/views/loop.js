@@ -22,7 +22,7 @@ const label = (text) => el('span', { class: 'loop__label' }, text);
 
 // --- the clock --------------------------------------------------------------
 
-function clock(adventure, state, actions) {
+function clock(adventure, state, actions, run) {
   const { slots } = adventure.loop;
   // Shared with the shared screen, and derived from the adventure's own
   // startLabel: this used to assume the hour and the minute it started at.
@@ -51,6 +51,16 @@ function clock(adventure, state, actions) {
           class: 'btn btn--danger', type: 'button',
           html: `${icon('flame')}<span>Burn the room</span>`,
           onclick: () => actions.loopReset(),
+        }),
+        // Its sibling, and quiet rather than danger-red: burning the room is
+        // the move you make several times an evening, and this is the one you
+        // make once, before the table arrives.
+        el('button', {
+          class: 'btn btn--quiet', type: 'button',
+          title: 'Throw the run away and go back to loop 1',
+          html: `${icon('undo')}<span>Start over</span>`,
+          disabled: !run,
+          onclick: () => actions.loopDiscard(),
         }))),
     el('ol', { class: 'loop__slots' }, ...Array.from({ length: slots }, (_, i) => {
       const n = i + 1;
@@ -287,6 +297,56 @@ function recallPanel(adventure) {
         el('p', { class: 'muted loop__rk-note' }, pair.note)))));
 }
 
+// --- the beats ---------------------------------------------------------------
+
+/**
+ * The ten moments that carry the session.
+ *
+ * Ticking one is not bookkeeping; it is the question "has this landed yet?"
+ * asked at a glance. An un-ticked beat two acts after its window is the single
+ * most useful thing this console can tell a GM mid-session, which is why the
+ * lever sits inside each one rather than in a separate table nobody opens.
+ */
+function beatsPanel(adventure, state, actions) {
+  const beats = adventure.beats ?? [];
+  if (!beats.length) return null;
+  const done = beats.filter((b) => state.beats?.[b.id]).length;
+
+  return el('section', { class: 'panel' },
+    el('div', { class: 'panel__head' },
+      el('h2', { class: 'panel__title' }, 'The beats'),
+      el('span', { class: 'muted loop__beat-count' }, `${done} of ${beats.length}`)),
+    el('ol', { class: 'loop__beats' }, ...beats.map((beat, i) => {
+      const landed = Boolean(state.beats?.[beat.id]);
+      const detail = el('div', { class: 'loop__beat-detail', hidden: true },
+        el('p', { class: 'loop__beat-line' }, el('strong', {}, 'Landed when '), beat.landed),
+        el('p', { class: 'loop__beat-line is-lever' }, el('strong', {}, 'If it has not '), beat.lever));
+
+      const newAct = i === 0 || beats[i - 1].act !== beat.act;
+
+      return el('li', { class: `loop__beat${landed ? ' is-landed' : ''}${newAct ? ' is-act-start' : ''}` },
+        newAct ? el('span', { class: 'loop__act' }, `Act ${beat.act}`) : null,
+        el('div', { class: 'loop__beat-row' },
+          el('button', {
+            class: 'loop__beat-tick', type: 'button',
+            'aria-pressed': String(landed),
+            'aria-label': `${beat.name} \u2014 mark landed`,
+            onclick: () => actions.loopBeat(beat.id, !landed),
+          }, landed ? el('span', { html: icon('check') }) : el('span', { class: 'loop__beat-n' }, String(beat.n))),
+          el('button', {
+            class: 'loop__beat-name', type: 'button', 'aria-expanded': 'false',
+            onclick: (e) => {
+              const open = detail.hidden;
+              detail.hidden = !open;
+              e.currentTarget.setAttribute('aria-expanded', String(open));
+            },
+          },
+          el('span', {}, beat.name),
+          el('span', { class: 'muted loop__beat-when' }, beat.when))),
+        detail);
+    })));
+}
+
 // --- the view ---------------------------------------------------------------
 
 export function loopView({ adventure, run, state, actions }) {
@@ -302,7 +362,7 @@ export function loopView({ adventure, run, state, actions }) {
       el('div', { class: 'loop__count' },
         label('Loop'), el('strong', {}, String(state.loop))),
       run ? null : el('span', { class: 'pill pill--warn' }, 'Not saved yet')),
-    clock(adventure, state, actions),
+    clock(adventure, state, actions, run),
     isPerfectRun(state, adventure)
       ? el('p', { class: 'loop__perfect' },
         el('span', { html: icon('check') }),
@@ -312,6 +372,7 @@ export function loopView({ adventure, run, state, actions }) {
       : null,
     el('div', { class: 'loop__cols' },
       el('div', { class: 'panels' },
+        beatsPanel(adventure, state, actions),
         el('section', { class: 'panel' },
           el('div', { class: 'panel__head' }, el('h2', { class: 'panel__title' }, 'The faults')),
           el('div', { class: 'loop__faults' },

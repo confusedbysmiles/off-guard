@@ -26,6 +26,9 @@ const STATE = {
     wine: { known: true, fixed: true, sticky: false },
     aspic: { known: true, fixed: true, sticky: true },
   },
+  // Beats are evening-level progress, not loop-level, so the round trip has to
+  // carry them too.
+  beats: { soup: true, burns: true, havel: false },
   influence: { points: 6, highWater: 6, discovered: ['Society'] },
   log: { 3: { 0: { 2: 'went to the cellar' } } },
 };
