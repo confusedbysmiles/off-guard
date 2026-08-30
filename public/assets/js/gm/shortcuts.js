@@ -17,6 +17,9 @@ export const TABS = [
   // Everything about this campaign that is not a fight: its settings, who is
   // in it, their links, and what happened last week.
   ['setup', 'Setup', 'S'],
+  // Only meaningful for a looping adventure, but a tab that appears and
+  // disappears is worse at a table than one that is sometimes empty.
+  ['loop', 'Loop', 'L'],
   ['overview', 'All campaigns', 'A'],
   ['start', 'Start here', '?'],
 ];

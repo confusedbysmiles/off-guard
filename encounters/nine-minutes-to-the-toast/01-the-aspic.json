@@ -1,0 +1,23 @@
+{
+  "offGuardEncounter": 1,
+  "name": "The Aspic",
+  "adventure": "Nine Minutes to the Toast",
+  "chapter": "Recurring — slot 7",
+  "sortOrder": 1,
+  "notes": "Fires at 7:57 of EVERY loop, without exception.\n\nRun it as a social disaster, not a fight. The guests politely ignore it because acknowledging it would embarrass the Duke. Havel serves around it.\n\n270 HP and immune to piercing, slashing, precision and critical hits — a level 12 party with blades cannot meaningfully hurt it, and it re-forms next loop anyway. The trap nobody sees coming: drawing a weapon at the table ruins the toast exactly as thoroughly as the aspic does.\n\nCongealed: fire makes it QUICKENED. A fire party makes it faster. That joke is in the published block.\n\nFixes: remove it before 7:57 (2 slots + DC 28 Athletics), dispel the preservation (rank 4, GM ruling), or kill the parent in the Cold Room — which is permanent.",
+  "terrain": "Formal dining room. Long table, sideboard, chandelier.",
+  "lighting": "Candlelit, bright.",
+  "treasure": "None. It is dessert.",
+  "partyLevelOverride": 12,
+  "partySizeOverride": 3,
+  "creatures": [
+    {
+      "creatureId": "tallow-ooze",
+      "displayName": "The Vairemont Ancestral Aspic",
+      "adjustment": null,
+      "levelScale": 0,
+      "count": 1,
+      "notes": ""
+    }
+  ]
+}

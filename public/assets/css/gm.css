@@ -929,6 +929,274 @@
 .session__head strong { flex: 1; min-width: 0; }
 .session__body { margin: var(--sp-2) 0 0; white-space: pre-wrap; font-size: var(--step--1); }
 
+/* --- The loop console -----------------------------------------------------
+ *
+ * For adventures where the evening resets. The colour language is the one the
+ * rest of the dashboard already uses: --warn for something the party knows,
+ * --good for something fixed in this loop, --bad for the reset, because
+ * burning the room is the destructive action here and it should read like one.
+ * No new tokens, so `npm run check:contrast` still covers every pair.
+ */
+
+.loop { display: grid; gap: var(--sp-4); }
+
+.loop__head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-4);
+}
+.loop__title { font-size: var(--step-2); }
+.loop__count { margin-left: auto; display: flex; align-items: baseline; gap: var(--sp-2); }
+.loop__count strong { font-size: var(--step-3); color: var(--primary-ink); font-variant-numeric: tabular-nums; }
+
+.loop__label {
+  display: block;
+  font-size: var(--step--2);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-top: var(--sp-3);
+}
+
+/* The clock */
+.loop__time { font-variant-numeric: tabular-nums; color: var(--ink-dim); }
+.loop__controls { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-left: auto; }
+
+.loop__slots {
+  display: grid;
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  gap: var(--sp-1);
+  list-style: none;
+  margin: var(--sp-3) 0 0;
+  padding: 0;
+}
+.loop__slot {
+  width: 100%;
+  min-height: 58px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: var(--sp-2) 2px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--ink-faint);
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+.loop__slot-n { font-size: var(--step-1); font-weight: 600; line-height: 1; }
+.loop__slot-tag {
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.loop__slot.is-past { background: var(--primary-sunk); color: var(--ink-dim); border-color: var(--primary); }
+.loop__slot.is-now { background: var(--gradient); border-color: transparent; color: #FFFFFF; }
+.loop__slot.is-amber:not(.is-now) { border-color: var(--warn); color: var(--warn-ink); }
+.loop__slot.is-ember:not(.is-now) { border-color: var(--bad); color: var(--bad-ink); }
+
+.loop__event {
+  margin: var(--sp-3) 0 0;
+  padding: var(--sp-2) var(--sp-3);
+  border-left: 3px solid var(--warn);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--surface-sunk);
+  color: var(--ink-dim);
+}
+.loop__event.is-ember { border-left-color: var(--bad); }
+
+.loop__perfect {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin: 0;
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--good);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--good-ink);
+}
+
+.loop__cols { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: var(--sp-4); align-items: start; }
+@media (max-width: 1100px) { .loop__cols { grid-template-columns: minmax(0, 1fr); } }
+
+/* Faults */
+.loop__faults { display: grid; gap: var(--sp-2); }
+.loop__fault {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+.loop__fault.is-known { border-left-color: var(--warn); }
+.loop__fault.is-fixed { border-left-color: var(--good); }
+
+.loop__fault-head { display: flex; align-items: flex-start; gap: var(--sp-3); padding: var(--sp-3); }
+.loop__fault-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  flex: 1 1 auto;
+  min-width: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  padding: 0;
+}
+.loop__fault-n { width: 1.75rem; flex: none; font-weight: 600; color: var(--ink-faint); }
+.loop__fault.is-known .loop__fault-n { color: var(--warn-ink); }
+.loop__fault.is-fixed .loop__fault-n { color: var(--good-ink); }
+.loop__fault-body { display: grid; gap: 2px; min-width: 0; }
+.loop__fault-name { font-weight: 600; }
+.loop__fault-sum { color: var(--ink-dim); font-size: var(--step--1); max-width: 62ch; }
+.loop__pills { display: flex; gap: var(--sp-1); flex: none; }
+.loop__pills .pill { cursor: pointer; }
+.loop__pills .pill[aria-pressed='true'].pill--warn { background: var(--warn); color: #1A1033; border-color: var(--warn); }
+.loop__pills .pill[aria-pressed='true'].pill--good { background: var(--good); color: #1A1033; border-color: var(--good); }
+
+.loop__detail { display: grid; gap: var(--sp-3); padding: 0 var(--sp-3) var(--sp-3) 3.25rem; }
+/* A class that sets `display` beats the user agent's `[hidden] { display: none }`,
+   so the collapsed state has to be spelled out. */
+.loop__detail[hidden] { display: none; }
+.loop__list { margin: var(--sp-1) 0 0; padding-left: var(--sp-4); color: var(--ink-dim); display: grid; gap: 2px; }
+.loop__route {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunk);
+  font-size: var(--step--1);
+}
+.loop__route.is-bad { border-color: var(--bad); }
+.loop__route.is-sticky { border-color: var(--good); }
+.loop__route-label { font-weight: 500; }
+.loop__route-dc { color: var(--primary-ink); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.loop__route.is-bad .loop__route-dc { color: var(--bad-ink); }
+.loop__route-note { grid-column: 1 / -1; color: var(--ink-dim); }
+
+/* Influence */
+.loop__inf-name { font-weight: 600; margin: 0; }
+.loop__inf-stats { font-size: var(--step--1); margin: 0 0 var(--sp-3); }
+.loop__score { display: flex; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-3); }
+.loop__points { font-size: var(--step-3); line-height: 1; font-variant-numeric: tabular-nums; }
+.loop__step { display: flex; gap: var(--sp-1); }
+.loop__hw { margin-left: auto; font-size: var(--step--1); color: var(--warn-ink); font-variant-numeric: tabular-nums; }
+
+.loop__ladder { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-1); }
+.loop__rung {
+  display: grid;
+  grid-template-columns: 1.75rem minmax(0, 1fr);
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--ink-faint);
+  font-size: var(--step--1);
+}
+.loop__rung-at {
+  text-align: center;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  padding: 2px 0;
+}
+.loop__rung.is-earned { color: var(--ink-dim); border-color: var(--border); border-style: dashed; }
+.loop__rung.is-earned .loop__rung-at { color: var(--warn-ink); }
+.loop__rung.is-hit { color: var(--ink); border-color: var(--good); border-style: solid; }
+.loop__rung.is-hit .loop__rung-at { background: var(--good); color: #1A1033; }
+
+.loop__mod { margin: 0; font-size: var(--step--1); color: var(--ink-dim); }
+.loop__mod.is-weak strong { color: var(--good-ink); font-variant-numeric: tabular-nums; }
+.loop__mod.is-res strong { color: var(--bad-ink); font-variant-numeric: tabular-nums; }
+.loop__house {
+  margin: var(--sp-3) 0 0;
+  padding: var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunk);
+  font-size: var(--step--1);
+  color: var(--ink-dim);
+}
+
+/* The slot log */
+.loop__log-wrap { overflow-x: auto; }
+.loop__log {
+  display: grid;
+  grid-template-columns: 6rem repeat(9, minmax(3.5rem, 1fr));
+  gap: 3px;
+  min-width: 40rem;
+  align-items: center;
+}
+.loop__log-h {
+  text-align: center;
+  font-size: var(--step--2);
+  font-weight: 600;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+.loop__log-h.is-now { color: var(--primary-ink); }
+.loop__log-name {
+  background: transparent;
+  border: 0;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--step--1);
+  min-width: 0;
+  padding: var(--sp-1) var(--sp-2) var(--sp-1) 0;
+}
+.loop__log-cell {
+  min-height: 2.25rem;
+  padding: var(--sp-1);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--step--2);
+  line-height: 1.25;
+  resize: none;
+}
+.loop__log-cell.is-now { border-color: var(--primary); }
+.loop__log-cell.is-filled { background: var(--primary-sunk); }
+
+/* Stat blocks and prompts */
+.loop__det { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); }
+.loop__det + .loop__det { margin-top: var(--sp-2); }
+.loop__det summary {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  cursor: pointer;
+  font-weight: 600;
+}
+.loop__det-xp { margin-left: auto; font-size: var(--step--2); font-variant-numeric: tabular-nums; }
+.loop__sb { margin: 0; padding: 0 var(--sp-3) var(--sp-3); display: grid; gap: var(--sp-2); font-size: var(--step--1); }
+.loop__sb-row { display: grid; grid-template-columns: 5rem minmax(0, 1fr); gap: var(--sp-3); }
+.loop__sb-row dt { font-size: var(--step--2); text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-faint); }
+.loop__sb-row dd { margin: 0; color: var(--ink-dim); }
+.loop__sb-note {
+  margin: 0;
+  padding: var(--sp-2) var(--sp-3);
+  border-left: 3px solid var(--bad);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--surface-sunk);
+}
+.loop__src { margin: 0; font-size: var(--step--2); }
+.loop__prompt + .loop__prompt { margin-top: var(--sp-1); }
+.loop__prompt-btn { width: 100%; justify-content: flex-start; text-align: left; }
+
 /* The primary action on an encounter: run it. Set apart from the quiet
  * new/export/copy/delete row in the header, because it is the one that starts
  * a session rather than manages a list. */
@@ -941,3 +1209,22 @@
   border-top: 1px solid var(--border);
 }
 .encounter-run .faint { font-size: var(--step--1); }
+
+/* Recall Knowledge. The two halves are given equal visual weight on purpose:
+   the GM needs the labels, but nothing here should make one look heavier than
+   the other while it is being read out. */
+.loop__rk-rule { margin: 0 0 var(--sp-3); font-size: var(--step--1); }
+.loop__rk { padding: 0 var(--sp-3) var(--sp-3); display: grid; gap: var(--sp-2); }
+.loop__rk-line {
+  margin: 0;
+  padding: var(--sp-2) var(--sp-3);
+  border-left: 3px solid var(--border-strong);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--surface-sunk);
+  font-size: var(--step--1);
+}
+.loop__rk-line.is-true { border-left-color: var(--good); }
+.loop__rk-line.is-true strong { color: var(--good-ink); }
+.loop__rk-line.is-false { border-left-color: var(--bad); }
+.loop__rk-line.is-false strong { color: var(--bad-ink); }
+.loop__rk-note { margin: 0; font-size: var(--step--2); }

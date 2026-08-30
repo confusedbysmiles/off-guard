@@ -10,6 +10,7 @@ import { registerCharacterAdminRoutes } from './characters.js';
 import { registerEncounterRoutes } from './encounters.js';
 import { registerInitiativeRoutes } from './initiative.js';
 import { registerLinkRoutes } from './links.js';
+import { registerLoopRoutes } from './loop.js';
 import { registerCatalogueRoutes } from './catalogue.js';
 import { registerPartyRoutes } from './party.js';
 import { registerReferenceRoutes } from './reference.js';
@@ -22,6 +23,7 @@ export async function registerGmRoutes(app) {
   await registerEncounterRoutes(app);
   await registerInitiativeRoutes(app);
   await registerLinkRoutes(app);
+  await registerLoopRoutes(app);
   await registerCatalogueRoutes(app);
   await registerPartyRoutes(app);
   await registerReferenceRoutes(app);

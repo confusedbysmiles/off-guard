@@ -1,0 +1,23 @@
+{
+  "offGuardEncounter": 1,
+  "name": "The Cold Room — the parent",
+  "adventure": "Nine Minutes to the Toast",
+  "chapter": "Fault III — the dessert",
+  "sortOrder": 3,
+  "notes": "The real combat of the adventure, and it is a puzzle.\n\nSPLIT: hit by piercing or slashing at 10+ HP and it becomes two oozes at half HP each. It is also immune to both. So the attack does nothing AND doubles the problem. A party that opens with a rapier turns one Gargantuan ooze into two. Then four. In a walk-in.\n\nThe answers are bludgeoning, fire, spells dealing neither piercing nor slashing, or shutting the door and solving Fault III another way.\n\nKilling it PERMANENTLY stops the aspic re-forming in every subsequent loop. It is the only progress in the adventure that survives a reset. Tell them it stuck — they will feel that win enormously.\n\nFlag: some printings say the acid damages flesh only, not bone, stone or wood. Not confirmed on the current Nethys page — treat as flavour, not a ruling.",
+  "terrain": "Kitchen walk-in cold room. Cramped for something Gargantuan.",
+  "lighting": "Dim. One lantern by the door.",
+  "treasure": "None.",
+  "partyLevelOverride": 12,
+  "partySizeOverride": 3,
+  "creatures": [
+    {
+      "creatureId": "carnivorous-blob",
+      "displayName": "The thing the aspic came from",
+      "adjustment": null,
+      "levelScale": 0,
+      "count": 1,
+      "notes": ""
+    }
+  ]
+}

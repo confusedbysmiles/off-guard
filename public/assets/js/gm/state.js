@@ -36,6 +36,13 @@ const state = {
   recall: null,
   tokens: null,
   sessions: [],
+
+  // The loop console. `loopRun` is what the server last returned -- null until
+  // this campaign has saved one -- and `loopState` is what the GM is editing.
+  // Kept apart so an unsaved console still renders after a failed write.
+  loopAdventure: null,
+  loopRun: null,
+  loopState: null,
 };
 
 export function subscribe(listener) {

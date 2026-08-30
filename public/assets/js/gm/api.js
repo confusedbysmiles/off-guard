@@ -84,6 +84,13 @@ export const api = {
   deleteEncounter: (id, encounterId) => request(`/campaigns/${id}/encounters/${encounterId}`, { method: 'DELETE' }),
   setCreatures: (id, encounterId, creatures) =>
     request(`/campaigns/${id}/encounters/${encounterId}/creatures`, { method: 'PUT', body: { creatures } }),
+  loopRuns: (id) => request(`/campaigns/${id}/loop`),
+  loopRun: (id, adventureId) => request(`/campaigns/${id}/loop/${adventureId}`),
+  saveLoopRun: (id, adventureId, body) =>
+    request(`/campaigns/${id}/loop/${adventureId}`, { method: 'PUT', body }),
+  deleteLoopRun: (id, adventureId) =>
+    request(`/campaigns/${id}/loop/${adventureId}`, { method: 'DELETE' }),
+
   copyEncounter: (id, encounterId, toCampaignId) =>
     request(`/campaigns/${id}/encounters/${encounterId}/copy`, { method: 'POST', body: { toCampaignId } }),
   reprice: (id, encounterId, toCampaignId) =>

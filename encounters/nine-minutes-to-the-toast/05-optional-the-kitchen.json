@@ -1,0 +1,23 @@
+{
+  "offGuardEncounter": 1,
+  "name": "Optional — The Kitchen",
+  "adventure": "Nine Minutes to the Toast",
+  "chapter": "Cuttable",
+  "sortOrder": 5,
+  "notes": "Only if you need a fourth fight or the party stalls. The fire in the range is one of Qazrahin's bound staff.\n\nFour Magma Scorpions is 40 XP, exactly a LOW encounter for three level-12 PCs. They are stupid (Int -4) and not plot-critical.\n\nCUT THIS FIRST. It is the top of the cut list in the run sheet and it goes without leaving a trace.",
+  "terrain": "Kitchen. Ranges, a long prep table, a door to the cold room.",
+  "lighting": "Bright, hot.",
+  "treasure": "None.",
+  "partyLevelOverride": 12,
+  "partySizeOverride": 3,
+  "creatures": [
+    {
+      "creatureId": "magma-scorpion",
+      "displayName": "",
+      "adjustment": null,
+      "levelScale": 0,
+      "count": 4,
+      "notes": ""
+    }
+  ]
+}

@@ -171,6 +171,15 @@ button, input, select, textarea {
   font-weight: 600;
 }
 
+/* Destructive, and undoable. Uses --bad-ink as text on the button's own
+   ground, the same pairing .pill--bad already relies on, so no new token. */
+.btn--danger {
+  border-color: var(--bad);
+  color: var(--bad-ink);
+  font-weight: 600;
+}
+.btn--danger:hover { background: var(--surface); border-color: var(--bad); }
+
 .btn--quiet { background: transparent; border-color: transparent; }
 .btn--quiet:hover { background: var(--surface-2); border-color: var(--border); }
 

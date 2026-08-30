@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Off-Guard — Loop Console</title>
+
+<!--
+  Integration example for Off-Guard.
+
+  Matches the stack constraints in the build brief: vanilla ES modules, no
+  build step, no bundler, no external CDN, no runtime network calls. Jost is
+  expected to be self-hosted by the host application; declare it in the app's
+  own stylesheet with @font-face and this module picks it up.
+
+  CSP: no inline <style> and no inline <script> here, so a policy without
+  unsafe-inline passes unmodified.
+-->
+<link rel="stylesheet" href="./loop-console.css">
+<script type="module" src="./mount.js"></script>
+</head>
+<body>
+  <loop-console id="console"></loop-console>
+</body>
+</html>

@@ -1,0 +1,719 @@
+/* ============================================================================
+   Off-Guard — Loop Console
+   ----------------------------------------------------------------------------
+   Light-DOM component styles, scoped under the <loop-console> element.
+
+   Every colour is declared as var(--og-*, <fallback>). Mounted inside
+   Off-Guard the module adopts the app's tokens; mounted anywhere else it
+   falls back to the Off-Guard palette so it still looks right.
+
+   Dark-first, matching the app. Three theme states are handled:
+     - bare rules            = dark (the base)
+     - prefers-color-scheme: light, unstamped root
+     - [data-theme="light"]  = explicit light choice wins over a dark OS
+   Nothing here uses an inline <style> or style attribute, so a CSP with
+   no unsafe-inline is satisfied.
+
+   Jost is expected from the host application (self-hosted). The stack
+   degrades to system-ui if it is absent.
+   ========================================================================= */
+
+loop-console {
+  /* --- surfaces ---------------------------------------------------------- */
+  --ogl-bg:        var(--og-bg,        #1A1033);
+  --ogl-surface:   var(--og-surface,   #241748);
+  --ogl-raised:    var(--og-raised,    #2E1E58);
+  --ogl-border:    var(--og-border,    #3D2B6B);
+  --ogl-border-lo: var(--og-border-lo, #2C1E52);
+
+  /* --- text: violet-biased neutrals, not flat grey ----------------------- */
+  --ogl-text:      var(--og-text,       #EDE9F7);
+  --ogl-muted:     var(--og-text-muted, #A99CC6);
+  --ogl-faint:     var(--og-text-faint, #7A6D99);
+
+  /* --- brand ------------------------------------------------------------- */
+  --ogl-primary:   var(--og-primary, #667EEA);
+  --ogl-accent:    var(--og-accent,  #764BA2);
+
+  /* --- semantic state, deliberately separate from the brand hues ---------
+     ember  the reset, the fire, slot 9 — the thing this adventure does nine times
+     amber  discovered but not solved
+     green  solved this loop                                                */
+  --ogl-ember: #E2683C;
+  --ogl-amber: #D9A441;
+  --ogl-green: #43C59E;
+
+  --ogl-on-ember: #21100A;
+  --ogl-on-amber: #2A1F06;
+  --ogl-on-green: #06251C;
+
+  /* --- metrics ----------------------------------------------------------- */
+  --ogl-r:     10px;
+  --ogl-r-sm:  6px;
+  --ogl-gap:   16px;
+  --ogl-pad:   16px;
+
+  display: block;
+  background: var(--ogl-bg);
+  color: var(--ogl-text);
+  font-family: 'Jost', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  container-type: inline-size;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) loop-console {
+    --ogl-bg:        var(--og-bg,        #F6F4FC);
+    --ogl-surface:   var(--og-surface,   #FFFFFF);
+    --ogl-raised:    var(--og-raised,    #F0ECFA);
+    --ogl-border:    var(--og-border,    #DCD4EE);
+    --ogl-border-lo: var(--og-border-lo, #EAE4F6);
+    --ogl-text:      var(--og-text,       #1A1033);
+    --ogl-muted:     var(--og-text-muted, #6B5F87);
+    --ogl-faint:     var(--og-text-faint, #8E82A8);
+    --ogl-primary:   var(--og-primary, #5061C4);
+    --ogl-accent:    var(--og-accent,  #6B4396);
+    --ogl-ember:     #C2461A;
+    --ogl-amber:     #9A6B0C;
+    --ogl-green:     #14805E;
+    --ogl-on-ember:  #FFFFFF;
+    --ogl-on-amber:  #FFFFFF;
+    --ogl-on-green:  #FFFFFF;
+  }
+}
+
+:root[data-theme="light"] loop-console {
+  --ogl-bg:        var(--og-bg,        #F6F4FC);
+  --ogl-surface:   var(--og-surface,   #FFFFFF);
+  --ogl-raised:    var(--og-raised,    #F0ECFA);
+  --ogl-border:    var(--og-border,    #DCD4EE);
+  --ogl-border-lo: var(--og-border-lo, #EAE4F6);
+  --ogl-text:      var(--og-text,       #1A1033);
+  --ogl-muted:     var(--og-text-muted, #6B5F87);
+  --ogl-faint:     var(--og-text-faint, #8E82A8);
+  --ogl-primary:   var(--og-primary, #5061C4);
+  --ogl-accent:    var(--og-accent,  #6B4396);
+  --ogl-ember:     #C2461A;
+  --ogl-amber:     #9A6B0C;
+  --ogl-green:     #14805E;
+  --ogl-on-ember:  #FFFFFF;
+  --ogl-on-amber:  #FFFFFF;
+  --ogl-on-green:  #FFFFFF;
+}
+
+/* --- primitives ---------------------------------------------------------- */
+
+loop-console *,
+loop-console *::before,
+loop-console *::after { box-sizing: border-box; }
+
+/* Every display rule below would otherwise beat the hidden attribute's
+   UA default. Toggle visibility with el.hidden and let this hold. */
+loop-console [hidden] { display: none !important; }
+
+loop-console .ogl-shell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ogl-gap);
+  padding: var(--ogl-pad);
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+loop-console h1,
+loop-console h2,
+loop-console h3 { margin: 0; font-weight: 600; text-wrap: balance; }
+
+loop-console .ogl-label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ogl-faint);
+}
+
+loop-console .ogl-num { font-variant-numeric: tabular-nums; }
+
+loop-console button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: var(--ogl-r-sm);
+}
+
+loop-console button:focus-visible,
+loop-console [tabindex]:focus-visible,
+loop-console input:focus-visible,
+loop-console textarea:focus-visible {
+  outline: 2px solid var(--ogl-primary);
+  outline-offset: 2px;
+}
+
+loop-console .ogl-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px;
+  border: 1px solid var(--ogl-border);
+  background: var(--ogl-raised);
+  color: var(--ogl-text);
+  font-weight: 500;
+  font-size: 13px;
+  transition: border-color .12s, background .12s;
+}
+loop-console .ogl-btn:hover { border-color: var(--ogl-primary); }
+loop-console .ogl-btn[disabled] { opacity: .4; cursor: not-allowed; }
+loop-console .ogl-btn svg { width: 15px; height: 15px; flex: none; }
+
+loop-console .ogl-btn--ember {
+  background: var(--ogl-ember);
+  border-color: var(--ogl-ember);
+  color: var(--ogl-on-ember);
+  font-weight: 600;
+}
+loop-console .ogl-btn--ember:hover { filter: brightness(1.1); border-color: var(--ogl-ember); }
+
+/* --- header -------------------------------------------------------------- */
+
+loop-console .ogl-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--ogl-border-lo);
+}
+loop-console .ogl-title { font-size: 21px; letter-spacing: -0.015em; }
+loop-console .ogl-sub { font-size: 13px; color: var(--ogl-muted); }
+loop-console .ogl-head-spacer { flex: 1 1 auto; }
+
+loop-console .ogl-loopcount {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+loop-console .ogl-loopcount b {
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--ogl-primary);
+}
+
+/* --- the clock ----------------------------------------------------------- */
+
+loop-console .ogl-clock {
+  background: var(--ogl-surface);
+  border: 1px solid var(--ogl-border);
+  border-radius: var(--ogl-r);
+  padding: 14px var(--ogl-pad) var(--ogl-pad);
+}
+
+loop-console .ogl-clock-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+loop-console .ogl-clock-time {
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+loop-console .ogl-clock-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}
+/* On a phone the controls own the row rather than overhanging it. */
+@container (max-width: 560px) {
+  loop-console .ogl-clock-controls { margin-left: 0; width: 100%; }
+  loop-console .ogl-clock-controls .ogl-btn { flex: 1 1 auto; justify-content: center; }
+}
+
+loop-console .ogl-slots {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 5px;
+}
+
+loop-console .ogl-slot {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 58px;
+  padding: 6px 2px;
+  border: 1px solid var(--ogl-border);
+  border-radius: var(--ogl-r-sm);
+  background: var(--ogl-raised);
+  color: var(--ogl-faint);
+  font-variant-numeric: tabular-nums;
+  transition: background .12s, border-color .12s, color .12s;
+}
+loop-console .ogl-slot-n { font-size: 16px; font-weight: 600; line-height: 1; }
+loop-console .ogl-slot-tag {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+loop-console .ogl-slot.is-past {
+  background: color-mix(in srgb, var(--ogl-primary) 16%, transparent);
+  border-color: color-mix(in srgb, var(--ogl-primary) 34%, transparent);
+  color: var(--ogl-muted);
+}
+loop-console .ogl-slot.is-now {
+  background: linear-gradient(135deg, var(--ogl-primary), var(--ogl-accent));
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ogl-primary) 35%, transparent);
+}
+loop-console .ogl-slot.is-event-amber:not(.is-now) { border-color: var(--ogl-amber); color: var(--ogl-amber); }
+loop-console .ogl-slot.is-event-ember:not(.is-now) { border-color: var(--ogl-ember); color: var(--ogl-ember); }
+
+loop-console .ogl-eventnote {
+  margin-top: 11px;
+  padding: 9px 12px;
+  border-left: 3px solid var(--ogl-amber);
+  border-radius: 0 var(--ogl-r-sm) var(--ogl-r-sm) 0;
+  background: color-mix(in srgb, var(--ogl-amber) 12%, transparent);
+  font-size: 13px;
+}
+loop-console .ogl-eventnote.is-ember {
+  border-left-color: var(--ogl-ember);
+  background: color-mix(in srgb, var(--ogl-ember) 13%, transparent);
+}
+
+/* --- perfect run banner -------------------------------------------------- */
+
+loop-console .ogl-perfect {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 12px 15px;
+  border-radius: var(--ogl-r);
+  border: 1px solid var(--ogl-green);
+  background: color-mix(in srgb, var(--ogl-green) 15%, transparent);
+  font-weight: 600;
+  font-size: 14px;
+}
+loop-console .ogl-perfect svg { width: 19px; height: 19px; color: var(--ogl-green); flex: none; }
+loop-console .ogl-perfect span { font-weight: 400; color: var(--ogl-muted); }
+
+/* --- layout -------------------------------------------------------------- */
+
+loop-console .ogl-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+  gap: var(--ogl-gap);
+  align-items: start;
+}
+@container (max-width: 940px) {
+  loop-console .ogl-cols { grid-template-columns: minmax(0, 1fr); }
+}
+
+loop-console .ogl-stack { display: flex; flex-direction: column; gap: var(--ogl-gap); min-width: 0; }
+
+loop-console .ogl-card {
+  background: var(--ogl-surface);
+  border: 1px solid var(--ogl-border);
+  border-radius: var(--ogl-r);
+  padding: var(--ogl-pad);
+}
+loop-console .ogl-card > .ogl-label { display: block; margin-bottom: 11px; }
+
+/* --- faults -------------------------------------------------------------- */
+
+loop-console .ogl-faults { display: flex; flex-direction: column; gap: 10px; }
+
+loop-console .ogl-fault {
+  position: relative;
+  border: 1px solid var(--ogl-border);
+  border-left: 3px solid var(--ogl-faint);
+  border-radius: var(--ogl-r-sm);
+  background: var(--ogl-raised);
+  overflow: hidden;
+  transition: border-color .14s;
+}
+loop-console .ogl-fault.is-known  { border-left-color: var(--ogl-amber); }
+loop-console .ogl-fault.is-fixed  { border-left-color: var(--ogl-green); }
+
+loop-console .ogl-fault-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 12px 13px;
+}
+loop-console .ogl-fault-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+  padding: 0;
+}
+loop-console .ogl-mt { margin-top: 12px; }
+loop-console .ogl-fault-n {
+  flex: none;
+  width: 26px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ogl-faint);
+  font-variant-numeric: tabular-nums;
+  padding-top: 1px;
+}
+loop-console .ogl-fault.is-known .ogl-fault-n { color: var(--ogl-amber); }
+loop-console .ogl-fault.is-fixed .ogl-fault-n { color: var(--ogl-green); }
+
+loop-console .ogl-fault-body { flex: 1 1 auto; min-width: 0; }
+loop-console .ogl-fault-name { display: block; font-size: 15px; font-weight: 600; }
+loop-console .ogl-fault-sum {
+  display: block;
+  font-size: 13px;
+  color: var(--ogl-muted);
+  margin-top: 2px;
+  max-width: 62ch;
+}
+
+loop-console .ogl-pills { display: flex; gap: 6px; flex: none; padding-top: 1px; }
+
+loop-console .ogl-pill {
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--ogl-border);
+  background: transparent;
+  color: var(--ogl-faint);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: background .12s, color .12s, border-color .12s;
+}
+loop-console .ogl-pill:hover { border-color: var(--ogl-primary); }
+loop-console .ogl-pill[aria-pressed="true"].ogl-pill--known {
+  background: var(--ogl-amber); border-color: var(--ogl-amber); color: var(--ogl-on-amber);
+}
+loop-console .ogl-pill[aria-pressed="true"].ogl-pill--fixed {
+  background: var(--ogl-green); border-color: var(--ogl-green); color: var(--ogl-on-green);
+}
+
+loop-console .ogl-fault-detail {
+  padding: 0 13px 13px 50px;
+  display: grid;
+  gap: 11px;
+}
+loop-console .ogl-fault-detail[hidden] { display: none; }
+
+loop-console .ogl-detail-group { display: grid; gap: 5px; }
+loop-console .ogl-detail-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+loop-console .ogl-detail-list li {
+  font-size: 12.5px;
+  color: var(--ogl-muted);
+  padding-left: 13px;
+  position: relative;
+}
+loop-console .ogl-detail-list li::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 8px;
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--ogl-faint);
+}
+
+loop-console .ogl-route {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 3px 12px;
+  padding: 7px 10px;
+  border-radius: var(--ogl-r-sm);
+  background: color-mix(in srgb, var(--ogl-primary) 8%, transparent);
+  border: 1px solid var(--ogl-border-lo);
+  font-size: 12.5px;
+}
+loop-console .ogl-route.is-bad { background: color-mix(in srgb, var(--ogl-ember) 9%, transparent); }
+loop-console .ogl-route.is-sticky { border-color: var(--ogl-green); }
+loop-console .ogl-route-label { font-weight: 500; }
+loop-console .ogl-route-dc {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ogl-primary);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+loop-console .ogl-route.is-bad .ogl-route-dc { color: var(--ogl-ember); }
+loop-console .ogl-route-note { grid-column: 1 / -1; color: var(--ogl-muted); font-size: 12px; }
+
+/* --- influence ----------------------------------------------------------- */
+
+loop-console .ogl-inf-head { display: flex; align-items: baseline; gap: 9px; margin-bottom: 3px; }
+loop-console .ogl-inf-name { font-size: 15px; font-weight: 600; }
+loop-console .ogl-inf-stats { font-size: 11.5px; color: var(--ogl-faint); margin-bottom: 13px; }
+
+loop-console .ogl-inf-score {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 12px;
+}
+loop-console .ogl-inf-pts {
+  font-size: 27px;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  min-width: 2.1ch;
+  text-align: right;
+}
+loop-console .ogl-inf-max { font-size: 14px; color: var(--ogl-faint); }
+loop-console .ogl-inf-hw {
+  margin-left: auto;
+  font-size: 11.5px;
+  color: var(--ogl-amber);
+  font-variant-numeric: tabular-nums;
+}
+loop-console .ogl-step { display: flex; gap: 5px; }
+loop-console .ogl-step button {
+  width: 30px; height: 30px;
+  display: grid; place-items: center;
+  border: 1px solid var(--ogl-border);
+  background: var(--ogl-raised);
+  font-size: 16px; font-weight: 600; line-height: 1;
+}
+loop-console .ogl-step button:hover { border-color: var(--ogl-primary); }
+
+loop-console .ogl-ladder { display: grid; gap: 5px; margin-bottom: 13px; }
+loop-console .ogl-rung {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 7px 9px;
+  border-radius: var(--ogl-r-sm);
+  border: 1px solid var(--ogl-border-lo);
+  font-size: 12.5px;
+  color: var(--ogl-faint);
+  transition: background .14s, color .14s, border-color .14s;
+}
+loop-console .ogl-rung-at {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  padding: 2px 0;
+  border-radius: var(--ogl-r-sm);
+  background: var(--ogl-raised);
+}
+loop-console .ogl-rung.is-hit {
+  color: var(--ogl-text);
+  border-color: color-mix(in srgb, var(--ogl-green) 45%, transparent);
+  background: color-mix(in srgb, var(--ogl-green) 11%, transparent);
+}
+loop-console .ogl-rung.is-hit .ogl-rung-at { background: var(--ogl-green); color: var(--ogl-on-green); }
+loop-console .ogl-rung.is-earned:not(.is-hit) {
+  color: var(--ogl-muted);
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--ogl-amber) 50%, transparent);
+}
+loop-console .ogl-rung.is-earned:not(.is-hit) .ogl-rung-at { color: var(--ogl-amber); }
+
+loop-console .ogl-modline {
+  display: flex; gap: 8px; align-items: baseline;
+  font-size: 12px; padding: 5px 0;
+  border-top: 1px solid var(--ogl-border-lo);
+}
+loop-console .ogl-modline b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+loop-console .ogl-modline.is-res b { color: var(--ogl-ember); }
+loop-console .ogl-modline.is-weak b { color: var(--ogl-green); }
+loop-console .ogl-modline span { color: var(--ogl-muted); }
+
+loop-console .ogl-house {
+  margin-top: 11px;
+  padding: 10px 12px;
+  border-radius: var(--ogl-r-sm);
+  background: color-mix(in srgb, var(--ogl-accent) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ogl-accent) 40%, transparent);
+  font-size: 12px;
+  color: var(--ogl-muted);
+}
+loop-console .ogl-house b { color: var(--ogl-text); display: block; margin-bottom: 2px; font-size: 11px; letter-spacing: .07em; text-transform: uppercase; }
+
+loop-console .ogl-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+loop-console .ogl-chip {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--ogl-border);
+  background: transparent;
+  font-size: 11.5px;
+  color: var(--ogl-muted);
+  font-variant-numeric: tabular-nums;
+}
+loop-console .ogl-chip:hover { border-color: var(--ogl-primary); }
+loop-console .ogl-chip[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--ogl-primary) 22%, transparent);
+  border-color: var(--ogl-primary);
+  color: var(--ogl-text);
+}
+
+/* --- slot log ------------------------------------------------------------ */
+
+loop-console .ogl-logwrap { overflow-x: auto; }
+loop-console .ogl-log {
+  display: grid;
+  grid-template-columns: 92px repeat(9, minmax(58px, 1fr));
+  gap: 3px;
+  min-width: 640px;
+}
+loop-console .ogl-log-h {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ogl-faint);
+  text-align: center;
+  padding: 3px 0;
+  font-variant-numeric: tabular-nums;
+}
+loop-console .ogl-log-h.is-now { color: var(--ogl-primary); }
+loop-console .ogl-log-name {
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 6px 7px 6px 0;
+  border: none;
+  background: transparent;
+  color: var(--ogl-text);
+  min-width: 0;
+  width: 100%;
+}
+loop-console .ogl-log-cell {
+  min-height: 34px;
+  padding: 4px 5px;
+  border: 1px solid var(--ogl-border-lo);
+  border-radius: 4px;
+  background: var(--ogl-raised);
+  color: var(--ogl-text);
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.25;
+  resize: none;
+  overflow: hidden;
+}
+loop-console .ogl-log-cell::placeholder { color: transparent; }
+loop-console .ogl-log-cell:hover { border-color: var(--ogl-border); }
+loop-console .ogl-log-cell.is-now { border-color: var(--ogl-primary); }
+loop-console .ogl-log-cell.is-filled { background: color-mix(in srgb, var(--ogl-primary) 13%, transparent); }
+
+/* --- stat blocks + prompts ----------------------------------------------- */
+
+loop-console details.ogl-det {
+  border: 1px solid var(--ogl-border);
+  border-radius: var(--ogl-r-sm);
+  background: var(--ogl-raised);
+  overflow: hidden;
+}
+loop-console details.ogl-det + details.ogl-det { margin-top: 7px; }
+loop-console .ogl-det summary {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  padding: 10px 12px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+loop-console .ogl-det summary::-webkit-details-marker { display: none; }
+loop-console .ogl-det summary:hover { color: var(--ogl-primary); }
+loop-console .ogl-det summary > span:first-child { flex: 0 1 auto; min-width: 0; }
+loop-console .ogl-det-lvl {
+  flex: none;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ogl-primary) 20%, transparent);
+  color: var(--ogl-primary);
+  font-variant-numeric: tabular-nums;
+}
+loop-console .ogl-det-xp { font-size: 11px; font-weight: 400; color: var(--ogl-faint); margin-left: auto; font-variant-numeric: tabular-nums; }
+loop-console .ogl-det-inner { padding: 0 12px 12px; font-size: 12.5px; display: grid; gap: 7px; }
+loop-console .ogl-sb-row { display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 10px; }
+loop-console .ogl-sb-row dt { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ogl-faint); padding-top: 2px; }
+loop-console .ogl-sb-row dd { margin: 0; color: var(--ogl-muted); }
+loop-console .ogl-sb-def { color: var(--ogl-text); font-variant-numeric: tabular-nums; }
+loop-console .ogl-sb-note {
+  padding: 9px 11px;
+  border-left: 3px solid var(--ogl-ember);
+  border-radius: 0 var(--ogl-r-sm) var(--ogl-r-sm) 0;
+  background: color-mix(in srgb, var(--ogl-ember) 11%, transparent);
+  color: var(--ogl-text);
+  font-size: 12.5px;
+}
+loop-console .ogl-sb-list { margin: 0; padding-left: 16px; color: var(--ogl-muted); display: grid; gap: 3px; }
+
+loop-console .ogl-prompt {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--ogl-border-lo);
+  border-radius: var(--ogl-r-sm);
+  background: var(--ogl-raised);
+  text-align: left;
+  width: 100%;
+}
+loop-console .ogl-prompt + .ogl-prompt { margin-top: 6px; }
+loop-console .ogl-prompt:hover { border-color: var(--ogl-primary); }
+loop-console .ogl-prompt-l { font-size: 12.5px; font-weight: 600; }
+loop-console .ogl-prompt-t { font-size: 12px; color: var(--ogl-muted); }
+loop-console .ogl-prompt-t[hidden] { display: none; }
+
+/* --- footer -------------------------------------------------------------- */
+
+loop-console .ogl-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px 16px;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid var(--ogl-border-lo);
+  font-size: 11.5px;
+  color: var(--ogl-faint);
+}
+loop-console .ogl-keys { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+loop-console kbd {
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border: 1px solid var(--ogl-border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: var(--ogl-raised);
+  color: var(--ogl-muted);
+}
+
+loop-console .ogl-live {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  loop-console *, loop-console *::before, loop-console *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

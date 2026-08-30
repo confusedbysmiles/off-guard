@@ -10,6 +10,7 @@
  */
 import { displayName } from '../../../engine/shared/character-name.js';
 import { debounce } from '../lib/dom.js';
+import { blankState, resetLoop, setInfluence } from '../../../engine/shared/loop.js';
 import { assignDisplayNames } from './views/builder.js';
 
 /** A revealed fact was stored as a bare key by an earlier build; accept both. */
@@ -340,6 +341,144 @@ export function createActions({
       } catch (error) {
         notices.error(`That file could not be imported: ${error.message}`);
       }
+    },
+
+    // --- the loop console ----------------------------------------------------
+
+    /**
+     * Load a looping adventure for the current campaign.
+     *
+     * A campaign that has never run it gets the adventure's blank state rather
+     * than an error: opening the console for the first time is the normal case,
+     * and there is nothing to report about it.
+     */
+    async loadLoop(adventure) {
+      const id = campaign();
+      if (!id || !adventure) return;
+      // Set before awaiting. The tab renders immediately and the GM can click
+      // while the fetch is in flight; an action that found no adventure in the
+      // store would do nothing at all, which reads as a dead interface.
+      store.set({ loopAdventure: adventure, loopRun: null, loopState: blankState(adventure) });
+      try {
+        const { run } = await api.loopRun(id, adventure.id);
+        store.set({ loopRun: run, loopState: run?.state ?? blankState(adventure) });
+      } catch (error) {
+        // The blank state set above stands, which keeps the console usable when
+        // the fetch fails. Saving will retry on the next edit.
+        notices.error(`Could not load the loop console: ${error.message}`);
+      }
+      refresh();
+    },
+
+    /**
+     * Write the state the GM is looking at.
+     *
+     * Debounced, because a slot note is typed a character at a time and the
+     * whole state is small enough that sending it whole is cheaper than working
+     * out what changed.
+     */
+    saveLoop: debounce(async () => {
+      const id = campaign();
+      const { loopAdventure, loopState } = store.get();
+      if (!id || !loopAdventure || !loopState) return;
+      try {
+        const { run } = await api.saveLoopRun(id, loopAdventure.id, {
+          state: loopState, title: loopAdventure.title,
+        });
+        store.set({ loopRun: run });
+      } catch (error) {
+        notices.error(`The loop console did not save: ${error.message}`);
+      }
+    }, 400),
+
+    /** Apply a change to the loop state and persist it. */
+    patchLoop(next) {
+      store.set({ loopState: next });
+      actions.saveLoop();
+      refresh();
+    },
+
+    loopSlot(slot) {
+      const { loopAdventure, loopState } = store.get();
+      if (!loopAdventure) return;
+      const clamped = Math.min(loopAdventure.loop.slots, Math.max(1, slot));
+      if (clamped === loopState.slot) return;
+      actions.patchLoop({ ...loopState, slot: clamped });
+    },
+
+    /**
+     * Burn the room.
+     *
+     * The one destructive thing the console does, so it offers an undo the way
+     * deleting a session note does. The state before the reset is still in hand.
+     */
+    loopReset() {
+      const { loopState } = store.get();
+      const before = loopState;
+      actions.patchLoop(resetLoop(loopState));
+      notices.warn(`Loop ${before.loop} burned.`, {
+        detail: 'Fixes cleared. What the party knows, and anything solved permanently, carried over.',
+        actions: [['Undo', () => actions.patchLoop(before)]],
+        timeout: 8000,
+      });
+    },
+
+    /** `known` and `fixed` on one fault. Fixing something implies knowing it. */
+    loopFault(faultId, patch) {
+      const { loopState } = store.get();
+      const current = loopState.faults[faultId] ?? { known: false, fixed: false, sticky: false };
+      const next = { ...current, ...patch };
+      if (next.fixed) next.known = true;
+      actions.patchLoop({ ...loopState, faults: { ...loopState.faults, [faultId]: next } });
+    },
+
+    /**
+     * Mark a fault solved by removing its cause rather than its symptom.
+     *
+     * The only progress in a looping adventure that survives a reset, so it
+     * says so out loud -- a table that does not notice this landed has been
+     * robbed of the one win the loop cannot take back.
+     */
+    loopSticky(faultId, sticky) {
+      const { loopState } = store.get();
+      const current = loopState.faults[faultId] ?? { known: false, fixed: false, sticky: false };
+      const next = sticky
+        ? { known: true, fixed: true, sticky: true }
+        : { ...current, sticky: false };
+      actions.patchLoop({ ...loopState, faults: { ...loopState.faults, [faultId]: next } });
+      if (sticky) notices.info('That one stays fixed through every reset from here.');
+    },
+
+    loopInfluence(points) {
+      const { loopAdventure, loopState } = store.get();
+      if (!loopAdventure) return;
+      actions.patchLoop(setInfluence(loopState, points, loopAdventure.influence.max));
+    },
+
+    loopDiscovery(name) {
+      const { loopState } = store.get();
+      const held = new Set(loopState.influence.discovered);
+      if (held.has(name)) held.delete(name); else held.add(name);
+      actions.patchLoop({
+        ...loopState,
+        influence: { ...loopState.influence, discovered: [...held] },
+      });
+    },
+
+    loopParty(index, name) {
+      const { loopState } = store.get();
+      const party = [...loopState.party];
+      party[index] = name;
+      actions.patchLoop({ ...loopState, party });
+    },
+
+    loopNote(actorIndex, slot, text) {
+      const { loopState } = store.get();
+      const loop = String(loopState.loop);
+      const log = { ...loopState.log };
+      log[loop] = { ...(log[loop] ?? {}) };
+      log[loop][actorIndex] = { ...(log[loop][actorIndex] ?? {}), [slot]: text };
+      actions.patchLoop({ ...loopState, log });
     },
 
     // --- initiative --------------------------------------------------------

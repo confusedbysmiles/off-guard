@@ -1,0 +1,31 @@
+{
+  "offGuardEncounter": 1,
+  "name": "The Toast — Qazrahin the Fastidious",
+  "adventure": "Nine Minutes to the Toast",
+  "chapter": "The boss",
+  "sortOrder": 4,
+  "notes": "SEVERE, exactly on budget: Ifrit Shuyookh (14) = 80 XP, Magma Scorpion (8) = 10 XP, total 90 against a 3-PC severe budget of 90.\n\nTHE ROOM IS THE ANSWER. Weak cold 15 and water 15, in a dining room stocked with ice buckets, water carafes and coolers of chilled wine — all described in loop 1, three hours before it matters. A thrown bucket is an improvised weapon, but 15 points of weakness damage per hit is real. If nobody has noticed by round three, have Havel calmly hand a PC an ice bucket without comment.\n\nExploit Regret is the jewel of the block. Qazrahin, mid-fight, politely offering to eat a hit in exchange for going faster, is exactly the register of this adventure. Use it every round it is available.\n\nDO NOT use interplanar teleport to flee. It has it at will and a boss that escapes ruins the ending. Qazrahin will not leave. Leaving is not in the contract.\n\nRoute B exists: the contract binds BETROTHAL feasts, not WEDDING feasts. Pell has a copy in his case. DC 28 Society or any legal Lore. That route ends with the ifrit shaking everyone's hand.",
+  "terrain": "The dining room, at 8:00. Ice buckets and water carafes within reach on the table.",
+  "lighting": "Candlelit, then very bright.",
+  "treasure": "The contract itself, in Master Girard Pell's case.",
+  "partyLevelOverride": 12,
+  "partySizeOverride": 3,
+  "creatures": [
+    {
+      "creatureId": "ifrit-shuyookh",
+      "displayName": "Qazrahin the Fastidious",
+      "adjustment": null,
+      "levelScale": 0,
+      "count": 1,
+      "notes": ""
+    },
+    {
+      "creatureId": "magma-scorpion",
+      "displayName": "Qazrahin's Assistant",
+      "adjustment": null,
+      "levelScale": 0,
+      "count": 1,
+      "notes": ""
+    }
+  ]
+}

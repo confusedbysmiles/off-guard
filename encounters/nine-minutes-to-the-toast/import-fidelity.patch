@@ -1,0 +1,38 @@
+diff --git a/public/assets/js/gm/actions.js b/public/assets/js/gm/actions.js
+index 423f1b0..328ea3c 100644
+--- a/public/assets/js/gm/actions.js
++++ b/public/assets/js/gm/actions.js
+@@ -278,10 +278,17 @@ export function createActions({
+       const payload = {
+         offGuardEncounter: 1,
+         name: encounter.name,
++        adventure: encounter.adventure,
++        chapter: encounter.chapter,
++        sortOrder: encounter.sortOrder,
+         notes: encounter.notes,
+         terrain: encounter.terrain,
+         lighting: encounter.lighting,
+         treasure: encounter.treasure,
++        // A one-shot prices itself against its own party, not the campaign's
++        // sheets. Without these the budget silently re-reads the party panel.
++        partyLevelOverride: encounter.partyLevelOverride,
++        partySizeOverride: encounter.partySizeOverride,
+         creatures: encounter.creatures.map((row) => ({
+           creatureId: row.creatureId,
+           displayName: row.displayName,
+@@ -308,10 +315,15 @@ export function createActions({
+         if (!Array.isArray(parsed.creatures)) throw new Error('no creature list');
+         const { encounter } = await api.createEncounter(campaign(), {
+           name: parsed.name ?? 'Imported encounter',
++          adventure: parsed.adventure ?? null,
++          chapter: parsed.chapter ?? null,
++          sortOrder: parsed.sortOrder ?? 0,
+           notes: parsed.notes ?? '',
+           terrain: parsed.terrain ?? '',
+           lighting: parsed.lighting ?? '',
+           treasure: parsed.treasure ?? '',
++          partyLevelOverride: parsed.partyLevelOverride ?? null,
++          partySizeOverride: parsed.partySizeOverride ?? null,
+         });
+         await api.setCreatures(campaign(), encounter.id, parsed.creatures);
+         await loadEncounters();

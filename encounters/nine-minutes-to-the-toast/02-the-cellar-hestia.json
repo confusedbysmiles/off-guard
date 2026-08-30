@@ -1,0 +1,23 @@
+{
+  "offGuardEncounter": 1,
+  "name": "The Cellar — Great-Aunt Hestia",
+  "adventure": "Nine Minutes to the Toast",
+  "chapter": "Fault I — the wine",
+  "sortOrder": 2,
+  "notes": "Ghost Mage with the ELITE adjustment applied, which is what makes her Creature 11.\n\nBe honest with yourself: three level-12 PCs kill her in two or three rounds. 155 HP and resistance 10 that magical weapons already halve is not a wall. She is a negotiation with a stat block attached.\n\nThe lock is not her hit points — it is that killing her does not get them the wine. She is the only creature who knows which rack hides the false wall. Without her: DC 35 Perception for the seam, then a slot and DC 30 Thievery or Athletics.\n\nAsking nicely is DC 28 Diplomacy or Deception (offer not to tell anyone). Promising the toast will name her is DC 25 and is the best outcome — she volunteers Fault III.\n\nRejuvenation is 2d4 days, so it is the LOOP RESET that brings her back, not the ability. If they killed her she returns offended: +5 DC on every social check with her for the rest of the session.\n\nUse Frightful Moan once, for effect.",
+  "terrain": "Wine cellar. Racks, a service stair, a false wall.",
+  "lighting": "Dark. No light source unless the party brings one.",
+  "treasure": "The 4413 Vairemont Reserve, behind the false wall.",
+  "partyLevelOverride": 12,
+  "partySizeOverride": 3,
+  "creatures": [
+    {
+      "creatureId": "ghost-mage",
+      "displayName": "Great-Aunt Hestia Vairemont",
+      "adjustment": "elite",
+      "levelScale": 0,
+      "count": 1,
+      "notes": ""
+    }
+  ]
+}

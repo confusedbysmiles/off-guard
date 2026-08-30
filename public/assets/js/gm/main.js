@@ -27,7 +27,10 @@ import { linkReveal, linksPanel } from './views/links.js';
 import { campaignPanel, rosterPanel, sessionsPanel } from './views/campaign.js';
 import { createDrawer, drawerShell } from './drawer.js';
 import { startPanel } from './views/start.js';
+import { loopView } from './views/loop.js';
+import { ADVENTURE as NINE_MINUTES } from './adventures/nine-minutes.js';
 import { shortcutFor, TABS } from './shortcuts.js';
+import { blankState } from '../../../engine/shared/loop.js';
 
 const notices = createNotices($('#notices'));
 
@@ -230,6 +233,16 @@ function renderNow() {
     return;
   }
 
+  if (state.tab === 'loop') {
+    main.replaceChildren(loopView({
+      adventure: state.loopAdventure ?? NINE_MINUTES,
+      run: state.loopRun,
+      state: state.loopState ?? blankState(NINE_MINUTES),
+      actions,
+    }));
+    return;
+  }
+
   if (state.tab === 'setup') {
     main.replaceChildren(el('div', { class: 'panels' },
       campaignPanel({ campaign: store.currentCampaign(), actions }),
@@ -304,12 +317,16 @@ async function selectCampaign(id) {
   store.set({
     campaignId: id, encounter: null, encounterId: null, budget: null, combat: null,
     rolls: [], recall: null, sessions: [], tokens: null,
+    // Same rule: a loop run belongs to the campaign being left. Tuesday's
+    // seventh loop must not be on screen under Saturday's name.
+    loopAdventure: null, loopRun: null, loopState: null,
   });
   store.writeLocation({ campaignId: id, tab: store.get().tab });
   await Promise.all([
     actions.loadParty(), actions.loadEncounters(), actions.loadCombat(),
     actions.loadRolls(), actions.loadTokens(), actions.loadSessions(),
   ]);
+  if (store.get().tab === 'loop') await actions.loadLoop(NINE_MINUTES);
   render();
   drawer.render();
 }
@@ -319,6 +336,10 @@ function selectTab(tab) {
   store.set({ tab });
   store.writeLocation({ campaignId, tab, encounterId });
   if (tab === 'overview') actions.loadOverview().then(render);
+  // Loaded on arrival rather than with the campaign: most tables are not
+  // running a looping adventure, and a fetch per campaign switch for a tab
+  // nobody opened is a request that buys nothing.
+  if (tab === 'loop' && !store.get().loopState) actions.loadLoop(NINE_MINUTES);
   if (tab === 'encounters' && !store.get().searchResults) actions.search(actions.searchQuery);
   render();
 }
@@ -439,6 +460,9 @@ async function start() {
   await selectCampaign(active.id);
   if (wanted.encounterId) await actions.openEncounter(wanted.encounterId);
   if (store.get().tab === 'overview') await actions.loadOverview();
+  // A reload straight onto #/campaign/3/loop restores the tab without going
+  // through selectTab, so the console has to be loaded here too.
+  if (store.get().tab === 'loop' && !store.get().loopState) await actions.loadLoop(NINE_MINUTES);
   render();
 }
 
