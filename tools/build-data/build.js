@@ -16,7 +16,7 @@
  * a trigram index would not be.
  */
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
-import { resolve as resolvePath } from 'node:path';
+import { dirname, resolve as resolvePath } from 'node:path';
 
 import { ensureUpstream, LOCK, PROJECT_ROOT } from './upstream.js';
 import { listPacks, readPack } from './packs.js';
@@ -27,6 +27,7 @@ import { isCreaturePack, packTier } from './catalog.js';
 import { normalizeCreature } from './normalize/creature.js';
 import { normalizeHazard } from './normalize/hazard.js';
 import { applyPage, loadPageTable } from './pages.js';
+import { buildOptions } from './options-build.js';
 
 const DATA_DIR = resolvePath(PROJECT_ROOT, 'data');
 
@@ -159,7 +160,16 @@ function main() {
   }
 
   report.pages.unmatched = [...unusedPageKeys].sort();
-  writeOutputs({ creaturesByPack, hazardsByPack, rows, report, started });
+
+  // Character options -- the things a player picks rather than the things they
+  // fight. Same upstream checkout and the same markup resolver, so a feat's
+  // rules text resolves its @UUID links exactly as a creature's ability does.
+  console.log('');
+  console.log('Character options:');
+  const options = buildOptions({ upstream, resolve, log: (line) => console.log(line) });
+  report.options = options.report;
+
+  writeOutputs({ creaturesByPack, hazardsByPack, rows, report, options, started });
 }
 
 /**
@@ -209,11 +219,14 @@ function indexRow(record, kind) {
   };
 }
 
-function writeOutputs({ creaturesByPack, hazardsByPack, rows, report, started }) {
-  rmSync(resolvePath(DATA_DIR, 'creatures'), { recursive: true, force: true });
-  rmSync(resolvePath(DATA_DIR, 'hazards'), { recursive: true, force: true });
-  mkdirSync(resolvePath(DATA_DIR, 'creatures'), { recursive: true });
-  mkdirSync(resolvePath(DATA_DIR, 'hazards'), { recursive: true });
+function writeOutputs({ creaturesByPack, hazardsByPack, rows, report, options, started }) {
+  for (const dir of ['creatures', 'hazards', 'options']) {
+    // Cleared rather than overwritten: a shard that stops being produced --
+    // a spell rank with nothing left in it -- would otherwise sit there being
+    // served from the last build that had one.
+    rmSync(resolvePath(DATA_DIR, dir), { recursive: true, force: true });
+    mkdirSync(resolvePath(DATA_DIR, dir), { recursive: true });
+  }
 
   let bytes = 0;
   const write = (path, value) => {
@@ -224,6 +237,23 @@ function writeOutputs({ creaturesByPack, hazardsByPack, rows, report, started })
 
   for (const [pack, records] of creaturesByPack) write(`creatures/${pack}.json`, records);
   for (const [pack, records] of hazardsByPack) write(`hazards/${pack}.json`, records);
+
+  // A shard key doubles as its path, and some of them are nested -- `feat/class`,
+  // `spell/rank-3` -- so the directory has to exist before the file does.
+  for (const [shard, records] of options.shards) {
+    const file = `options/${shard}.json`;
+    mkdirSync(dirname(resolvePath(DATA_DIR, file)), { recursive: true });
+    write(file, records);
+  }
+
+  write('options-index.json', {
+    generated: { commit: report.upstream.commit },
+    rows: options.rows.sort((a, b) => a.name.localeCompare(b.name)),
+  });
+  write('class-progression.json', {
+    generated: { commit: report.upstream.commit },
+    classes: options.progression,
+  });
 
   const traits = new Map();
   for (const row of rows) for (const t of row.traits) traits.set(t, (traits.get(t) ?? 0) + 1);
@@ -247,6 +277,17 @@ function writeOutputs({ creaturesByPack, hazardsByPack, rows, report, started })
 
   console.log('');
   console.log(`Creatures: ${report.counts.creatures}   Hazards: ${report.counts.hazards}`);
+  console.log(
+    `Options: ${options.rows.length}   Classes with a progression: ${report.options.progression.classes}`
+  );
+  if (report.options.progression.unmapped.length) {
+    // Reported, never guessed: an unrecognized feature leaves a proficiency
+    // flat rather than moving it to the wrong rank.
+    console.log(
+      `Unmapped class features: ${report.options.progression.unmapped.length}`
+      + `   Duplicate option ids: ${report.options.duplicateIds.length}`
+    );
+  }
   console.log(`Id collisions: ${report.idCollisions}   Superseded by remaster: ${report.superseded.length}`);
   console.log(
     `Page references: ${report.pages.applied} applied` +
