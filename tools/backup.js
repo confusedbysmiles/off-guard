@@ -88,7 +88,18 @@ const summarise = (rows) => Object.entries(rows)
   .map(([table, n]) => `${n} ${table}${n === 1 ? '' : 's'}`)
   .join(', ');
 
-const stamp = new Date().toISOString().slice(0, 10);
+/**
+ * Today's date, where you are.
+ *
+ * `toISOString()` is UTC, which put an evening backup under tomorrow's name --
+ * one taken at 22:17 on the 29th became `2026-08-30.sqlite`. That is not just
+ * an odd filename: the weekly agent passes `--skip-existing`, so the next
+ * morning's scheduled run found today's name already taken and quietly did
+ * nothing. An evening backup cancelled the following morning's.
+ *
+ * `en-CA` is the ISO ordering, and `toLocaleDateString` is the local day.
+ */
+const stamp = new Date().toLocaleDateString('en-CA');
 const destination = resolve(target ?? `${homedir()}/off-guard-backups/${stamp}.sqlite`);
 
 if (verifyOnly) {

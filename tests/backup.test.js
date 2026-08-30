@@ -13,7 +13,7 @@
  * machine: its arguments, its refusals and its exit codes.
  */
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, mkdtempSync, statSync } from 'node:fs';
+import { copyFileSync, mkdtempSync, readdirSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import Database from 'better-sqlite3';
@@ -146,6 +146,42 @@ describe('the scheduled run', () => {
     const backup = join(dir, 'backup.sqlite');
     expect(run(['--skip-existing', backup], file)).toContain('3 campaigns');
     expect(countIn(backup)).toBe(3);
+    db.close();
+  });
+});
+
+describe('the name it picks', () => {
+  /**
+   * Run with no destination, in a sandboxed HOME and a chosen timezone, and
+   * report what it called the file.
+   */
+  const defaultNameIn = (timeZone, file) => {
+    const home = mkdtempSync(join(tmpdir(), 'off-guard-home-'));
+    execFileSync('node', [TOOL], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      env: { ...process.env, OFF_GUARD_DB: file, HOME: home, TZ: timeZone },
+    });
+    return readdirSync(join(home, 'off-guard-backups'))[0];
+  };
+
+  // One of these is always on a different date from UTC, whenever this runs:
+  // +14 and -11 cannot both share UTC's day.
+  it.each(['Pacific/Kiritimati', 'Pacific/Midway'])('is today in %s, not in UTC', (timeZone) => {
+    const { file, db } = liveDatabase();
+    const local = new Date().toLocaleDateString('en-CA', { timeZone });
+    expect(defaultNameIn(timeZone, file)).toBe(`${local}.sqlite`);
+    db.close();
+  });
+
+  it('does not let an evening backup cancel the next morning’s', () => {
+    // The failure this had: `toISOString()` is UTC, so a backup taken at 22:17
+    // took tomorrow's name, and the weekly agent -- which passes
+    // --skip-existing -- found it already there and did nothing.
+    const { file, db } = liveDatabase();
+    const evening = new Date('2026-08-29T22:17:00-05:00');
+    expect(evening.toISOString().slice(0, 10)).toBe('2026-08-30');
+    expect(evening.toLocaleDateString('en-CA', { timeZone: 'America/Chicago' })).toBe('2026-08-29');
     db.close();
   });
 });
