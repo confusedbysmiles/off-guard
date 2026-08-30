@@ -7,9 +7,16 @@ node_modules/
 data/creatures/
 data/hazards/
 data/index.json
+data/options/
+data/options-index.json
+data/class-progression.json
 data/glossary.json
 data/build-report.json
 e2e/.world-*.json
+
+# Finder litter. It appears in any directory somebody has opened, which
+# during a Google Drive sync was most of them.
+.DS_Store
 test-results/
 playwright-report/
 
