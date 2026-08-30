@@ -227,6 +227,60 @@ export const ADVENTURE = {
   ],
 
 
+
+  /**
+   * The ten beats that carry the session.
+   *
+   * Not a plot outline. A checklist of moments, each with a way to tell it
+   * landed and a lever for when it has not -- because a beat that does not land
+   * is not something the party failed, it is something the GM has to hand them.
+   *
+   * These persist across resets. A beat lands once, in the whole evening, which
+   * is the one piece of progress here that is neither a fault nor a fix.
+   */
+  beats: [
+    { id: 'soup', n: 1, act: 'I', name: 'The soup is fine',
+      when: 'Cold open',
+      landed: 'A player asks about the food, the seating or a guest rather than about the job.',
+      lever: 'Slow down. Describe one more course. This one cannot be skipped.' },
+    { id: 'burns', n: 2, act: 'I', name: 'The room burns',
+      when: 'End of loop 1, 8:00',
+      landed: 'Somebody says something out loud that is not in character.',
+      lever: 'You did it right anyway. Say the reset line and wait.' },
+    { id: 'nobody', n: 3, act: 'I', name: 'Nobody else remembers',
+      when: 'Loop 2, early',
+      landed: 'A player deliberately tests it on an NPC.',
+      lever: 'Greet them again with the same handshake and the same sentence, word for word.' },
+    { id: 'whole', n: 4, act: 'I', name: 'You come back whole',
+      when: 'Loop 2',
+      landed: 'A player does something reckless on purpose.',
+      lever: 'Let the aspic hurt someone, then say it flat and out of character. This beat is the difference between a cautious session and a good one.' },
+    { id: 'allocation', n: 5, act: 'II', name: 'More to do than there is evening',
+      when: 'Loop 3',
+      landed: 'They start dividing the loop between them unprompted.',
+      lever: 'Say the allocation sentence out loud. Most useful thing you will say all night.' },
+    { id: 'named', n: 6, act: 'II', name: 'The four faults have names',
+      when: 'Loops 3 to 5',
+      landed: 'Somebody lists all four without checking.',
+      lever: 'Aldeth says the count, or Havel mentions the floor cloths, or the ledger. In that order.' },
+    { id: 'havel', n: 7, act: 'II', name: 'Havel remembers',
+      when: 'Loops 3 to 6, once',
+      landed: 'The table goes quiet, or somebody asks him something in a different tone.',
+      lever: 'Do not save it past loop 6. Best card in the deck, and it does nothing in your hand.' },
+    { id: 'sticks', n: 8, act: 'II', name: 'Something sticks',
+      when: 'When the cold room dies',
+      landed: 'You tell them it stuck and somebody reacts.',
+      lever: 'Say it out of character. A permanent win the table does not notice is one you wasted.' },
+    { id: 'notenough', n: 9, act: 'III', name: 'It works, and it is not enough',
+      when: 'The perfect run',
+      landed: 'Somebody groans, or laughs, or says no.',
+      lever: 'Do not soften it. A version where the toast simply works is a worse evening.' },
+    { id: 'choice', n: 10, act: 'III', name: 'The choice',
+      when: 'The boss',
+      landed: 'They pick, and it feels like a decision rather than a default.',
+      lever: 'Pell has been at the table all night. Have him set the case down and go to find the necessary.' }
+  ],
+
   /**
    * Recall Knowledge, and the Dubious Knowledge feat.
    *

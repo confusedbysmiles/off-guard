@@ -9,6 +9,164 @@ disagree, the adventure doc is right and this one has a typo.
 
 ---
 
+## The spine
+
+Everything after this section is reference — what is in the cellar, how the Duke
+works, what Piotr says when he is caught. This section is the route through it.
+
+**What the evening is actually about.** A contractor who cannot stop, and a table
+of people who are given one evening that only they will remember. The comedy is
+the mechanism and not the point. Somewhere around the fourth loop the party stops
+solving a puzzle and starts noticing that Qazrahin has been alone with this since
+4413, and that Havel has been alone with it since seven fifty-one.
+
+Nothing in the adventure asks you to underline that. It asks you not to get in
+its way.
+
+### The ten beats
+
+Ten moments carry the session. Everything else is texture. Each one has a
+trigger, a way to tell it landed, and a lever for when it has not — because a
+beat that does not land is not a beat the party failed, it is one you have to
+hand them.
+
+**Act one — the trap closes. Loops 1 to 2.**
+
+**1. The soup is fine.**
+*Cold open.* Establish an evening so ordinary it is slightly boring. The reset
+needs something to break, and a table that never relaxed has nothing to lose.
+**Landed when:** a player asks a question about the food, the seating or a guest
+rather than about the job.
+**If it has not:** slow down. Describe one more course. You cannot skip this.
+
+**2. The room burns.**
+*End of loop 1, 8:00 exactly.* Cut them off mid-action if you have to.
+**Landed when:** somebody says something out loud that is not in character.
+**If it has not:** you did it right anyway. Say the reset line and wait.
+
+**3. Nobody else remembers.**
+*Loop 2, early.* The rule that turns this from a disaster into a game.
+**Landed when:** a player deliberately tests it — says something outrageous to a
+guest to see what happens.
+**If it has not, by mid loop 2:** have the Duke greet them again with the exact
+same handshake and the exact same sentence, word for word, and deliver it
+identically. Repeating yourself verbatim is the cheapest and best tell there is.
+
+**4. You come back whole.**
+*Loop 2.* The permission slip, and the most under-used beat in the adventure.
+**Landed when:** a player does something reckless on purpose.
+**If it has not:** let the aspic hurt someone, then say it flat and out of
+character — full hit points, all your slots, everything you spent, everything you
+picked up back where it was. Watch what the table does with that. This single
+beat is the difference between a cautious session and a good one.
+
+**Act two — the work. Loops 3 to 6.**
+
+**5. There is more to do than there is evening.**
+*Loop 3.* The puzzle shows its real shape: not discovery, allocation.
+**Landed when:** the players start dividing up the loop between them without
+being asked.
+**If it has not:** say the sentence out loud. It is in the Loop 2 section and it
+is the most useful thing you will say all night.
+
+**6. The four faults have names.**
+*Loops 3 to 5.* They do not need solutions yet. They need the list.
+**Landed when:** somebody can say all four out loud without checking.
+**If it has not, by the end of loop 5:** Sister Aldeth says the count out loud, or
+Havel mentions the floor cloths, or you reach for the ledger. In that order.
+
+**7. Havel remembers.**
+*Anywhere in loops 3 to 6, once.* The turn. The first moment the loop stops being
+a machine and becomes a thing that has been happening to somebody.
+**Landed when:** the table goes quiet, or somebody immediately asks him a
+question in a different tone of voice.
+**If it has not, by loop 6:** use it. Do not save it past six. It is the best card
+in the deck and it does nothing in your hand.
+**Do not oversell it.** He does not stop moving. He does not sit down. He refills a
+glass, says the thing, and carries on, because the alternative would be a scene.
+
+**8. Something sticks.**
+*Whenever the thing in the cold room dies.* The only permanent progress in the
+adventure.
+**Landed when:** you tell them it stuck and somebody reacts.
+**If they have not found the cold room by loop 5:** Havel mentions where the aspic
+comes from. He knows. He has always known.
+**Say it out of character.** "That one stayed dead. The aspic will not re-form —
+not this loop, not any loop." A permanent win that the table does not notice is a
+permanent win you wasted.
+
+**Act three — the price. The real loop, and after.**
+
+**9. It works, and it is not enough.**
+*The perfect run.* All four fixed, the toast lands, the room is silent, and
+nothing happens — which is the first time all evening that nothing has happened.
+Hold it. Let them believe it.
+Then Qazrahin becomes visible and apologises.
+**Landed when:** somebody groans, or laughs, or says "no."
+**Do not soften this.** It is the reversal the whole session is built on, and a
+version where the toast simply works is a worse evening for everyone.
+
+**10. The choice.**
+*The boss.* Fight it, or discharge it. Both are real endings and neither is the
+good one.
+**Landed when:** they pick, and it feels like a decision rather than a default.
+**If they have not found the contract:** Pell has been at the table all night with
+his case. Have him set it down and go to find the necessary.
+
+### The escalation curve
+
+What the table should feel, loop by loop. When the register is wrong, that is
+your signal — not the clock.
+
+| Loop | The table feels | Watch for | If it is not happening |
+|---|---|---|---|
+| 1 | Bored, then ambushed | Someone breaking character at the fire | Nothing. The fire does this by itself. |
+| 2 | Testing the walls | A deliberate experiment on an NPC | Repeat one of your own lines verbatim |
+| 3 | Competent | Dividing the loop between them | Say the allocation sentence out loud |
+| 4–5 | Working the problem | Three faults named, one solved | Aldeth, then Havel, then the ledger |
+| 6–7 | Confident, then wrong | An attempted perfect run that fails | Let it fail. Do not rescue it. |
+| 8+ | Grim and precise | Silence, checklists, short sentences | This is the good part. Stay out of the way. |
+| Boss | Elated, then robbed | Somebody looking at an ice bucket | Havel hands one over without comment |
+
+**The most common failure is not being stuck — it is loop six going well.** If
+their first perfect run succeeds, they have skipped beat 9 and the session ends
+forty minutes early on a flat note. If they are close to all four in loop six,
+find the fault they have handled most carelessly and let it come apart. The Duke
+is usually the one.
+
+### Momentum levers
+
+Keyed to the symptom rather than the clock. Reach for the smallest one that fits.
+
+| The symptom | The lever |
+|---|---|
+| They have not left the dining room | Havel, quietly, about having the floor cloths ready by ten to |
+| They are talking about the wine and getting nowhere | Lady Sabetha mentions the cellar has "always been an awkward shape" |
+| Nobody has approached the Duke | Odile Wend approaches *them*. She is bored, she has clocked that they are up to something, and she wants in. |
+| They have not counted the table | Sister Aldeth, out loud, to nobody: "That is twelve." |
+| They killed Hestia and are stuck | She is back next loop, colder. The +5 DC is the lesson; do not also block the wall. |
+| They are treating it as a fight | Let them kill the aspic at the table. The fire at 8:00 explains it better than you can. |
+| One player is disengaged | Give them Piotr. He will talk about food to anyone, for as long as they let him. |
+| They are stuck on all four | The ledger. Do not hold it back past hour three. |
+| They are winning too easily | See the note above. Break the Duke. |
+
+### The five sentences
+
+If you get everything else wrong and these five land, the session works.
+
+1. **"The soup is fine."** Every reset. Flat, identical, no inflection. It becomes
+   a thing the table says with you.
+2. **"The puzzle is allocation, not discovery."** Once, after loop 2, out of
+   character.
+3. **"The dessert goes at fifty-seven past, sir. I find it best to have the floor
+   cloths ready by ten to."** Havel, not stopping, not looking up.
+4. **"I have been awake for one evening in three hundred and twelve years."**
+   Qazrahin, at the perfect run, and then the apology.
+5. **"What do you do with an evening you are the only one who remembers?"** The
+   last thing you say. Then stop talking.
+
+---
+
 ## Before anyone arrives
 
 Five minutes of setup, and only the first two matter.

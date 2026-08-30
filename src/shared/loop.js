@@ -23,11 +23,17 @@ export function blankState(adventure) {
   for (const fault of adventure.faults ?? []) {
     faults[fault.id] = { known: false, fixed: false, sticky: false };
   }
+  // Beats are the one kind of progress that is neither a fault nor a fix: they
+  // land once in the evening and no reset takes them back.
+  const beats = {};
+  for (const beat of adventure.beats ?? []) beats[beat.id] = false;
+
   return {
     loop: 1,
     slot: 1,
     party: [...(adventure.party ?? [])],
     faults,
+    beats,
     influence: { points: 0, highWater: 0, discovered: [] },
     log: {},
   };
@@ -103,6 +109,7 @@ export function fromRow(row) {
     slot: row.slot,
     party: rest.party ?? [],
     faults: rest.faults ?? {},
+    beats: rest.beats ?? {},
     log: rest.log ?? {},
     influence: {
       points: row.influencePoints,

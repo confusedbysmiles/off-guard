@@ -386,6 +386,10 @@ export function createActions({
           state: loopState, title: loopAdventure.title,
         });
         store.set({ loopRun: run });
+        // The first save is what turns Start over from disabled to live, so the
+        // view has to hear about it. Safe to render mid-typing: `preservingFocus`
+        // puts the caret and the half-typed slot note back.
+        refresh();
       } catch (error) {
         notices.error(`The loop console did not save: ${error.message}`);
       }
@@ -404,6 +408,53 @@ export function createActions({
       const clamped = Math.min(loopAdventure.loop.slots, Math.max(1, slot));
       if (clamped === loopState.slot) return;
       actions.patchLoop({ ...loopState, slot: clamped });
+    },
+
+    /**
+     * Start over.
+     *
+     * Not a bigger reset: a reset moves the evening forward, and there is no
+     * arithmetic that goes back -- `resetLoop` only ever increments. Getting to
+     * loop 1 means there being no run at all, because a console with no saved
+     * run shows `blankState`, which *is* loop 1 with nothing known.
+     *
+     * So this throws the run away. The row is handed back whole by the server
+     * for exactly this reason, and undo writes it again: same bargain as
+     * burning the room, and a good deal more worth having, since this is the
+     * one action that discards an evening rather than a loop.
+     */
+    async loopDiscard() {
+      const id = campaign();
+      const { loopAdventure, loopRun } = store.get();
+      if (!id || !loopAdventure) return;
+      if (!loopRun) {
+        // Nothing saved yet, so this is already loop 1. Say so rather than
+        // sending a delete that would 404.
+        notices.info('Nothing to start over from — this is loop 1 already.');
+        return;
+      }
+      try {
+        const { deleted } = await api.deleteLoopRun(id, loopAdventure.id);
+        store.set({ loopRun: null, loopState: blankState(loopAdventure) });
+        refresh();
+        const reached = deleted.state?.loop ?? 1;
+        notices.warn(reached > 1
+          ? `Thrown away, ${reached} loops in.`
+          : 'Thrown away.', {
+          detail: 'Back to loop 1 with nothing known. The room’s clock is hidden '
+            + 'again until a run is saved.',
+          actions: [['Undo', async () => {
+            const { run } = await api.saveLoopRun(id, loopAdventure.id, {
+              state: deleted.state, title: loopAdventure.title,
+            });
+            store.set({ loopRun: run, loopState: run?.state ?? deleted.state });
+            refresh();
+          }]],
+          timeout: 12000,
+        });
+      } catch (error) {
+        notices.error(`Could not start over: ${error.message}`);
+      }
     },
 
     /**
@@ -447,6 +498,17 @@ export function createActions({
         : { ...current, sticky: false };
       actions.patchLoop({ ...loopState, faults: { ...loopState.faults, [faultId]: next } });
       if (sticky) notices.info('That one stays fixed through every reset from here.');
+    },
+
+    /**
+     * Mark a beat landed, or take it back.
+     *
+     * Beats survive a reset -- they are the evening's progress rather than the
+     * loop's -- so this is a plain patch with no special handling at the burn.
+     */
+    loopBeat(beatId, landed) {
+      const { loopState } = store.get();
+      actions.patchLoop({ ...loopState, beats: { ...loopState.beats, [beatId]: landed } });
     },
 
     loopInfluence(points) {
