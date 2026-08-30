@@ -69,3 +69,20 @@ export {
   CONDITIONS, DYING_MAXIMUM, endOfTurn, isValued, PERSISTENT_FLAT_DC,
   recoverFromDying, removeCondition, setConditionValue, startOfTurn,
 } from './conditions.js';
+
+/**
+ * The character builder's derivation.
+ *
+ * Exported from here so the browser reaches it the same way it reaches every
+ * other piece of the engine -- `/engine/rules/index.js` -- rather than by
+ * knowing where inside `src/rules/` it lives.
+ */
+export {
+  DERIVED_PATHS, deriveCharacter, isDerivedPath, proficienciesAt,
+} from './character/derive.js';
+
+export {
+  attributeModifiers, boosted, boostProblems,
+} from './character/attributes.js';
+
+export { outstanding, slotsFor } from './character/slots.js';

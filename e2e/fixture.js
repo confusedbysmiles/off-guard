@@ -61,6 +61,39 @@ export function buildFixture(port) {
     { path: 'hp', value: { max: 54, current: 54, temp: 0 } },
   ], { by: 'gm', campaignId: campaign.id });
 
+  /**
+   * A character made in the builder rather than typed in.
+   *
+   * Written straight onto the sheet rather than through the builder API, so the
+   * fixture needs no options catalogue -- what these tests check is the sheet's
+   * behaviour when a build is present, not the derivation, which the unit tests
+   * cover against real compendium records.
+   */
+  const sable = createCharacter(db, gm, campaign.id, {
+    name: 'Sable Quintain', playerName: 'Robin', level: 3,
+  });
+  applyPatch(db, gm, sable.id, [
+    { path: 'name', value: 'Sable Quintain' },
+    { path: 'level', value: 3 },
+    { path: 'ancestry', value: 'Elf' },
+    { path: 'class', value: 'Rogue' },
+    { path: 'hp', value: { max: 38, current: 38, temp: 0 } },
+    { path: 'notes', value: 'Owes the harbourmaster a favour.' },
+    {
+      path: 'build',
+      value: {
+        version: 1,
+        level: 3,
+        name: 'Sable Quintain',
+        ancestry: 'ancestry:elf',
+        class: 'class:rogue',
+        attributes: { ancestry: ['dex'], background: [], class: 'dex', 1: ['dex', 'int', 'con', 'wis'] },
+        skills: { trained: [], increases: {}, lores: [] },
+        feats: {},
+      },
+    },
+  ], { by: 'builder', campaignId: campaign.id });
+
   const encounter = createEncounter(db, gm, campaign.id, { name: 'Ambush in the stairwell' });
   setCreatures(db, gm, encounter.id, [
     { creatureId: 'goblin-warrior', displayName: 'Goblin Warrior', count: 2 },
@@ -90,6 +123,11 @@ export function buildFixture(port) {
     database: file,
     gmToken,
     characterToken: mintCharacterToken(db, gm, kestrel.id, campaign.id).token,
+    builtCharacterToken: mintCharacterToken(db, gm, sable.id, campaign.id).token,
+    // Dorn's sheet was typed in by hand and nothing rotates his link, which is
+    // what the `characterToken` above cannot promise -- the suite rotates that
+    // one deliberately, and a rotated link is a dead one for every later test.
+    plainCharacterToken: mintCharacterToken(db, gm, dorn.id, campaign.id).token,
     tableToken: mintTableToken(db, gm, campaign.id).token,
     campaignId: campaign.id,
     characterId: kestrel.id,

@@ -1,0 +1,951 @@
+{
+ "note": "Real records from the pinned upstream, descriptions stripped. Regenerate with tools/build-data.",
+ "ancestry": {
+  "ancestry:dwarf": {
+   "id": "ancestry:dwarf",
+   "kind": "ancestry",
+   "name": "Dwarf",
+   "level": 0,
+   "rarity": "common",
+   "traits": [
+    "dwarf",
+    "humanoid"
+   ],
+   "source": {
+    "book": "Pathfinder Player Core",
+    "pack": "ancestries",
+    "tier": "supplement",
+    "remaster": true,
+    "license": "ORC"
+   },
+   "hp": 10,
+   "size": "med",
+   "sizeName": "Medium",
+   "speed": 20,
+   "reach": 5,
+   "boosts": [
+    {
+     "free": false,
+     "options": [
+      "con"
+     ]
+    },
+    {
+     "free": false,
+     "options": [
+      "wis"
+     ]
+    },
+    {
+     "free": true,
+     "options": [
+      "str",
+      "dex",
+      "con",
+      "int",
+      "wis",
+      "cha"
+     ]
+    }
+   ],
+   "flaws": [
+    "cha"
+   ],
+   "languages": [
+    "common",
+    "dwarven"
+   ],
+   "additionalLanguages": {
+    "count": 0,
+    "options": [
+     "gnomish",
+     "goblin",
+     "jotun",
+     "orcish",
+     "petran",
+     "sakvroth"
+    ]
+   },
+   "vision": "darkvision",
+   "grants": [
+    {
+     "name": "Clan Dagger",
+     "level": 0,
+     "uuid": "Compendium.pf2e.ancestryfeatures.Item.Clan Dagger",
+     "id": "clan-dagger"
+    }
+   ]
+  },
+  "ancestry:human": {
+   "id": "ancestry:human",
+   "kind": "ancestry",
+   "name": "Human",
+   "level": 0,
+   "rarity": "common",
+   "traits": [
+    "human",
+    "humanoid"
+   ],
+   "source": {
+    "book": "Pathfinder Player Core",
+    "pack": "ancestries",
+    "tier": "supplement",
+    "remaster": true,
+    "license": "ORC"
+   },
+   "hp": 8,
+   "size": "med",
+   "sizeName": "Medium",
+   "speed": 25,
+   "reach": 5,
+   "boosts": [
+    {
+     "free": true,
+     "options": [
+      "str",
+      "dex",
+      "con",
+      "int",
+      "wis",
+      "cha"
+     ]
+    },
+    {
+     "free": true,
+     "options": [
+      "str",
+      "dex",
+      "con",
+      "int",
+      "wis",
+      "cha"
+     ]
+    }
+   ],
+   "flaws": [],
+   "languages": [
+    "common"
+   ],
+   "additionalLanguages": {
+    "count": 1,
+    "options": []
+   },
+   "vision": "normal",
+   "grants": []
+  }
+ },
+ "background": {
+  "background:acolyte": {
+   "id": "background:acolyte",
+   "kind": "background",
+   "name": "Acolyte",
+   "level": 0,
+   "rarity": "common",
+   "traits": [],
+   "source": {
+    "book": "Pathfinder Player Core",
+    "pack": "backgrounds",
+    "tier": "supplement",
+    "remaster": true,
+    "license": "ORC"
+   },
+   "boosts": [
+    {
+     "free": true,
+     "options": [
+      "int",
+      "wis"
+     ]
+    },
+    {
+     "free": true,
+     "options": [
+      "str",
+      "dex",
+      "con",
+      "int",
+      "wis",
+      "cha"
+     ]
+    }
+   ],
+   "trainedSkills": [
+    "religion"
+   ],
+   "trainedLore": [
+    "Scribing Lore"
+   ],
+   "grants": [
+    {
+     "name": "Student of the Canon",
+     "level": 1,
+     "uuid": "Compendium.pf2e.feats-srd.Item.Student of the Canon",
+     "id": "student-of-the-canon"
+    }
+   ],
+   "grantedFeat": {
+    "name": "Student of the Canon",
+    "level": 1,
+    "uuid": "Compendium.pf2e.feats-srd.Item.Student of the Canon",
+    "id": "student-of-the-canon"
+   }
+  }
+ },
+ "heritage": {
+  "heritage:rock-dwarf": {
+   "id": "heritage:rock-dwarf",
+   "kind": "heritage",
+   "name": "Rock Dwarf",
+   "level": 0,
+   "rarity": "common",
+   "traits": [],
+   "source": {
+    "book": "Pathfinder Player Core",
+    "pack": "heritages",
+    "tier": "supplement",
+    "remaster": true,
+    "license": "ORC"
+   },
+   "ancestry": "dwarf",
+   "ancestryName": "Dwarf"
+  }
+ },
+ "class": {
+  "class:fighter": {
+   "id": "class:fighter",
+   "kind": "class",
+   "name": "Fighter",
+   "level": 0,
+   "rarity": "common",
+   "traits": [],
+   "source": {
+    "book": "Pathfinder Player Core",
+    "pack": "classes",
+    "tier": "supplement",
+    "remaster": true,
+    "license": "ORC"
+   },
+   "hp": 10,
+   "keyAttributes": [
+    "dex",
+    "str"
+   ],
+   "initial": {
+    "perception": "expert",
+    "saves": {
+     "fortitude": "expert",
+     "reflex": "expert",
+     "will": "trained"
+    },
+    "attacks": {
+     "unarmed": "expert",
+     "simple": "expert",
+     "martial": "expert",
+     "advanced": "trained",
+     "other": null
+    },
+    "defenses": {
+     "unarmored": "trained",
+     "light": "trained",
+     "medium": "trained",
+     "heavy": "trained"
+    },
+    "classDc": "trained",
+    "spellcasting": "untrained"
+   },
+   "trainedSkills": {
+    "additional": 3,
+    "fixed": []
+   },
+   "featLevels": {
+    "class": [
+     1,
+     2,
+     4,
+     6,
+     8,
+     10,
+     12,
+     14,
+     16,
+     18,
+     20
+    ],
+    "ancestry": [
+     1,
+     5,
+     9,
+     13,
+     17
+    ],
+    "general": [
+     3,
+     7,
+     11,
+     15,
+     19
+    ],
+    "skill": [
+     2,
+     4,
+     6,
+     8,
+     10,
+     12,
+     14,
+     16,
+     18,
+     20
+    ]
+   },
+   "skillIncreaseLevels": [
+    3,
+    5,
+    7,
+    9,
+    11,
+    13,
+    15,
+    17,
+    19
+   ],
+   "grants": [
+    {
+     "name": "Reactive Strike",
+     "level": 1,
+     "uuid": "Compendium.pf2e.classfeatures.Item.Reactive Strike",
+     "id": "reactive-strike"
+    },
+    {
+     "name": "Shield Block",
+     "level": 1,
+     "uuid": "Compendium.pf2e.classfeatures.Item.Shield Block",
+     "id": "shield-block"
+    },
+    {
+     "name": "Bravery",
+     "level": 3,
+     "uuid": "Compendium.pf2e.classfeatures.Item.Bravery",
+     "id": "bravery"
+    },
+    {
+     "name": "Fighter Weapon Mastery",
+     "level": 5,
+     "uuid": "Compendium.pf2e.classfeatures.Item.Fighter Weapon Mastery",
+     "id": "fighter-weapon-mastery"
+    },
+    {
+     "name": "Battlefield Surveyor",
+     "level": 7,
+     "uuid": "Compendium.pf2e.classfeatures.Item.Battlefield Surveyor",
+     "id": "battlefield-surveyor"
+    },
+    {
+     "name": "Weapon Specialization",
+     "level": 7,
+     "uuid": "Compendium.pf2e.classfeatures.Item.Weapon Specialization",
+     "id": "weapon-specialization"
+    },
+    {
+     "name": "Battle Hardened",
+     "level": 9,
+     "uuid": "Compendium.pf2e.classfeatures.Item.Battle Hardened",
+     "id": "battle-hardened"
+    },
+    {
+     "name": "Combat Flexibility",
+     "level": 9,
+     "uuid": "Compendium.pf2e.classfeatures.Item.Combat Flexibility",
+     "id": "combat-flexibility"
+    },
+    {
+     "name": "Armor Expertise",
+     "level": 11,
+     "uuid": "Compendium.pf2e.classfeatures.Item.Armor Expertise",
+     "id": "armor-expertise"
+    },
+    {
+     "name": "Fighter Expertise",
+     "level": 11,
+     "uuid": "Compendium.pf2e.classfeatures.Item.Fighter Expertise",
+     "id": "fighter-expertise"
+    },
+    {
+     "name": "Weapon Legend",
+     "level": 13,
+     "uuid": "Compendium.pf2e.classfeatures.Item.Weapon Legend",
+     "id": "weapon-legend"
+    },
+    {
+     "name": "Greater Weapon Specialization",
+     "level": 15,
+     "uuid": "Compendium.pf2e.classfeatures.Item.Greater Weapon Specialization",
+     "id": "greater-weapon-specialization"
+    },
+    {
+     "name": "Improved Flexibility",
+     "level": 15,
+     "uuid": "Compendium.pf2e.classfeatures.Item.Improved Flexibility",
+     "id": "improved-flexibility"
+    },
+    {
+     "name": "Tempered Reflexes",
+     "level": 15,
+     "uuid": "Compendium.pf2e.classfeatures.Item.Tempered Reflexes",
+     "id": "tempered-reflexes"
+    },
+    {
+     "name": "Armor Mastery",
+     "level": 17,
+     "uuid": "Compendium.pf2e.classfeatures.Item.Armor Mastery",
+     "id": "armor-mastery"
+    },
+    {
+     "name": "Versatile Legend",
+     "level": 19,
+     "uuid": "Compendium.pf2e.classfeatures.Item.Versatile Legend",
+     "id": "versatile-legend"
+    }
+   ]
+  },
+  "class:wizard": {
+   "id": "class:wizard",
+   "kind": "class",
+   "name": "Wizard",
+   "level": 0,
+   "rarity": "common",
+   "traits": [],
+   "source": {
+    "book": "Pathfinder Player Core",
+    "pack": "classes",
+    "tier": "supplement",
+    "remaster": true,
+    "license": "ORC"
+   },
+   "hp": 6,
+   "keyAttributes": [
+    "int"
+   ],
+   "initial": {
+    "perception": "trained",
+    "saves": {
+     "fortitude": "trained",
+     "reflex": "trained",
+     "will": "expert"
+    },
+    "attacks": {
+     "unarmed": "trained",
+     "simple": "trained",
+     "martial": "untrained",
+     "advanced": "untrained",
+     "other": null
+    },
+    "defenses": {
+     "unarmored": "trained",
+     "light": "untrained",
+     "medium": "untrained",
+     "heavy": "untrained"
+    },
+    "classDc": "trained",
+    "spellcasting": "trained"
+   },
+   "trainedSkills": {
+    "additional": 2,
+    "fixed": [
+     "arcana"
+    ]
+   },
+   "featLevels": {
+    "class": [
+     2,
+     4,
+     6,
+     8,
+     10,
+     12,
+     14,
+     16,
+     18,
+     20
+    ],
+    "ancestry": [
+     1,
+     5,
+     9,
+     13,
+     17
+    ],
+    "general": [
+     3,
+     7,
+     11,
+     15,
+     19
+    ],
+    "skill": [
+     2,
+     4,
+     6,
+     8,
+     10,
+     12,
+     14,
+     16,
+     18,
+     20
+    ]
+   },
+   "skillIncreaseLevels": [
+    3,
+    5,
+    7,
+    9,
+    11,
+    13,
+    15,
+    17,
+    19
+   ],
+   "grants": [
+    {
+     "name": "Arcane Bond",
+     "level": 1,
+     "uuid": "Compendium.pf2e.classfeatures.Item.Arcane Bond",
+     "id": "arcane-bond"
+    },
+    {
+     "name": "Arcane School",
+     "level": 1,
+     "uuid": "Compendium.pf2e.classfeatures.Item.Arcane School",
+     "id": "arcane-school"
+    },
+    {
+     "name": "Arcane Thesis",
+     "level": 1,
+     "uuid": "Compendium.pf2e.classfeatures.Item.Arcane Thesis",
+     "id": "arcane-thesis"
+    },
+    {
+     "name": "Wizard Spellcasting",
+     "level": 1,
+     "uuid": "Compendium.pf2e.classfeatures.Item.Wizard Spellcasting",
+     "id": "wizard-spellcasting"
+    },
+    {
+     "name": "Reflex Expertise",
+     "level": 5,
+     "uuid": "Compendium.pf2e.classfeatures.Item.Reflex Expertise",
+     "id": "reflex-expertise"
+    },
+    {
+     "name": "Expert Spellcaster",
+     "level": 7,
+     "uuid": "Compendium.pf2e.classfeatures.Item.Expert Spellcaster",
+     "id": "expert-spellcaster"
+    },
+    {
+     "name": "Magical Fortitude",
+     "level": 9,
+     "uuid": "Compendium.pf2e.classfeatures.Item.Magical Fortitude",
+     "id": "magical-fortitude"
+    },
+    {
+     "name": "Perception Expertise",
+     "level": 11,
+     "uuid": "Compendium.pf2e.classfeatures.Item.Perception Expertise",
+     "id": "perception-expertise"
+    },
+    {
+     "name": "Weapon Expertise",
+     "level": 11,
+     "uuid": "Compendium.pf2e.classfeatures.Item.Weapon Expertise",
+     "id": "weapon-expertise"
+    },
+    {
+     "name": "Defensive Robes",
+     "level": 13,
+     "uuid": "Compendium.pf2e.classfeatures.Item.Defensive Robes",
+     "id": "defensive-robes"
+    },
+    {
+     "name": "Weapon Specialization",
+     "level": 13,
+     "uuid": "Compendium.pf2e.classfeatures.Item.Weapon Specialization",
+     "id": "weapon-specialization"
+    },
+    {
+     "name": "Master Spellcaster",
+     "level": 15,
+     "uuid": "Compendium.pf2e.classfeatures.Item.Master Spellcaster",
+     "id": "master-spellcaster"
+    },
+    {
+     "name": "Prodigious Will",
+     "level": 17,
+     "uuid": "Compendium.pf2e.classfeatures.Item.Prodigious Will",
+     "id": "prodigious-will"
+    },
+    {
+     "name": "Archwizard's Spellcraft",
+     "level": 19,
+     "uuid": "Compendium.pf2e.classfeatures.Item.Archwizard's Spellcraft",
+     "id": "archwizard-s-spellcraft"
+    },
+    {
+     "name": "Legendary Spellcaster",
+     "level": 19,
+     "uuid": "Compendium.pf2e.classfeatures.Item.Legendary Spellcaster",
+     "id": "legendary-spellcaster"
+    }
+   ]
+  }
+ },
+ "progression": {
+  "class:fighter": {
+   "id": "class:fighter",
+   "name": "Fighter",
+   "initial": {
+    "perception": "expert",
+    "saves": {
+     "fortitude": "expert",
+     "reflex": "expert",
+     "will": "trained"
+    },
+    "attacks": {
+     "unarmed": "expert",
+     "simple": "expert",
+     "martial": "expert",
+     "advanced": "trained",
+     "other": null
+    },
+    "defenses": {
+     "unarmored": "trained",
+     "light": "trained",
+     "medium": "trained",
+     "heavy": "trained"
+    },
+    "classDc": "trained",
+    "spellcasting": "untrained"
+   },
+   "byLevel": {
+    "3": {
+     "saves": {
+      "will": "expert"
+     }
+    },
+    "5": {
+     "attacks": {
+      "unarmed": "master",
+      "simple": "master",
+      "martial": "master"
+     }
+    },
+    "7": {
+     "perception": "master",
+     "weaponSpecialization": "standard"
+    },
+    "9": {
+     "saves": {
+      "fortitude": "master"
+     }
+    },
+    "11": {
+     "defenses": {
+      "unarmored": "expert",
+      "light": "expert",
+      "medium": "expert",
+      "heavy": "expert"
+     },
+     "classDc": "expert"
+    },
+    "13": {
+     "attacks": {
+      "unarmed": "legendary",
+      "simple": "legendary",
+      "martial": "legendary"
+     }
+    },
+    "15": {
+     "weaponSpecialization": "greater",
+     "saves": {
+      "reflex": "master"
+     }
+    },
+    "17": {
+     "defenses": {
+      "unarmored": "master",
+      "light": "master",
+      "medium": "master",
+      "heavy": "master"
+     }
+    },
+    "19": {
+     "classDc": "master",
+     "attacks": {
+      "unarmed": "legendary",
+      "simple": "legendary",
+      "martial": "legendary"
+     }
+    }
+   }
+  },
+  "class:wizard": {
+   "id": "class:wizard",
+   "name": "Wizard",
+   "initial": {
+    "perception": "trained",
+    "saves": {
+     "fortitude": "trained",
+     "reflex": "trained",
+     "will": "expert"
+    },
+    "attacks": {
+     "unarmed": "trained",
+     "simple": "trained",
+     "martial": "untrained",
+     "advanced": "untrained",
+     "other": null
+    },
+    "defenses": {
+     "unarmored": "trained",
+     "light": "untrained",
+     "medium": "untrained",
+     "heavy": "untrained"
+    },
+    "classDc": "trained",
+    "spellcasting": "trained"
+   },
+   "byLevel": {
+    "5": {
+     "saves": {
+      "reflex": "expert"
+     }
+    },
+    "7": {
+     "spellcasting": "expert"
+    },
+    "9": {
+     "saves": {
+      "fortitude": "expert"
+     }
+    },
+    "11": {
+     "perception": "expert",
+     "attacks": {
+      "unarmed": "expert",
+      "simple": "expert"
+     }
+    },
+    "13": {
+     "defenses": {
+      "unarmored": "expert"
+     },
+     "weaponSpecialization": "standard"
+    },
+    "15": {
+     "spellcasting": "master"
+    },
+    "19": {
+     "spellcasting": "legendary"
+    }
+   }
+  }
+ },
+ "equipment": {
+  "equipment:longsword": {
+   "id": "equipment:longsword",
+   "kind": "equipment",
+   "name": "Longsword",
+   "level": 0,
+   "rarity": "common",
+   "traits": [
+    "versatile-p"
+   ],
+   "source": {
+    "book": "Pathfinder Player Core",
+    "pack": "equipment",
+    "tier": "supplement",
+    "remaster": true,
+    "license": "ORC"
+   },
+   "itemType": "weapon",
+   "bulk": 1,
+   "price": {
+    "gp": 1
+   },
+   "baseItem": "longsword",
+   "group": "sword",
+   "category": "martial",
+   "damage": {
+    "dice": 1,
+    "die": "d8",
+    "type": "slashing"
+   },
+   "range": null,
+   "reload": "-",
+   "hands": null
+  },
+  "equipment:rapier": {
+   "id": "equipment:rapier",
+   "kind": "equipment",
+   "name": "Rapier",
+   "level": 0,
+   "rarity": "common",
+   "traits": [
+    "deadly-d8",
+    "disarm",
+    "finesse"
+   ],
+   "source": {
+    "book": "Pathfinder Player Core",
+    "pack": "equipment",
+    "tier": "supplement",
+    "remaster": true,
+    "license": "ORC"
+   },
+   "itemType": "weapon",
+   "bulk": 1,
+   "price": {
+    "gp": 2
+   },
+   "baseItem": "rapier",
+   "group": "sword",
+   "category": "martial",
+   "damage": {
+    "dice": 1,
+    "die": "d6",
+    "type": "piercing"
+   },
+   "range": null,
+   "reload": null,
+   "hands": null
+  },
+  "equipment:shortbow": {
+   "id": "equipment:shortbow",
+   "kind": "equipment",
+   "name": "Shortbow",
+   "level": 0,
+   "rarity": "common",
+   "traits": [
+    "deadly-d10"
+   ],
+   "source": {
+    "book": "Pathfinder Player Core",
+    "pack": "equipment",
+    "tier": "supplement",
+    "remaster": true,
+    "license": "ORC"
+   },
+   "itemType": "weapon",
+   "bulk": 1,
+   "price": {
+    "gp": 3
+   },
+   "baseItem": "shortbow",
+   "group": "bow",
+   "category": "martial",
+   "damage": {
+    "dice": 1,
+    "die": "d6",
+    "type": "piercing"
+   },
+   "range": 60,
+   "reload": "0",
+   "hands": null
+  },
+  "equipment:dagger": {
+   "id": "equipment:dagger",
+   "kind": "equipment",
+   "name": "Dagger",
+   "level": 0,
+   "rarity": "common",
+   "traits": [
+    "agile",
+    "finesse",
+    "thrown-10",
+    "versatile-s"
+   ],
+   "source": {
+    "book": "Pathfinder Player Core",
+    "pack": "equipment",
+    "tier": "supplement",
+    "remaster": true,
+    "license": "ORC"
+   },
+   "itemType": "weapon",
+   "bulk": 0.1,
+   "price": {
+    "sp": 2
+   },
+   "baseItem": "dagger",
+   "group": "knife",
+   "category": "simple",
+   "damage": {
+    "dice": 1,
+    "die": "d4",
+    "type": "piercing"
+   },
+   "range": null,
+   "reload": null,
+   "hands": null
+  },
+  "equipment:full-plate": {
+   "id": "equipment:full-plate",
+   "kind": "equipment",
+   "name": "Full Plate",
+   "level": 2,
+   "rarity": "common",
+   "traits": [
+    "bulwark"
+   ],
+   "source": {
+    "book": "Pathfinder Player Core",
+    "pack": "equipment",
+    "tier": "supplement",
+    "remaster": true,
+    "license": "ORC"
+   },
+   "itemType": "armor",
+   "bulk": 4,
+   "price": {
+    "gp": 30
+   },
+   "baseItem": "full-plate",
+   "group": "plate",
+   "category": "heavy",
+   "acBonus": 6,
+   "dexCap": 0,
+   "checkPenalty": -3,
+   "speedPenalty": -10,
+   "strength": 4
+  },
+  "equipment:leather-armor": {
+   "id": "equipment:leather-armor",
+   "kind": "equipment",
+   "name": "Leather Armor",
+   "level": 0,
+   "rarity": "common",
+   "traits": [],
+   "source": {
+    "book": "Pathfinder Player Core",
+    "pack": "equipment",
+    "tier": "supplement",
+    "remaster": true,
+    "license": "ORC"
+   },
+   "itemType": "armor",
+   "bulk": 1,
+   "price": {
+    "gp": 2
+   },
+   "baseItem": "leather-armor",
+   "group": "leather",
+   "category": "light",
+   "acBonus": 1,
+   "dexCap": 4,
+   "checkPenalty": -1,
+   "speedPenalty": 0,
+   "strength": 0
+  }
+ }
+}

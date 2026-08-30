@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#1A1033">
+<!-- The token is in the URL and must not be here: no title, no og: tag, and
+     nothing else that names the character before the page has loaded. -->
+<title>Character builder</title>
+<link rel="stylesheet" href="../assets/css/tokens.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="../assets/css/build.css">
+</head>
+<body>
+<a class="skip-link" href="#timeline">Skip to the timeline</a>
+
+<header class="build-bar">
+  <!-- The page's heading, not the character's: the name is an editable field
+       here, and a heading you can type into is neither. -->
+  <h1 class="sr-only">Character builder</h1>
+  <div class="build-bar__identity">
+    <label class="sr-only" for="name">Character name</label>
+    <input class="input build-bar__name" id="name" type="text" placeholder="Name your character"
+           autocomplete="off" spellcheck="false">
+    <output class="build-bar__outstanding" id="outstanding" aria-live="polite"></output>
+  </div>
+
+  <div class="build-bar__levels">
+    <div class="field field--inline">
+      <label class="field__label" for="level">Level</label>
+      <input class="input input--number" id="level" type="number" min="1" max="20" step="1">
+    </div>
+    <div class="field field--inline">
+      <label class="field__label" for="plan-to">Plan to</label>
+      <input class="input input--number" id="plan-to" type="number" min="1" max="20" step="1">
+    </div>
+  </div>
+
+  <div class="build-bar__tools">
+    <output class="save-state" id="save-state" aria-live="polite"></output>
+    <button class="btn" id="play" type="button">Play</button>
+    <button class="btn btn--icon btn--quiet" id="theme" type="button" aria-pressed="false">
+      <span class="sr-only">Switch to the light theme</span>
+    </button>
+  </div>
+</header>
+
+<div class="notices" id="notices" role="status" aria-live="polite"></div>
+
+<main class="build">
+  <div class="build__timeline" id="timeline" tabindex="-1">
+    <p class="build__loading" id="loading">Loading your character…</p>
+  </div>
+  <!-- Not part of the timeline: equipment is not a level choice. -->
+  <section class="level build__equipment" id="equipment" aria-labelledby="equipment-heading"></section>
+  <aside class="build__summary" id="summary" aria-label="Current character"></aside>
+</main>
+
+<dialog class="modal modal--picker" id="picker-dialog" aria-labelledby="picker-title"></dialog>
+
+<script type="module" src="../assets/js/build/main.js"></script>
+</body>
+</html>

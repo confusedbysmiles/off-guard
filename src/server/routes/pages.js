@@ -48,6 +48,10 @@ export async function registerPageRoutes(app, { publicDir }) {
   };
 
   app.get('/c/:token', { onRequest: app.rateLimit() }, page('character', 'sheet.html'));
+  // The builder is the same character behind the same token, on its own page:
+  // building and playing are different postures and the sheet is the one that
+  // has to stay usable one-handed at the table.
+  app.get('/build/:token', { onRequest: app.rateLimit() }, page('character', 'build.html'));
   app.get('/gm/:token', { onRequest: app.rateLimit() }, page('gm', 'gm.html'));
   app.get('/table/:token', { onRequest: app.rateLimit() }, page('table', 'table.html'));
 }

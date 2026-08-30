@@ -10,7 +10,7 @@
  * value. `update(state)` runs the updaters. An input the player is currently
  * typing into is never written to.
  */
-import { armorClass, classDc, statistic } from '../../../engine/rules/index.js';
+import { armorClass, classDc, isDerivedPath, statistic } from '../../../engine/rules/index.js';
 import { el, formatMod, titleCase } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
 import { readPath } from './store.js';
@@ -23,6 +23,29 @@ export function mount(root, store, { onImport = () => {} } = {}) {
   const updaters = [];
   const onUpdate = (fn) => updaters.push(fn);
 
+  /**
+   * Lock a control the builder owns.
+   *
+   * Only for a character that has a build. A sheet typed in by hand or brought
+   * across from Pathbuilder has no `build`, owns every one of its own fields,
+   * and is untouched by this.
+   *
+   * Without it the sheet has two editors for one field and no warning: an
+   * ancestry changed here would hold until the next save from the builder
+   * silently put it back.
+   */
+  function lockIfDerived(node, state, path) {
+    const build = state.sheet?.build;
+    const owned = Boolean(build) && isDerivedPath(path, build);
+    node.classList.toggle('is-derived', owned);
+    // `readOnly` where it exists, because it keeps the value focusable and
+    // selectable; `disabled` only where there is no such thing.
+    if (node.tagName === 'SELECT' || node.type === 'checkbox') node.disabled = owned;
+    else node.readOnly = owned;
+    if (owned) node.title = 'Set in the character builder.';
+    else if (node.title === 'Set in the character builder.') node.removeAttribute('title');
+  }
+
   /** Bind a control to a path. The store is the only writer of sheet values. */
   function bind(node, path, { parse = (v) => v, format = (v) => (v ?? ''), event = 'input' } = {}) {
     node.addEventListener(event, () => {
@@ -30,6 +53,7 @@ export function mount(root, store, { onImport = () => {} } = {}) {
       store.set(path, parsed);
     });
     onUpdate((state) => {
+      lockIfDerived(node, state, path);
       // Never fight the player for their own caret.
       if (document.activeElement === node) return;
       const value = readPath(state.sheet, path);
@@ -121,8 +145,14 @@ export function mount(root, store, { onImport = () => {} } = {}) {
 
   // --- sections ----------------------------------------------------------
 
+  const builtNote = el('p', { class: 'muted built-note', hidden: true },
+    'This character is built in the character builder. The fields it works out '
+    + 'are shown here and changed there; everything else on this sheet is yours.');
+  onUpdate((state) => { builtNote.hidden = !state.sheet?.build; });
+
   const identity = el('section', { class: 'card section--wide' },
     el('h2', { class: 'section__title' }, 'Character'),
+    builtNote,
     el('div', { class: 'grid grid--2' },
       labelled('Character name', text('name')),
       labelled('Player', text('playerName')),

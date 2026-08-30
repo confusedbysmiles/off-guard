@@ -60,6 +60,7 @@ const NAME_AUDIT = `
 
 const SURFACES = [
   ['the character sheet', () => `/c/${world.characterToken}`],
+  ['the character builder', () => `/build/${world.characterToken}`],
   ['the GM dashboard', () => `/gm/${world.gmToken}`],
   ['the shared screen', () => `/table/${world.tableToken}`],
 ];

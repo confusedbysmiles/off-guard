@@ -1,0 +1,348 @@
+/**
+ * The character builder.
+ *
+ * Two columns where there is room: the timeline you work down, and a summary
+ * that stays put so the consequence of a choice is visible without scrolling
+ * back. One column when there is not, with the summary first -- on a phone the
+ * useful thing is what the character currently is, not a twenty-level plan.
+ *
+ * Deliberately roomier than the sheet. The sheet is thumbed one-handed at a
+ * table and every tap target is sized for that; this page is read.
+ */
+
+.build-bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.build-bar__identity { flex: 1 1 14rem; min-width: 0; }
+
+.build-bar__name {
+  width: 100%;
+  font-size: var(--step-2);
+  font-weight: 600;
+  padding: var(--sp-1) var(--sp-2);
+  background: transparent;
+  border-color: transparent;
+}
+.build-bar__name:hover { border-color: var(--border); }
+.build-bar__name:focus { background: var(--surface-sunk); border-color: var(--focus); }
+
+.build-bar__outstanding {
+  display: block;
+  font-size: var(--step--1);
+  color: var(--warn-ink);
+  padding-inline-start: var(--sp-2);
+}
+.build-bar__outstanding[data-done="true"] { color: var(--good-ink); }
+
+.build-bar__levels { display: flex; gap: var(--sp-3); }
+.build-bar__tools { display: flex; align-items: center; gap: var(--sp-2); margin-inline-start: auto; }
+
+.field--inline { display: flex; align-items: center; gap: var(--sp-2); }
+.field--inline .field__label { margin: 0; white-space: nowrap; }
+.field--inline .input--number { width: 4.5rem; }
+
+/* --- layout ------------------------------------------------------------- */
+
+.build {
+  display: grid;
+  gap: var(--sp-5);
+  padding: var(--sp-5) var(--sp-4);
+  max-width: 78rem;
+  margin-inline: auto;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 60rem) {
+  .build { grid-template-columns: minmax(0, 1fr) 20rem; align-items: start; }
+  .build__summary { position: sticky; top: 5.5rem; }
+}
+
+.build__loading { color: var(--ink-faint); }
+
+/* --- the timeline ------------------------------------------------------- */
+
+.build__timeline { display: flex; flex-direction: column; gap: var(--sp-4); }
+
+.level {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+/* A planned level is the same list, drawn quieter: it is a decision that has
+   not arrived yet, not a different kind of thing. */
+.level--planned { background: transparent; border-style: dashed; }
+.level--planned .level__head { background: transparent; }
+
+.level__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.level__title {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 0;
+  font-size: var(--step-1);
+}
+
+.level__open { font-size: var(--step--1); color: var(--warn-ink); }
+.level__open--done { color: var(--ink-faint); display: inline-flex; align-items: center; gap: var(--sp-1); }
+.level__tick { display: inline-flex; color: var(--good-ink); }
+.level__tick .icon { width: 1em; height: 1em; }
+
+.level__slots { display: flex; flex-direction: column; }
+
+.slot-row {
+  display: grid;
+  grid-template-columns: 11rem minmax(0, 1fr);
+  gap: var(--sp-3);
+  align-items: start;
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--border);
+}
+.slot-row:last-child { border-bottom: 0; }
+
+@media (max-width: 40rem) {
+  .slot-row { grid-template-columns: 1fr; gap: var(--sp-2); }
+}
+
+.slot-row__label {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--ink-dim);
+  font-size: var(--step--1);
+  padding-block-start: var(--sp-2);
+}
+
+/* An unanswered slot is marked once, here, rather than by colouring the whole
+   row -- a page of twenty highlighted rows highlights nothing. */
+.slot-row__dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--warn);
+  flex: none;
+}
+
+.slot-row__hint { margin: var(--sp-1) 0 0; font-size: var(--step--2); }
+
+/* --- a choice from the catalogue ---------------------------------------- */
+
+.slot-choice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  width: 100%;
+  min-height: var(--tap);
+  padding: var(--sp-2) var(--sp-3);
+  font: inherit;
+  text-align: start;
+  color: var(--ink);
+  background: var(--surface-sunk);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.slot-choice:hover:not(:disabled) { border-color: var(--border-strong); }
+.slot-choice:disabled { opacity: 0.55; cursor: not-allowed; }
+.slot-choice--empty .slot-choice__value { color: var(--ink-faint); }
+.slot-choice--broken { border-color: var(--bad); color: var(--bad-ink); }
+.slot-choice__hint { display: inline-flex; color: var(--ink-faint); }
+
+/* --- attribute boosts and skills ---------------------------------------- */
+
+.boosts { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+
+.boost {
+  position: relative;
+  min-width: 3.5rem;
+  min-height: var(--tap);
+  padding: var(--sp-2);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  background: var(--surface-sunk);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.boost:hover:not(:disabled) { border-color: var(--border-strong); }
+.boost:disabled { opacity: 0.4; cursor: not-allowed; }
+.boost--on { background: var(--primary-sunk); border-color: var(--primary); color: var(--primary-ink); }
+
+/* The partial-boost rule, shown before it bites rather than explained after. */
+.boost__half {
+  position: absolute;
+  top: 2px;
+  inset-inline-end: 4px;
+  font-size: var(--step--2);
+  color: var(--warn-ink);
+}
+
+.skill-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: var(--sp-2);
+}
+
+.skill-toggle {
+  min-height: var(--tap);
+  padding: var(--sp-2);
+  font: inherit;
+  font-size: var(--step--1);
+  color: var(--ink);
+  background: var(--surface-sunk);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.skill-toggle:hover:not(:disabled) { border-color: var(--border-strong); }
+.skill-toggle--on { background: var(--primary-sunk); border-color: var(--primary); color: var(--primary-ink); }
+/* Already trained by the background or class: not a choice, and not an error. */
+.skill-toggle--free { opacity: 0.5; cursor: not-allowed; border-style: dashed; }
+.skill-toggle:disabled:not(.skill-toggle--free) { opacity: 0.4; cursor: not-allowed; }
+
+/* --- the summary -------------------------------------------------------- */
+
+.build__summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  padding: var(--sp-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.summary__name { margin: 0; font-size: var(--step-2); }
+.summary__stats { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); margin: 0; }
+.summary__stat dt { font-size: var(--step--2); color: var(--ink-faint); }
+.summary__stat dd { margin: 0; font-size: var(--step-1); font-variant-numeric: tabular-nums; }
+
+.summary__attributes { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-2); }
+
+.summary__attribute {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--sp-2);
+  background: var(--surface-sunk);
+  border-radius: var(--radius-sm);
+}
+.summary__attribute-name { font-size: var(--step--2); color: var(--ink-faint); }
+.summary__attribute-mod { font-size: var(--step-1); font-variant-numeric: tabular-nums; }
+.summary__attribute-half {
+  position: absolute;
+  top: 2px;
+  inset-inline-end: 4px;
+  font-size: var(--step--2);
+  color: var(--warn-ink);
+}
+
+.summary__saves { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-2); }
+.summary__save { display: flex; flex-direction: column; align-items: center; font-size: var(--step--1); }
+.summary__save strong { font-weight: 500; color: var(--ink-dim); }
+
+.summary__problems { margin: 0; padding-inline-start: var(--sp-4); display: grid; gap: var(--sp-2); }
+.summary__problems li { font-size: var(--step--1); }
+.summary__problem-where {
+  display: block;
+  font-size: var(--step--2);
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.summary__done { display: flex; align-items: center; gap: var(--sp-2); color: var(--good-ink); margin: 0; }
+
+/* --- the picker --------------------------------------------------------- */
+
+/* `.btn` sets `display: inline-flex`, which beats the user agent's
+   `[hidden] { display: none }`. Without this a hidden button is still drawn. */
+[hidden] { display: none !important; }
+
+.modal--picker { width: min(46rem, 94vw); max-height: 86vh; padding: 0; }
+
+.picker { display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-4); max-height: 86vh; }
+.picker__head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
+.picker__head h2 { margin: 0; font-size: var(--step-2); }
+.picker__summary { margin: 0; font-size: var(--step--1); }
+
+.picker__results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.picker__row { border-bottom: 1px solid var(--border); }
+.picker__row:last-child { border-bottom: 0; }
+.picker__row.is-chosen { background: var(--primary-sunk); }
+
+.picker__main { display: flex; align-items: stretch; }
+
+.picker__choose {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding: var(--sp-3);
+  font: inherit;
+  text-align: start;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.picker__choose:hover { background: var(--surface-2); }
+.picker__name { font-size: var(--step-0); }
+.picker__meta { display: flex; flex-wrap: wrap; gap: var(--sp-1); }
+
+.picker__reveal { align-self: center; margin-inline-end: var(--sp-2); }
+
+.picker__detail { padding: 0 var(--sp-3) var(--sp-3); border-top: 1px dashed var(--border); }
+.picker__detail .rich { font-size: var(--step--1); color: var(--ink-dim); }
+.picker__detail .rich p { margin: var(--sp-2) 0; }
+
+.picker__actions { display: flex; justify-content: flex-end; gap: var(--sp-2); margin: 0; padding: 0; }
+
+/* --- equipment ---------------------------------------------------------- */
+
+/* Its own panel below the timeline: equipment is not a level choice. */
+.build__equipment { grid-column: 1; }
+
+.equip-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.equip-row + .equip-row { margin-block-start: var(--sp-2); }
+.equip-row .slot-choice { flex: 1 1 12rem; width: auto; }
+.equip-row .input { flex: 1 1 12rem; }
+.equip-row .input--compact { flex: 0 0 auto; min-height: var(--tap); }
