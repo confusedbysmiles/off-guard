@@ -10,6 +10,7 @@ import { applyDamage, endOfTurn, applyAutomatic, startOfTurn } from '../../rules
 import { applyPatch } from './characters.js';
 import { visibleRolls } from './rolls.js';
 import { assertWritable, campaignFor, isGm, NotFoundError, ScopeError } from '../scope.js';
+import { displayName } from '../../shared/character-name.js';
 
 const COMBAT_COLUMNS = `
   id, campaign_id AS campaignId, encounter_id AS encounterId, name, round,
@@ -347,7 +348,7 @@ export function tableView(db, scope, requestedCampaignId = null) {
       const base = {
         id: c.id,
         isPlayer: Boolean(character),
-        name: character ? character.name : c.displayName,
+        name: character ? displayName(character) : c.displayName,
         playerName: character ? character.playerName : null,
         // One source of truth: the sheet for a player, the row for a creature.
         conditions: character ? (character.sheet.conditions ?? []) : c.conditions,

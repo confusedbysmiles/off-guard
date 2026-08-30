@@ -5,6 +5,7 @@
  * connects them and handles the things that belong to the page itself -- the
  * theme, the save indicator, the import dialog and the keyboard.
  */
+import { displayName } from '../../../engine/shared/character-name.js';
 import { $, debounce } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
 import { setUpTheme } from '../lib/theme.js';
@@ -142,7 +143,13 @@ async function start() {
     $('#undo').disabled = !state.canUndo;
 
     if (state.character) {
-      $('#character-name').textContent = state.sheet.name || state.character.name || 'Unnamed character';
+      // Until the player names it, this is "Alex's character" -- the same
+      // thing the GM's roster and the links panel call it, so the person who
+      // was sent the link recognises what they were sent.
+      $('#character-name').textContent = displayName({
+        name: state.sheet.name || state.character.name,
+        playerName: state.sheet.playerName || state.character.playerName,
+      });
       $('#campaign-name').textContent = state.campaign?.name ?? '';
       if (state.campaign?.accentColor) applyAccent(state.campaign.accentColor);
     }

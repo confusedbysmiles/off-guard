@@ -65,7 +65,11 @@ function describeCharacter(row, { partyLevel, now }) {
 
   return {
     id: row.id,
-    name: sheet.name || row.name || 'Unnamed',
+    // Raw, and possibly empty: a character can exist before it is named, and
+    // every surface decides for itself what to call one — see
+    // `src/shared/character-name.js`. Flattening it here to 'Unnamed' is what
+    // used to stop the roster telling a GM which row was still waiting.
+    name: sheet.name || row.name || '',
     playerName: sheet.playerName || row.playerName || '',
     class: sheet.class ?? '',
     level,

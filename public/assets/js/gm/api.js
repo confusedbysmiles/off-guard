@@ -48,6 +48,8 @@ export const api = {
   characters: (id) => request(`/campaigns/${id}/characters`),
   createCharacter: (id, fields) =>
     request(`/campaigns/${id}/characters`, { method: 'POST', body: fields }),
+  deleteCharacter: (id, characterId) =>
+    request(`/campaigns/${id}/characters/${characterId}`, { method: 'DELETE' }),
 
   sessions: (id) => request(`/campaigns/${id}/sessions`),
   createSession: (id, fields) =>

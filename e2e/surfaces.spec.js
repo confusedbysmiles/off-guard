@@ -569,3 +569,91 @@ test.describe('Start here', () => {
     expect(html).not.toContain(world.characterToken);
   });
 });
+
+test.describe('a link before the character has a name', () => {
+  test('a player name is enough to make a row, a link, and a working sheet', async ({ page }) => {
+    // The question this answers: can a GM hand out links knowing only who is
+    // playing, and let each player fill in who they are playing?
+    await page.goto(`/gm/${world.gmToken}`);
+    await page.locator('body').press('s');
+
+    await page.locator('#new-character-player').fill('Robin');
+    await page.locator('#new-character-level').fill('3');
+    await page.locator('.roster__add').getByRole('button', { name: 'Add' }).click();
+
+    // The roster calls it after the player, and says it has no name yet.
+    const row = page.locator('.roster__row', { hasText: 'Robin’s character' });
+    await expect(row).toBeVisible();
+    await expect(row).toContainText('not named yet');
+
+    // And so does the links panel, so the GM knows which link is whose.
+    const link = page.locator('.link-row', { hasText: 'Robin’s character' });
+    await link.getByRole('button', { name: /Make a link|Rotate/ }).click();
+    const url = await page.locator('.link-reveal__url').inputValue();
+    await page.locator('#link-dialog .dialog__close').click();
+
+    // Opening it works, and the sheet agrees about what it is called.
+    const player = await page.context().newPage();
+    await player.goto(url);
+    await expect(player.locator('#character-name')).toHaveText('Robin’s character');
+
+    // Naming the character is the player's to do, and it reaches the GM.
+    await player.getByLabel('Character name', { exact: true }).fill('Wren Dallow');
+    await expect(player.locator('#save-state')).toHaveText('Saved', { timeout: 5000 });
+    await expect(player.locator('#character-name')).toHaveText('Wren Dallow');
+    await player.close();
+
+    await page.reload();
+    await page.locator('body').press('s');
+    await expect(page.locator('.roster__row', { hasText: 'Wren Dallow' })).toBeVisible();
+    await expect(page.locator('.roster__row', { hasText: 'Robin’s character' })).toHaveCount(0);
+  });
+
+  test('still refuses a row with neither name', async ({ page }) => {
+    await page.goto(`/gm/${world.gmToken}`);
+    await page.locator('body').press('s');
+    const before = await page.locator('.roster__row').count();
+    await page.locator('.roster__add').getByRole('button', { name: 'Add' }).click();
+    await expect(page.locator('.roster__row')).toHaveCount(before);
+  });
+});
+
+test.describe('removing a character', () => {
+  test('takes their link with them, and undo brings the sheet back', async ({ page }) => {
+    await page.goto(`/gm/${world.gmToken}`);
+    await page.locator('body').press('s');
+
+    await page.locator('#new-character-name').fill('Temporary Tim');
+    await page.locator('#new-character-player').fill('Pat');
+    await page.locator('.roster__add').getByRole('button', { name: 'Add' }).click();
+    await expect(page.locator('.roster__row', { hasText: 'Temporary Tim' })).toBeVisible();
+
+    // Give them a link, so removal has something to revoke.
+    await page.locator('.link-row', { hasText: 'Temporary Tim' })
+      .getByRole('button', { name: /Make a link|Rotate/ }).click();
+    const url = await page.locator('.link-reveal__url').inputValue();
+    await page.locator('#link-dialog .dialog__close').click();
+
+    const player = await page.context().newPage();
+    expect((await player.goto(url)).status()).toBe(200);
+
+    await page.getByRole('button', { name: 'Remove Temporary Tim' }).click();
+    await expect(page.locator('.roster__row', { hasText: 'Temporary Tim' })).toHaveCount(0);
+    await expect(page.locator('.notices')).toContainText('Their link no longer works');
+
+    // And it really does not: the link is dead the moment they are gone.
+    expect((await player.goto(url)).status()).toBe(404);
+    await player.close();
+
+    await page.getByRole('button', { name: 'Undo' }).click();
+    await expect(page.locator('.roster__row', { hasText: 'Temporary Tim' })).toBeVisible();
+    await expect(page.locator('.link-row', { hasText: 'Temporary Tim' })).toContainText('no link yet');
+  });
+
+  test('says whose sheet it is about to remove, for a screen reader too', async ({ page }) => {
+    await page.goto(`/gm/${world.gmToken}`);
+    await page.locator('body').press('s');
+    // Not five buttons all called "Remove".
+    await expect(page.getByRole('button', { name: 'Remove Kestrel Vane' })).toBeVisible();
+  });
+});

@@ -888,6 +888,13 @@
   background: var(--surface-2);
   border-radius: var(--radius-sm);
 }
+
+/* The remove button sits at the end of the row and is quiet until hovered:
+ * it is beside somebody's character sheet, and it should not read as the
+ * obvious thing to press. */
+.roster__remove { justify-self: end; opacity: 0.55; }
+.roster__remove:hover,
+.roster__remove:focus-visible { opacity: 1; }
 .roster__row .faint { display: block; font-size: var(--step--2); }
 
 .roster__add {

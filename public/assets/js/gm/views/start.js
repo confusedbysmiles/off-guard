@@ -76,6 +76,9 @@ export function startPanel(state, { onTab }) {
         p('A link is shown ', b('once'), ' and cannot be shown again. Send it '
           + 'straight to the person it belongs to. If one goes missing, rotate '
           + 'it — that makes a new link and kills the old one in the same move.'),
+        p('You do not need to know what anyone is playing yet. A player’s name '
+          + 'on its own makes a row and a link; the character names itself when '
+          + 'they import or type it, and the link stays theirs either way.'),
       ],
     });
   }

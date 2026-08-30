@@ -12,6 +12,7 @@
  * goblin at eleven at night. So it gets a real picker and a set of defaults
  * that are actually distinguishable from each other.
  */
+import { displayName, isUnnamed } from '../../../../engine/shared/character-name.js';
 import { el } from '../../lib/dom.js';
 import { icon } from '../../lib/icons.js';
 
@@ -130,7 +131,7 @@ export function campaignPanel({ campaign, actions }) {
 export function rosterPanel({ characters, actions }) {
   const name = el('input', {
     class: 'input', id: 'new-character-name', type: 'text',
-    placeholder: 'Character', autocomplete: 'off',
+    placeholder: 'Character (optional)', autocomplete: 'off',
   });
   const player = el('input', {
     class: 'input', id: 'new-character-player', type: 'text',
@@ -141,7 +142,11 @@ export function rosterPanel({ characters, actions }) {
   });
 
   const add = () => {
-    if (!name.value.trim()) { name.focus(); return; }
+    // Either will do. A GM setting up a game usually knows who is playing
+    // before they know who anybody is playing, so a player's name on its own
+    // is enough to make a row and hand out a link; the character names itself
+    // when the player imports or types it.
+    if (!name.value.trim() && !player.value.trim()) { player.focus(); return; }
     actions.addCharacter({
       name: name.value.trim(),
       playerName: player.value.trim(),
@@ -149,7 +154,7 @@ export function rosterPanel({ characters, actions }) {
     });
     name.value = '';
     player.value = '';
-    name.focus();
+    player.focus();
   };
 
   return el('section', { class: 'panel' },
@@ -157,16 +162,30 @@ export function rosterPanel({ characters, actions }) {
       el('h2', { class: 'panel__title' }, 'Roster')),
 
     el('p', { class: 'muted' },
-      'A character starts empty and the player fills it in, or imports it from '
-      + 'Pathbuilder. Make their link below once they exist.'),
+      'A player’s name is enough. The character starts empty, and the player '
+      + 'fills it in or imports it from Pathbuilder — including its name. Make '
+      + 'their link below once the row exists; the link stays theirs whatever '
+      + 'they end up calling the character.'),
 
     characters.length
       ? el('ul', { class: 'roster' }, ...characters.map((character) => el('li', { class: 'roster__row' },
         el('div', {},
-          el('strong', {}, character.name),
+          el('strong', { class: isUnnamed(character) ? 'faint' : null },
+            displayName(character)),
           el('span', { class: 'faint' },
-            [character.playerName, character.class, `Level ${character.level}`]
-              .filter(Boolean).join(' · '))))))
+            [
+              // The player's name is already in the display name when the
+              // character has none of its own; repeating it reads as a stutter.
+              isUnnamed(character) ? 'not named yet' : character.playerName,
+              character.class,
+              `Level ${character.level}`,
+            ].filter(Boolean).join(' · '))),
+        el('button', {
+          class: 'btn btn--icon btn--quiet roster__remove', type: 'button',
+          title: 'Remove',
+          html: `${icon('x')}<span class="sr-only">Remove ${displayName(character)}</span>`,
+          onclick: () => actions.removeCharacter(character),
+        }))))
       : el('p', { class: 'faint' }, 'Nobody yet.'),
 
     el('form', {

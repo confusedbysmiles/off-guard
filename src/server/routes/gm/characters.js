@@ -2,7 +2,9 @@
  * Characters, from the GM's side. The player's own routes are in
  * `routes/character.js` and take no character id at all.
  */
-import { applyPatch, createCharacter, getCharacter, listCharacters } from '../../store/characters.js';
+import {
+  applyPatch, createCharacter, deleteCharacter, getCharacter, listCharacters,
+} from '../../store/characters.js';
 import { publishCharacter, publishTable } from '../../publish.js';
 
 export async function registerCharacterAdminRoutes(app) {
@@ -21,6 +23,15 @@ export async function registerCharacterAdminRoutes(app) {
   app.get('/campaigns/:campaignId/characters/:characterId', async (request) => ({
     character: getCharacter(db, request.scope, request.params.characterId, request.params.campaignId),
   }));
+
+  app.delete('/campaigns/:campaignId/characters/:characterId', async (request) => {
+    const result = deleteCharacter(
+      db, request.scope, request.params.characterId, request.params.campaignId,
+    );
+    // The shared screen may have had them in the initiative order.
+    publishTable(app, request.scope, request.params.campaignId);
+    return result;
+  });
 
   app.patch('/campaigns/:campaignId/characters/:characterId', async (request) => {
     const result = applyPatch(

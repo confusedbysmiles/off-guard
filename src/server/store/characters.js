@@ -62,6 +62,50 @@ export function createCharacter(db, scope, requestedCampaignId, fields = {}) {
   return getCharacter(db, scope, info.lastInsertRowid, campaignId);
 }
 
+/**
+ * Remove a character, and everything that pointed at them.
+ *
+ * Three things go together, in one transaction, and the order matters:
+ *
+ *   1. Their links are revoked. `token.character_id` carries no foreign key,
+ *      so deleting the row on its own would leave a live link pointing at a
+ *      character that is not there — which is a link that still authenticates.
+ *   2. They come out of any fight. `combatant.character_id` is
+ *      `ON DELETE SET NULL`, which would leave a nameless row in the initiative
+ *      order rather than removing it.
+ *   3. The character goes, taking `character_field` with it by cascade.
+ *
+ * The deleted record is returned whole, sheet included, so the dashboard can
+ * offer an undo. What cannot come back is the link: tokens are stored hashed,
+ * so restoring the character means minting a new one.
+ */
+export function deleteCharacter(db, scope, characterId, requestedCampaignId = null) {
+  assertWritable(scope);
+  if (!isGm(scope)) throw new NotFoundError('Only the GM removes a character');
+  const campaignId = campaignFor(scope, requestedCampaignId);
+  // Reads through getCharacter first, so a character in another campaign is a
+  // 404 before anything is written.
+  const character = getCharacter(db, scope, characterId, campaignId);
+
+  const remove = db.transaction(() => {
+    const links = db.prepare(`
+      UPDATE token SET revoked_at = datetime('now')
+      WHERE character_id = ? AND campaign_id = ? AND revoked_at IS NULL
+    `).run(characterId, campaignId).changes;
+
+    const combatants = db.prepare('DELETE FROM combatant WHERE character_id = ?')
+      .run(characterId).changes;
+
+    db.prepare('DELETE FROM character WHERE id = ? AND campaign_id = ?')
+      .run(characterId, campaignId);
+
+    return { links, combatants };
+  });
+
+  const { links, combatants } = remove();
+  return { deleted: Number(characterId), character, revokedLinks: links, removedFrom: combatants };
+}
+
 export function versionsFor(db, characterId) {
   const rows = db.prepare(
     'SELECT path, version, updated_at AS updatedAt, updated_by AS updatedBy FROM character_field WHERE character_id = ?',

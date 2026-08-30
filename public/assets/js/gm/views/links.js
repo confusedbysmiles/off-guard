@@ -13,6 +13,7 @@
  * large, with a copy button, and the dialog says plainly that it will not be
  * shown again.
  */
+import { displayName } from '../../../../engine/shared/character-name.js';
 import { el } from '../../lib/dom.js';
 import { icon } from '../../lib/icons.js';
 import { mount } from '../../lib/mount.js';
@@ -84,16 +85,16 @@ export function linksPanel({ tokens, characters, actions }) {
       ...characters.map((character) => {
         const existing = characterTokens.get(character.id);
         return row({
-          title: character.name,
+          title: displayName(character),
           subtitle: character.playerName || 'no player named',
           meta: existing ? relative(existing.lastUsedAt) : 'no link yet',
           actions: [
             existing
-              ? rotateButton('Rotate', () => actions.rotateLink(existing.id, character.name))
+              ? rotateButton('Rotate', () => actions.rotateLink(existing.id, displayName(character)))
               : el('button', {
                 class: 'btn btn--primary', type: 'button',
                 html: `${icon('plus')}<span>Make a link</span>`,
-                onclick: () => actions.mintCharacterLink(character.id, character.name),
+                onclick: () => actions.mintCharacterLink(character.id, displayName(character)),
               }),
           ],
         });

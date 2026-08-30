@@ -4,6 +4,7 @@
  * Live from the sheets: every number here was computed by the rules engine from
  * what the player last typed, so the panel and the sheet cannot disagree.
  */
+import { displayName } from '../../../../engine/shared/character-name.js';
 import { el, formatMod, titleCase } from '../../lib/dom.js';
 
 const SKILLS = [
@@ -44,7 +45,7 @@ function characterRow(character) {
 
   return el('article', { class: `pc${character.flags.length ? ' pc--flagged' : ''}` },
     el('div', { class: 'pc__name' },
-      el('strong', {}, character.name),
+      el('strong', {}, displayName(character)),
       el('span', { class: 'pc__player' },
         [character.playerName, character.class, `Level ${character.level}`]
           .filter(Boolean).join(' · '))),
@@ -63,7 +64,7 @@ function characterRow(character) {
         character.heroPoints ? el('span', { class: 'pill' }, `${character.heroPoints} hero`) : null),
       el('progress', {
         class: 'hp-bar', value: String(hpFraction), max: '1',
-        'aria-label': `${character.name} hit points`,
+        'aria-label': `${displayName(character)} hit points`,
         'aria-valuetext': `${character.hp.current} of ${character.hp.max}`,
         dataset: { hurt: hpFraction > 0.5 ? 'none' : (hpFraction > 0.25 ? 'some' : 'badly') },
       }),

@@ -11,7 +11,7 @@ creature data, reference tables and homebrew are global.
 
 **Status: complete, and running.** It has been live since 29 August 2026 on a
 Mac under launchd, reached through a Cloudflare Tunnel, and has been played on
-from a laptop, a phone and an iPad. 650 unit tests and 55 end-to-end tests, run
+from a laptop, a phone and an iPad. 734 unit tests and 59 end-to-end tests, run
 at a host root and at a subdirectory, in Chromium and — for the parts where
 engines differ — in WebKit. See [deploy/GOING-LIVE.md](deploy/GOING-LIVE.md).
 
@@ -26,6 +26,16 @@ engines differ — in WebKit. See [deploy/GOING-LIVE.md](deploy/GOING-LIVE.md).
 | 7 | Shared screen over SSE | done |
 | 8 | Reference drawer, dice roller, Recall Knowledge helper | done |
 | 9 | Deployment, accessibility and security pass | done |
+
+A character can exist before it has a name. A GM who knows who is playing but
+not yet who they are playing adds a row per person, hands out the links, and
+each player names their own character by importing or typing it — the link is
+bound to the row, not to the name. Until then every surface calls it "Alex's
+character", from one helper in `src/shared/character-name.js`, because a link
+labelled one thing and a roster row labelled another is how the wrong link gets
+sent. Removing a character revokes their link in the same transaction:
+`token.character_id` has no foreign key, so a row deleted on its own would leave
+a live link naming a character that is not there.
 
 Both the dashboard and the sheet have a **Start here** written for the person
 using them — `?` on the dashboard, a fold at the top of the sheet. Neither is a

@@ -8,6 +8,7 @@
  * Every one of them is a closure over the same four things: the API, the store,
  * the notice region and a `refresh` callback. Nothing here touches the DOM.
  */
+import { displayName } from '../../../engine/shared/character-name.js';
 import { debounce } from '../lib/dom.js';
 import { assignDisplayNames } from './views/builder.js';
 
@@ -278,10 +279,17 @@ export function createActions({
       const payload = {
         offGuardEncounter: 1,
         name: encounter.name,
+        adventure: encounter.adventure,
+        chapter: encounter.chapter,
+        sortOrder: encounter.sortOrder,
         notes: encounter.notes,
         terrain: encounter.terrain,
         lighting: encounter.lighting,
         treasure: encounter.treasure,
+        // A one-shot prices itself against its own party, not the campaign's
+        // sheets. Without these the budget silently re-reads the party panel.
+        partyLevelOverride: encounter.partyLevelOverride,
+        partySizeOverride: encounter.partySizeOverride,
         creatures: encounter.creatures.map((row) => ({
           creatureId: row.creatureId,
           displayName: row.displayName,
@@ -308,10 +316,15 @@ export function createActions({
         if (!Array.isArray(parsed.creatures)) throw new Error('no creature list');
         const { encounter } = await api.createEncounter(campaign(), {
           name: parsed.name ?? 'Imported encounter',
+          adventure: parsed.adventure ?? null,
+          chapter: parsed.chapter ?? null,
+          sortOrder: parsed.sortOrder ?? 0,
           notes: parsed.notes ?? '',
           terrain: parsed.terrain ?? '',
           lighting: parsed.lighting ?? '',
           treasure: parsed.treasure ?? '',
+          partyLevelOverride: parsed.partyLevelOverride ?? null,
+          partySizeOverride: parsed.partySizeOverride ?? null,
         });
         await api.setCreatures(campaign(), encounter.id, parsed.creatures);
         await loadEncounters();
@@ -644,6 +657,50 @@ export function createActions({
       }
     },
 
+    /**
+     * Remove a character.
+     *
+     * Undo rather than a confirmation dialog, which is how everything else here
+     * deletes: a dialog interrupts a GM mid-sentence, and the row is in memory
+     * anyway. The one thing undo cannot bring back is the link — tokens are
+     * stored hashed, so a restored character needs a new one, and the notice
+     * says so rather than letting a player find out.
+     */
+    async removeCharacter(character) {
+      const campaignId = campaign();
+      if (!campaignId) return;
+      try {
+        const result = await api.deleteCharacter(campaignId, character.id);
+        await Promise.all([actions.loadParty(), actions.loadTokens()]);
+        refresh();
+
+        const had = result.revokedLinks > 0;
+        notices.warn(`Removed ${displayName(result.character)}.`, {
+          detail: had
+            ? 'Their link no longer works. Undo brings the sheet back, but not '
+              + 'the link — that has to be made again.'
+            : 'They had no link yet.',
+          actions: [['Undo', async () => {
+            const { character: restored } = await api.createCharacter(campaignId, {
+              name: result.character.name,
+              playerName: result.character.playerName,
+              level: result.character.level,
+              sheet: result.character.sheet,
+            });
+            await Promise.all([actions.loadParty(), actions.loadTokens()]);
+            refresh();
+            if (had) {
+              notices.info(
+                `${displayName(restored)} is back. Make them a new link below.`,
+              );
+            }
+          }]],
+        });
+      } catch (error) {
+        notices.error(`Could not remove that character: ${error.message}`);
+      }
+    },
+
     async addCharacter(fields) {
       const id = campaign();
       if (!id) return;
@@ -651,7 +708,9 @@ export function createActions({
         await api.createCharacter(id, fields);
         await Promise.all([actions.loadParty(), actions.loadTokens()]);
         refresh();
-        notices.info(`Added ${fields.name}. Make their link below when you are ready.`);
+        notices.info(
+          `Added ${displayName(fields)}. Make their link below when you are ready.`,
+        );
       } catch (error) {
         notices.error(`Could not add that character: ${error.message}`);
       }
