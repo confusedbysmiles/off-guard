@@ -47,12 +47,13 @@ export function assignDisplayNames(rows, nameOf) {
 }
 
 export function builderView({
-  results, query, encounters, encounter, budget, campaigns, campaignId, catalogue, actions,
+  results, query, encounters, encounter, budget, campaigns, campaignId, catalogue, combat,
+  actions, onRun,
 }) {
   return el('div', { class: 'panels panels--builder' },
     searchPanel({ results, query, catalogue, actions }),
     el('div', { class: 'panels' },
-      encounterPanel({ encounters, encounter, actions, campaigns, campaignId }),
+      encounterPanel({ encounters, encounter, actions, campaigns, campaignId, combat, onRun }),
       budgetPanel(budget)));
 }
 
@@ -179,7 +180,9 @@ function encounterList({ encounters, encounter, actions }) {
     }, e.name))));
 }
 
-function encounterPanel({ encounters, encounter, actions, campaigns, campaignId }) {
+function encounterPanel({
+  encounters, encounter, actions, campaigns, campaignId, combat, onRun,
+}) {
   const picker = encounterList({ encounters, encounter, actions });
 
   if (!encounter) {
@@ -230,6 +233,21 @@ function encounterPanel({ encounters, encounter, actions, campaigns, campaignId 
       ? el('div', { class: 'encounter-rows stack-md', id: 'encounter-rows' },
         ...rows.map((row, index) => encounterRow(row, index, actions)))
       : el('p', { class: 'empty stack-md' }, 'Nothing in this encounter yet.'),
+
+    // The whole point of having built this. Without it the only way to run an
+    // encounter was a dropdown on another tab that defaults to "Party only",
+    // which is a thing you have to already know.
+    rows.length
+      ? el('div', { class: 'encounter-run stack-md' },
+        el('button', {
+          class: 'btn btn--primary', type: 'button', id: 'run-encounter',
+          html: `${icon('dice')}<span>Roll initiative</span>`,
+          onclick: () => actions.startCombat({ encounterId: encounter.id, onStarted: onRun }),
+        }),
+        el('span', { class: 'faint' }, combat
+          ? 'Ends the fight already running and starts this one.'
+          : 'Adds the party, rolls for the creatures, and opens the Initiative tab.'))
+      : null,
 
     el('details', { class: 'stack-md' },
       el('summary', {}, 'Notes, terrain and treasure'),

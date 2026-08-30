@@ -19,7 +19,7 @@
  * file that does not parse is found by loading the page, and the page it breaks
  * is every page that imports it.
  */
-import { execFileSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -85,11 +85,29 @@ describe('relative imports in the browser bundle', () => {
 });
 
 describe('every browser module', () => {
-  it.each(modules.map((f) => [relative(PUBLIC, f), f]))('%s parses', (_name, file) => {
-    // `node --check` is the same parser the browser will use, near enough, and
-    // needs nothing installed. Unit tests do not import these -- they touch the
-    // DOM -- so without this a syntax error ships.
-    expect(() => execFileSync('node', ['--check', file], { stdio: 'pipe' })).not.toThrow();
+  it('parses', () => {
+    // One subprocess for all of them, not one each. `node --check` per file
+    // meant thirty-odd spawns from a suite that runs its files in parallel,
+    // and the contention made unrelated tests fail at random -- a flaky suite
+    // is worth less than no suite. `SourceTextModule` parses without
+    // evaluating, which is the whole point: these touch the DOM on import.
+    const script = `
+      const vm = require('vm');
+      const { readFileSync } = require('fs');
+      const bad = [];
+      for (const file of process.argv.slice(1)) {
+        try { new vm.SourceTextModule(readFileSync(file, 'utf8')); }
+        catch (error) { bad.push(file + ': ' + error.message); }
+      }
+      if (bad.length) { console.error(bad.join('\\n')); process.exit(1); }
+    `;
+    const result = spawnSync(
+      'node',
+      ['--experimental-vm-modules', '--no-warnings', '-e', script, '--', ...modules],
+      { encoding: 'utf8' },
+    );
+    expect(result.stderr.trim(), result.stderr).toBe('');
+    expect(result.status).toBe(0);
   });
 });
 

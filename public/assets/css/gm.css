@@ -928,3 +928,16 @@
 .session__head { display: flex; align-items: baseline; gap: var(--sp-3); }
 .session__head strong { flex: 1; min-width: 0; }
 .session__body { margin: var(--sp-2) 0 0; white-space: pre-wrap; font-size: var(--step--1); }
+
+/* The primary action on an encounter: run it. Set apart from the quiet
+ * new/export/copy/delete row in the header, because it is the one that starts
+ * a session rather than manages a list. */
+.encounter-run {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-3);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--border);
+}
+.encounter-run .faint { font-size: var(--step--1); }

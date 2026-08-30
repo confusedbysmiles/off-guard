@@ -344,7 +344,33 @@ export function createActions({
 
     // --- initiative --------------------------------------------------------
 
-    async startCombat({ encounterId = null, skill = 'perception' } = {}) {
+    /**
+     * Roll initiative.
+     *
+     * Starting a fight ends whatever was running, in one statement on the
+     * server, and that cannot be undone -- so a second one is asked about
+     * rather than done. The question lives here rather than at the button
+     * because there are two buttons: the Initiative tab and the encounter
+     * builder.
+     *
+     * `onStarted` runs once a fight is actually running, and is carried through
+     * the confirmation rather than left to the caller: the encounter builder
+     * moves the GM to the Initiative tab, and it has to do that whether the
+     * fight started on the first click or after the question.
+     */
+    async startCombat({
+      encounterId = null, skill = 'perception', replacing = false, onStarted = null,
+    } = {}) {
+      if (!replacing && store.get().combat) {
+        notices.warn('A fight is already running.', {
+          detail: 'Rolling initiative again ends it and starts a new one, '
+            + 'and that cannot be undone.',
+          actions: [['End it and roll', () => actions.startCombat({
+            encounterId, skill, replacing: true, onStarted,
+          })]],
+        });
+        return false;
+      }
       try {
         const { combat } = await api.startCombat(campaign(), { encounterId });
         const { combat: filled } = await api.populate(campaign(), combat.id, {
@@ -353,8 +379,11 @@ export function createActions({
         store.set({ combat: filled });
         refresh();
         notices.info('Initiative rolled for the creatures. Players roll their own.');
+        if (onStarted) onStarted();
+        return true;
       } catch (error) {
         notices.error(`Could not start the fight: ${error.message}`);
+        return false;
       }
     },
 

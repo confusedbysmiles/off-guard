@@ -657,3 +657,91 @@ test.describe('removing a character', () => {
     await expect(page.getByRole('button', { name: 'Remove Kestrel Vane' })).toBeVisible();
   });
 });
+
+test.describe('typing on the dashboard', () => {
+  test('a search that re-renders does not throw you out of the box', async ({ page }) => {
+    // The bug: every keystroke debounced into a search, the results arrived,
+    // the tab was rebuilt, and the input being typed into was one of the
+    // children replaced. Focus fell to <body>, where the next letter was a
+    // shortcut — typing "goblin" landed on the Initiative tab.
+    await page.goto(`/gm/${world.gmToken}`);
+    await page.locator('body').press('e');
+
+    const box = page.getByLabel('Search creatures by name');
+    await box.click();
+    for (const letter of 'goblin warrior') {
+      await page.keyboard.type(letter);
+      await page.waitForTimeout(240);        // longer than the 200ms debounce
+    }
+
+    await expect(box).toBeFocused();
+    await expect(box).toHaveValue('goblin warrior');
+    await expect(page.locator('#tabs button[aria-current="page"]')).toContainText('Encounters');
+    await expect(page.locator('.result').first()).toContainText('Goblin Warrior');
+  });
+
+  test('keeps the caret where it was, rather than at the end', async ({ page }) => {
+    await page.goto(`/gm/${world.gmToken}`);
+    await page.locator('body').press('e');
+
+    const box = page.getByLabel('Search creatures by name');
+    await box.fill('goblin');
+    await page.waitForTimeout(400);
+    // Put the caret in the middle and type there.
+    await box.evaluate((el) => el.setSelectionRange(3, 3));
+    await page.keyboard.type('X');
+    await page.waitForTimeout(400);
+
+    await expect(box).toHaveValue('gobXlin');
+    expect(await box.evaluate((el) => el.selectionStart)).toBe(4);
+  });
+});
+
+test.describe('running an encounter', () => {
+  test('rolls initiative from the tab the encounter was built on', async ({ page }) => {
+    await page.goto(`/gm/${world.gmToken}`);
+    await page.locator('body').press('e');
+    await page.locator('.encounter-item__open', { hasText: 'Ambush in the stairwell' }).click();
+
+    // A fight is already running in the fixture, so it asks first rather than
+    // ending one without saying so.
+    await page.locator('#run-encounter').click();
+    await expect(page.locator('.notices')).toContainText('A fight is already running');
+    await expect(page.locator('#tabs button[aria-current="page"]')).toContainText('Encounters');
+
+    await page.getByRole('button', { name: 'End it and roll' }).click();
+
+    // Confirming has to land you in the fight, not leave you where you were.
+    await expect(page.locator('#tabs button[aria-current="page"]')).toContainText('Initiative');
+    await expect(page.locator('.combatant', { hasText: 'Kestrel Vane' })).toBeVisible();
+    await expect(page.locator('.combatant', { hasText: 'Goblin Warrior' }).first()).toBeVisible();
+  });
+
+  test('every creature in the fight carries its stat block and its hit points', async ({ page }) => {
+    // What "keeping track of monsters in a meaningful way" needs, and what a
+    // fight started this way actually has.
+    await page.goto(`/gm/${world.gmToken}`);
+    await page.locator('body').press('e');
+    await page.locator('.encounter-item__open', { hasText: 'Ambush in the stairwell' }).click();
+    await page.locator('#run-encounter').click();
+    await page.getByRole('button', { name: 'End it and roll' }).click();
+    await expect(page.locator('#tabs button[aria-current="page"]')).toContainText('Initiative');
+
+    const goblin = page.locator('.combatant', { hasText: 'Goblin Warrior A' });
+    await expect(goblin.locator('.combatant__damage')).toBeVisible();
+    await goblin.getByRole('button', { name: 'Stat block for Goblin Warrior A' }).click();
+
+    const dialog = page.locator('dialog[open]');
+    await expect(dialog).toContainText('Goblin Warrior');
+    await expect(dialog).toContainText('Perception');
+    await expect(dialog).toContainText('AC');
+    await page.keyboard.press('Escape');
+  });
+
+  test('offers nothing to run on an encounter with nothing in it', async ({ page }) => {
+    await page.goto(`/gm/${world.gmToken}`);
+    await page.locator('body').press('e');
+    await page.getByRole('button', { name: 'New' }).first().click();
+    await expect(page.locator('#run-encounter')).toHaveCount(0);
+  });
+});

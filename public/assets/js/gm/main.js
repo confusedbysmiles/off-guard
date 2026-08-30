@@ -11,6 +11,7 @@
  */
 import { $, el } from '../lib/dom.js';
 import { makeSortable } from '../lib/reorder.js';
+import { preservingFocus } from '../lib/focus.js';
 import { icon } from '../lib/icons.js';
 import { setUpTheme } from '../lib/theme.js';
 import { createNotices } from '../lib/notices.js';
@@ -160,7 +161,18 @@ function renderChrome() {
   el('span', { class: 'tab__key' }, key))));
 }
 
-function render() {
+/**
+ * Rebuild the open tab.
+ *
+ * Wrapped in `preservingFocus` as a whole rather than in each branch: any panel
+ * with a field in it can be re-rendered while the GM is typing into it, and
+ * search was only the one that did it on every keystroke.
+ */
+function render(...args) {
+  preservingFocus(() => renderNow(...args));
+}
+
+function renderNow() {
   const state = store.get();
   renderChrome();
   const main = $('#main');
@@ -208,7 +220,9 @@ function render() {
       campaigns: state.campaigns,
       campaignId: state.campaignId,
       catalogue: state.catalogue,
+      combat: state.combat,
       actions,
+      onRun: () => selectTab('initiative'),
     }));
     setUpEncounterFileInput();
     setUpEncounterReorder();
