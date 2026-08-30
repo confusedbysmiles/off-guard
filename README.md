@@ -26,6 +26,7 @@ engines differ — in WebKit. See [deploy/GOING-LIVE.md](deploy/GOING-LIVE.md).
 | 7 | Shared screen over SSE | done |
 | 8 | Reference drawer, dice roller, Recall Knowledge helper | done |
 | 9 | Deployment, accessibility and security pass | done |
+| 10 | Character builder: options catalogue, derivation, level planning | in progress |
 
 A character can exist before it has a name. A GM who knows who is playing but
 not yet who they are playing adds a row per person, hands out the links, and
@@ -257,6 +258,131 @@ applies to a given weapon's damage is a judgement the import cannot make. Each
 of those produces a warning on the confirmation screen, and the last one only
 when it could actually be hiding something — a character with a positive
 Strength modifier and no damage bonus on any weapon.
+
+## The character builder
+
+A second page for the same character, at `/build/<token>`. Building and playing
+are different postures -- the sheet is used one-handed on a phone while holding
+dice, and a builder is two hands and a lot of reading -- so they are separate
+pages rather than two modes of one. The sheet has a **Build** button and the
+builder has **Play**; neither writes the token into the markup, which is why
+both are buttons that navigate rather than links carrying an `href`.
+
+The shift that makes it work is that the sheet stops being the source of truth
+for what a character *is*. The build document at `sheet.build` holds the
+choices, and the sheet is derived from it onto exactly the paths
+`mapPathbuilder` produces -- so a built character is indistinguishable from a
+typed or imported one, and the party panel, the encounter budget and the
+initiative tracker needed no changes at all. A test asserts that from the far
+side: it builds a level 5 fighter through the player API and then reads the
+numbers back out of the GM's own party route.
+
+**Planning is not a separate feature.** A slot is a decision, and a decision at
+a level the character has not reached is stored, shown and worth nothing until
+they get there. Filling in level 12 on the train is the same code path as
+filling in level 3, and `planTo` only decides how far ahead the timeline is
+drawn. Level-up is then a number changing, with the plan already in place.
+
+Nothing is enforced. A half-built character is the normal state of one being
+built, so unchosen boosts and unfilled slots are listed rather than blocked, and
+the builder saves at every point.
+
+### What it derives, and what it does not
+
+Derived and owned by the build: attributes, proficiency ranks, hit points,
+speed, size, languages and the identity fields. Play state is not -- current and
+temporary hit points, conditions, hero points and spent slots survive a rebuild,
+because levelling up should no more heal a character than re-importing one does.
+
+What a feat mechanically *does* is not attempted. Upstream encodes feat effects
+only as Foundry rule elements, which are a runtime automation language; a
+builder that half-evaluated them would be wrong in ways nobody could see. Feats
+land on the sheet as named entries with their text and action cost, and the
+numbers they change stay manual adjustments -- which is how every field on the
+sheet already works.
+
+### Proficiency advancement
+
+The one thing the upstream packs do not contain. A class document states its
+ranks at level 1 and nothing after; Foundry advances them from hardcoded class
+logic. What the packs *do* state, per class, is which features are granted at
+which level.
+
+So `tools/build-data/progression.js` takes the **levels from the data** and
+hand-writes only the **effects**. That split is deliberate: a fully
+hand-maintained table would have two ways to be wrong, and "the level is wrong"
+is the one that stays invisible until someone rolls. Here it cannot happen. The
+worst case is a feature the table does not recognize, which leaves a proficiency
+flat rather than moving it somewhere invented, and lands in
+`data/build-report.json` rather than being ignored.
+
+Regular names are matched by pattern (`Perception Mastery`, `Heavy Armor
+Expertise`, `Expert Spellcaster`); the flavoured ones get a line each with the
+printed effect they stand for (`Bravery`, `Juggernaut`, `Battlefield Surveyor`).
+Player Core classes are complete. **147 granted features are still unmapped**,
+mostly on the Player Core 2 classes; the build report names every one.
+
+### The partial attribute boost
+
+Read out of the pinned upstream rather than from memory, because getting it
+wrong is silent -- every affected character merely looks lucky.
+`src/module/actor/character/document.ts`, `prepareBuildData`:
+
+```js
+ability.mod += ability.mod >= 4 ? 0.5 : 1;
+```
+
+A boost is worth a full point below +4 and half a point at or above it, the
+halves accumulate across levels, ancestry flaws apply inside the ancestry
+section, and the modifier is truncated only at the very end. So a boost taken at
+level 5 can appear to do nothing and has not: the builder marks it with a `½`
+and the summary shows the exact value. Fixed ancestry boosts are composed in by
+the derivation rather than stored -- a dwarf's Constitution is not a choice, and
+a build that had to carry it is a build that could lose it.
+
+### Armour and weapons
+
+This is the part the Pathbuilder import cannot do, and the contrast is the
+clearest argument for building characters here. An export gives a finished total
+and leaves the importer working backwards: it infers an armour's Dexterity cap
+from how much Dexterity reached the AC, and says out loud that it cannot tell
+whether Strength applies to a given weapon's damage, because weapon traits are
+not exported at all.
+
+Here both are fields. `dexCap` is on the armour -- and a cap of `0` and no cap
+are kept apart, because full plate is the first -- while `finesse`, `agile`,
+`thrown` and `propulsive` are on the weapon. So a rapier attacks with Dexterity
+and damages with Strength, a shortbow does neither, and a propulsive bow adds
+half a positive Strength modifier and all of a negative one. None of that is a
+judgement the player has to make.
+
+Runes are the player's rather than the item's. A `+1 striking longsword` is a
+longsword with two numbers beside it, so the catalogue holds one longsword and
+the build holds the runes -- and the name is a third, separate thing. Calling it
+"Grandfather's blade" changes what the sheet says and nothing about the dice,
+the traits or the proficiency underneath. That is what "adding a custom item"
+costs here: naming it.
+
+Weapon specialization comes from the class's own progression, and a striking
+rune adds *dice* rather than a bonus -- the mistake that halved every imported
+weapon above about level 4 until a real export caught it.
+
+### Options
+
+`npm run build:data` emits 17,035 build options beside the creature catalogue:
+ancestries, heritages, backgrounds, classes, feats, equipment, spells, actions
+and deities, sharded by the axis the builder filters on (`feat/class`,
+`spell/rank-3`, `equipment/armor`) so one question is one file read.
+
+The filters do the work. A level 6 fighter looking for a class feat sees the 55
+they can take, not 6,283 with a search box over them. Prerequisites are shown as
+printed and checked only where they can be read -- "trained in Athletics" is
+checkable and "you have a patron" is not, and pretending otherwise would refuse
+legal choices. Common options sort first, because alphabetically an ancestry
+list opens on Anadi, Android, Athamaru and Automaton.
+
+Like the creature catalogue, this is a build product and is not checked in. A
+clone that has not run `npm run build:data` gets a builder that says so.
 
 ## The GM dashboard
 

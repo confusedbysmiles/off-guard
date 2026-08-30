@@ -864,3 +864,46 @@ test.describe('the clock on the shared screen', () => {
     await expect(page.locator('#order')).toBeVisible();
   });
 });
+
+/**
+ * A sheet whose character was made in the builder.
+ *
+ * The builder owns what it derives, and the sheet has to say so rather than
+ * accepting an edit it will silently revert on the next save. Everything the
+ * builder does not set stays the player's -- which is most of the sheet.
+ */
+test.describe('a built character’s sheet', () => {
+  const field = (page, label) => page.locator('.field', { has: page.getByText(label, { exact: true }) })
+    .locator('input, select, textarea')
+    .first();
+
+  test('says the character is built, and locks what the builder works out', async ({ page }) => {
+    await page.goto(`/c/${world.builtCharacterToken}`);
+    await expect(page.locator('.built-note')).toBeVisible();
+
+    for (const label of ['Ancestry', 'Class', 'Level']) {
+      await expect(field(page, label), label).toHaveAttribute('readonly', '');
+    }
+    // A select has no readonly, so the lock is a disable.
+    await expect(field(page, 'AC proficiency')).toBeDisabled();
+  });
+
+  test('leaves everything the builder does not set alone', async ({ page }) => {
+    await page.goto(`/c/${world.builtCharacterToken}`);
+
+    // Play state, free text and the player's own name are never derived.
+    const player = field(page, 'Player');
+    await expect(player).not.toHaveAttribute('readonly', '');
+    await player.fill('Robin');
+    await expect(page.locator('#save-state')).toHaveText(/Saved/, { timeout: 5000 });
+
+    const current = field(page, 'Current');
+    await expect(current).not.toHaveAttribute('readonly', '');
+  });
+
+  test('does not lock a sheet that was typed in by hand', async ({ page }) => {
+    await page.goto(`/c/${world.plainCharacterToken}`);
+    await expect(page.locator('.built-note')).toBeHidden();
+    await expect(field(page, 'Ancestry')).not.toHaveAttribute('readonly', '');
+  });
+});

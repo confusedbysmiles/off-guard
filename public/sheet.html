@@ -24,6 +24,9 @@
   </div>
   <div class="sheet-bar__tools">
     <output class="save-state" id="save-state" aria-live="polite"></output>
+    <!-- A button rather than a link: an href would put the token into the
+         markup, which is the one thing every page here is careful not to do. -->
+    <button class="btn" id="build" type="button">Build</button>
     <button class="btn btn--icon btn--quiet" id="undo" type="button" disabled>
       <span class="sr-only">Undo last change</span>
     </button>

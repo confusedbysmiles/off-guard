@@ -31,6 +31,20 @@ const SAVE_LABEL = {
   [STATUS.error]: 'Could not load',
 };
 
+/**
+ * The builder, for this same character and the same token. A separate page
+ * rather than a mode: the sheet is used one-handed at the table and the builder
+ * is not, and making one of them serve both would cost the sheet.
+ */
+function setUpBuildLink() {
+  // The destination is computed at click time and never written into the DOM:
+  // an `href` would carry the token in the markup, which `page.content()` can
+  // read and a screenshot or a copied element would leak.
+  $('#build').addEventListener('click', () => {
+    globalThis.location.assign(apiPath(`/build/${token}`));
+  });
+}
+
 function setUpIcons() {
   $('#undo').prepend(fragment(icon('undo')));
   $('#print').prepend(fragment(icon('print')));
@@ -126,6 +140,7 @@ function preview(value) {
 async function start() {
   setUpIcons();
   setUpThemeButton();
+  setUpBuildLink();
 
   const root = $('#sheet');
   const update = mount(root, store, {

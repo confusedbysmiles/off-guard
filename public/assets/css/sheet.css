@@ -340,3 +340,19 @@
 .guide-card__section { display: block; }
 .guide-card__section + .guide-card__section { border-top: 1px solid var(--border); padding-top: var(--sp-4); }
 .guide-card__section .panel__title { font-size: var(--step-0); margin-bottom: var(--sp-2); }
+
+/**
+ * A field the character builder owns.
+ *
+ * Readable and selectable, visibly not editable. The alternative -- leaving it
+ * editable and quietly reverting it on the next build save -- is the failure
+ * this marks.
+ */
+.is-derived {
+  background: var(--surface-sunk);
+  border-style: dashed;
+  color: var(--ink-dim);
+  cursor: default;
+}
+
+.built-note { margin: 0 0 var(--sp-3); font-size: var(--step--1); }
