@@ -11,6 +11,7 @@ import { applyPatch } from './characters.js';
 import { visibleRolls } from './rolls.js';
 import { assertWritable, campaignFor, isGm, NotFoundError, ScopeError } from '../scope.js';
 import { displayName } from '../../shared/character-name.js';
+import { runForRoom } from './loop.js';
 
 const COMBAT_COLUMNS = `
   id, campaign_id AS campaignId, encounter_id AS encounterId, name, round,
@@ -333,8 +334,12 @@ export function tableView(db, scope, requestedCampaignId = null) {
   // The rolls the table may see. Secret rolls are dropped inside `visibleRolls`
   // rather than filtered here, so there is one place that decides.
   const rolls = visibleRolls(db, campaignId);
+  // The clock stands on its own: a looping adventure is watched between fights
+  // as much as during them, and the room should not lose the minute because
+  // nobody is rolling initiative.
+  const loop = runForRoom(db, campaignId);
   const combat = getActiveCombat(db, scope, campaignId);
-  if (!combat) return { round: null, turnIndex: null, combatants: [], rolls };
+  if (!combat) return { round: null, turnIndex: null, combatants: [], rolls, loop };
 
   const characters = new Map(
     db.prepare('SELECT id, name, player_name AS playerName, sheet FROM character WHERE campaign_id = ?')
@@ -373,5 +378,6 @@ export function tableView(db, scope, requestedCampaignId = null) {
     activeId: combatants.some((c) => c.id === activeId) ? activeId : null,
     combatants,
     rolls,
+    loop,
   };
 }

@@ -745,3 +745,88 @@ test.describe('running an encounter', () => {
     await expect(page.locator('#run-encounter')).toHaveCount(0);
   });
 });
+
+test.describe('the clock on the shared screen', () => {
+  const ADVENTURE = 'nine-minutes-to-the-toast';
+
+  const runState = (slot) => ({
+    loop: 3,
+    slot,
+    party: ['PC 1', 'PC 2', 'PC 3'],
+    faults: {
+      wine: { known: true, fixed: true, sticky: false },
+      guest: { known: true, fixed: false, sticky: false },
+      aspic: { known: false, fixed: false, sticky: false },
+    },
+    influence: { points: 5, highWater: 6, discovered: [] },
+    log: {},
+  });
+
+  /** Move the clock the way the dashboard does. */
+  const setSlot = (request, slot) => request.put(
+    `/api/gm/${world.gmToken}/campaigns/${world.campaignId}/loop/${ADVENTURE}`,
+    { data: { state: runState(slot), title: 'Nine Minutes to the Toast' } },
+  );
+
+  test('is the biggest thing on the screen, beside the initiative order', async ({ page, request }) => {
+    await setSlot(request, 7);
+    await page.goto(`/table/${world.tableToken}`);
+    await expect(page.locator('#connection')).toHaveAttribute('data-state', 'live');
+
+    await expect(page.locator('#clock-time')).toHaveText('7:57');
+    await expect(page.locator('#clock-meta')).toContainText('Loop 3');
+    await expect(page.locator('#clock-meta')).toContainText('minute 7 of 9');
+    await expect(page.locator('#clock-event')).toHaveText('Aspic');
+
+    // Side by side: the order and the loop, both on screen at once.
+    await expect(page.locator('#order .turn').first()).toBeVisible();
+    await expect(page.locator('#loop-room')).toBeVisible();
+
+    // And the clock really is the largest thing on it.
+    const clock = await page.locator('#clock-time').evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+    const round = await page.locator('#round').evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+    expect(clock).toBeGreaterThan(round * 2);
+  });
+
+  test('moves a minute when the GM does, without anybody touching it', async ({ page, request }) => {
+    await setSlot(request, 7);
+    await page.goto(`/table/${world.tableToken}`);
+    await expect(page.locator('#clock-time')).toHaveText('7:57');
+
+    await setSlot(request, 8);
+    // No reload: this has to arrive down the stream.
+    await expect(page.locator('#clock-time')).toHaveText('7:58', { timeout: 8000 });
+    await expect(page.locator('#clock-event')).toBeHidden();
+
+    await setSlot(request, 9);
+    await expect(page.locator('#clock-time')).toHaveText('7:59', { timeout: 8000 });
+    await expect(page.locator('#clock-event')).toHaveText('Toast');
+  });
+
+  test('shows what the party knows and nothing they do not', async ({ page, request }) => {
+    await setSlot(request, 7);
+    await page.goto(`/table/${world.tableToken}`);
+
+    const panel = page.locator('#loop-room');
+    await expect(panel).toContainText('The wine is a fake');
+    await expect(panel).toContainText('Twelve at an eleven-person table');
+    await expect(panel).toContainText('Influence');
+
+    // The undiscovered one is not on the page, in any form.
+    const html = await page.content();
+    expect(html).not.toContain('aspic');
+    expect(html).not.toContain('Aspic in the');
+  });
+
+  test('is absent entirely for a campaign with no looping adventure', async ({ page, request }) => {
+    // Almost every campaign. The screen has to look exactly as it did before.
+    // The tests above ran this campaign's loop, so put it back to never-run.
+    await request.delete(
+      `/api/gm/${world.gmToken}/campaigns/${world.campaignId}/loop/${ADVENTURE}`,
+    );
+    await page.goto(`/table/${world.tableToken}`);
+    await expect(page.locator('#clock')).toBeHidden();
+    await expect(page.locator('#loop-room')).toBeHidden();
+    await expect(page.locator('#order')).toBeVisible();
+  });
+});

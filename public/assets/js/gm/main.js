@@ -28,7 +28,7 @@ import { campaignPanel, rosterPanel, sessionsPanel } from './views/campaign.js';
 import { createDrawer, drawerShell } from './drawer.js';
 import { startPanel } from './views/start.js';
 import { loopView } from './views/loop.js';
-import { ADVENTURE as NINE_MINUTES } from './adventures/nine-minutes.js';
+import { ADVENTURE as NINE_MINUTES } from '../../../engine/shared/adventures/nine-minutes.js';
 import { shortcutFor, TABS } from './shortcuts.js';
 import { blankState } from '../../../engine/shared/loop.js';
 

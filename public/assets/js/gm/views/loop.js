@@ -16,23 +16,24 @@
  */
 import { el } from '../../lib/dom.js';
 import { icon } from '../../lib/icons.js';
-import { isPerfectRun } from '../../../../engine/shared/loop.js';
+import { clockFace, eventAt, isPerfectRun } from '../../../../engine/shared/loop.js';
 
 const label = (text) => el('span', { class: 'loop__label' }, text);
 
 // --- the clock --------------------------------------------------------------
 
 function clock(adventure, state, actions) {
-  const { slots, events } = adventure.loop;
-  const startMinute = 51;
-  const minute = startMinute + (state.slot - 1);
-  const clockFace = `${minute >= 60 ? 8 : 7}:${String(minute >= 60 ? minute - 60 : minute).padStart(2, '0')} PM`;
-  const event = events.find((e) => e.slot === state.slot);
+  const { slots } = adventure.loop;
+  // Shared with the shared screen, and derived from the adventure's own
+  // startLabel: this used to assume the hour and the minute it started at.
+  const face = clockFace(adventure, state.slot);
+  const faceText = face ? `${face.text} ${face.suffix}` : `slot ${state.slot}`;
+  const event = eventAt(adventure, state.slot);
 
   return el('section', { class: 'panel loop__clock' },
     el('div', { class: 'panel__head' },
       el('h2', { class: 'panel__title' }, 'The clock'),
-      el('span', { class: 'loop__time' }, `${clockFace} · slot ${state.slot} of ${slots}`),
+      el('span', { class: 'loop__time' }, `${faceText} · slot ${state.slot} of ${slots}`),
       el('div', { class: 'loop__controls' },
         el('button', {
           class: 'btn', type: 'button',
@@ -53,7 +54,7 @@ function clock(adventure, state, actions) {
         }))),
     el('ol', { class: 'loop__slots' }, ...Array.from({ length: slots }, (_, i) => {
       const n = i + 1;
-      const marked = events.find((e) => e.slot === n);
+      const marked = eventAt(adventure, n);
       return el('li', {},
         el('button', {
           class: `loop__slot${n < state.slot ? ' is-past' : ''}${n === state.slot ? ' is-now' : ''}${marked ? ` is-${marked.tone}` : ''}`,

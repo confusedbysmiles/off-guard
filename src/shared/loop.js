@@ -111,3 +111,48 @@ export function fromRow(row) {
     },
   };
 }
+
+// --- the clock ---------------------------------------------------------------
+//
+// Shared for the same reason the reset rules are: two screens show this clock
+// now. The GM advances it on the dashboard and the room reads it off the
+// television, and a minute that disagrees between the two is the one thing
+// nobody at the table can resolve by looking harder.
+
+/** `"7:51"` -> minutes past midnight, 24-hour, evening assumed. */
+function parseStart(label) {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(String(label ?? '').trim());
+  if (!match) return null;
+  const hour = Number(match[1]);
+  // These labels carry no AM or PM, and "7:51" is a dinner party rather than a
+  // breakfast one, so an hour before noon is read as the evening. A loop that
+  // runs past midnight keeps counting into the small hours rather than jumping
+  // back twelve.
+  return ((hour < 12 ? hour + 12 : hour) * 60) + Number(match[2]);
+}
+
+/**
+ * The face of the clock at a slot: `{ text: '7:57', suffix: 'PM' }`.
+ *
+ * Derived from the adventure's own `startLabel` rather than a constant, so a
+ * second adventure that does not start at ten to eight works without anybody
+ * remembering there was a number to change.
+ */
+export function clockFace(adventure, slot) {
+  const start = parseStart(adventure?.loop?.startLabel);
+  if (start === null) return null;
+
+  const total = start + (Math.max(1, Number(slot) || 1) - 1);
+  const hour24 = Math.floor(total / 60) % 24;
+  const minute = total % 60;
+  const hour12 = ((hour24 + 11) % 12) + 1;
+  return {
+    text: `${hour12}:${String(minute).padStart(2, '0')}`,
+    suffix: hour24 >= 12 ? 'PM' : 'AM',
+  };
+}
+
+/** The event that fires when the clock reaches this slot, if any. */
+export function eventAt(adventure, slot) {
+  return (adventure?.loop?.events ?? []).find((event) => event.slot === slot) ?? null;
+}

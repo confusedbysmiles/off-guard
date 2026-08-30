@@ -12,7 +12,8 @@
 import {
   assertWritable, campaignFor, InvalidError, isGm, NotFoundError, ScopeError,
 } from '../scope.js';
-import { fromRow, toRow } from '../../shared/loop.js';
+import { clockFace, eventAt, fromRow, toRow } from '../../shared/loop.js';
+import { adventureById } from '../../shared/adventures/index.js';
 
 const COLUMNS = `
   id, campaign_id AS campaignId, adventure_id AS adventureId, title,
@@ -108,4 +109,72 @@ export function deleteRun(db, scope, requestedCampaignId, adventureId) {
   if (!existing) throw new NotFoundError('No such loop run');
   db.prepare('DELETE FROM loop_run WHERE campaign_id = ? AND adventure_id = ?').run(campaignId, id);
   return { deleted: { ...existing, state: fromRow(existing) } };
+}
+
+/**
+ * The loop, as the room may see it.
+ *
+ * Everything on this screen is resolved here rather than sent as state for the
+ * page to interpret, because the shared screen's rule is that the payload
+ * contains only what players may see -- the same reason a secret roll is
+ * dropped from it rather than sent with a flag. The adventure holds discovery
+ * DCs, solutions and the faults nobody has found yet; none of that leaves this
+ * function, so a player who opens the shared screen on their own phone and
+ * reads it finds the clock and their own notes.
+ *
+ * What survives:
+ *
+ *   - the clock, which is the point of the screen
+ *   - which loop this is, because the party is counting
+ *   - the event on this minute, which has just happened in front of everyone
+ *   - the faults the party *knows*, by name, and whether each is fixed
+ *   - influence, which the party is told as it is earned
+ *
+ * A fault nobody has discovered is not listed, and no count of the undiscovered
+ * is given either: "two of five" tells the table how much is left to find.
+ *
+ * `null` when this campaign has never run a looping adventure, which is almost
+ * every campaign -- the shared screen then looks exactly as it did before.
+ */
+const pick = (object, keys) => (object
+  ? Object.fromEntries(keys.flatMap((key) => (key in object ? [[key, object[key]]] : [])))
+  : null);
+
+export function runForRoom(db, campaignId) {
+  const row = db.prepare(`
+    SELECT ${COLUMNS} FROM loop_run WHERE campaign_id = ?
+    ORDER BY updated_at DESC LIMIT 1
+  `).get(campaignId);
+  if (!row) return null;
+
+  const adventure = adventureById(row.adventureId);
+  if (!adventure) return null;      // a run whose adventure has been removed
+
+  const state = fromRow(row);
+  const known = (adventure.faults ?? [])
+    .filter((fault) => state.faults?.[fault.id]?.known)
+    .map((fault) => ({
+      id: fault.id,
+      n: fault.n ?? null,
+      name: fault.name,
+      fixed: Boolean(state.faults[fault.id]?.fixed),
+    }));
+
+  return {
+    adventureId: row.adventureId,
+    title: row.title || adventure.title,
+    loop: state.loop,
+    slot: state.slot,
+    slots: adventure.loop?.slots ?? null,
+    clock: clockFace(adventure, state.slot),
+    // Label and tone only. An event's `note` is written to the GM -- "every
+    // loop, no exceptions" is a fact about the adventure's structure, not
+    // something the room has just watched happen.
+    event: pick(eventAt(adventure, state.slot), ['label', 'tone']),
+    known,
+    influence: {
+      points: state.influence?.points ?? 0,
+      max: adventure.influence?.max ?? null,
+    },
+  };
 }

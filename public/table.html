@@ -32,9 +32,23 @@
      an HP change on a creature four rows down should not interrupt a reader. -->
 <p class="sr-only" id="announcement" role="status" aria-live="polite"></p>
 
-<main id="order" class="order">
-  <p class="table-empty" id="empty">No fight running.</p>
-</main>
+<!-- The clock. Empty and hidden unless a looping adventure is running, which
+     is almost every campaign: this page then looks exactly as it did before. -->
+<section class="clock" id="clock" aria-labelledby="clock-time" hidden>
+  <p class="clock__time" id="clock-time"></p>
+  <p class="clock__meta" id="clock-meta"></p>
+  <p class="clock__event" id="clock-event" hidden></p>
+</section>
+
+<div class="table-columns" id="columns">
+  <main id="order" class="order">
+    <p class="table-empty" id="empty">No fight running.</p>
+  </main>
+
+  <!-- What the party has worked out. Only what they already know reaches this
+       page at all -- the server resolves it, so there is nothing here to hide. -->
+  <aside class="loop-room" id="loop-room" aria-label="The loop" hidden></aside>
+</div>
 
 <!-- Open rolls. Secret rolls never reach this page: the server drops them from
      the payload rather than sending them with a flag, so there is nothing here

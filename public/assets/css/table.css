@@ -230,3 +230,129 @@
 
 [data-density='tv'] .table-roll__total { font-size: var(--step-4); }
 [data-density='tv'] .table-roll__label { font-size: var(--step-1); }
+
+/* --- The clock --------------------------------------------------------------
+ *
+ * The largest thing on the screen, deliberately. In a looping adventure the
+ * minute is the fact every other fact hangs off, and it is read from across a
+ * room by people who are also holding dice and arguing.
+ */
+
+.clock {
+  text-align: center;
+  padding: var(--sp-4) var(--sp-4) var(--sp-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.clock__time {
+  margin: 0;
+  font-size: clamp(4rem, 18vw, 11rem);
+  line-height: 0.95;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.clock__meta {
+  margin: var(--sp-2) 0 0;
+  font-size: clamp(1rem, 2.2vw, 1.6rem);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-dim);
+}
+
+.clock__event {
+  margin: var(--sp-3) auto 0;
+  display: inline-block;
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--radius-lg);
+  font-size: clamp(1rem, 2.4vw, 1.8rem);
+  font-weight: 600;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  color: var(--ink);
+}
+/* A class that sets `display` beats the user agent's `[hidden] { display: none }`,
+   so the minute after an event fires would otherwise still be showing it. */
+.clock__event[hidden] { display: none; }
+
+.clock__event[data-tone="amber"] { border-color: var(--warn); color: var(--warn-ink); }
+.clock__event[data-tone="ember"] { border-color: var(--bad); color: var(--bad-ink); }
+
+/* A minute moving is the one thing on this page that animates, because it is
+ * the one thing the room needs to notice without being told. */
+.clock.is-ticking .clock__time { animation: clock-tick 620ms ease-out; }
+
+@keyframes clock-tick {
+  0%   { transform: scale(1);    color: var(--primary-ink); }
+  35%  { transform: scale(1.06); color: var(--primary-ink); }
+  100% { transform: scale(1);    color: var(--ink); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clock.is-ticking .clock__time { animation: none; }
+}
+
+/* --- Initiative beside the loop --------------------------------------------- */
+
+.table-columns { display: grid; gap: var(--sp-4); }
+
+/* Side by side only when there is a loop to put beside it, and only when the
+ * screen is wide enough to be a television rather than a phone. */
+@media (min-width: 60rem) {
+  .table-columns.has-loop {
+    grid-template-columns: 1fr minmax(18rem, 22rem);
+    align-items: start;
+  }
+}
+
+.loop-room {
+  padding: var(--sp-4);
+  border-left: 1px solid var(--border);
+}
+
+.loop-room__title {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--step-1);
+  color: var(--ink-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.loop-room__list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
+
+.loop-room__fault {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: baseline;
+  gap: var(--sp-2) var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-size: var(--step-0);
+}
+
+.loop-room__n { font-variant-numeric: tabular-nums; color: var(--ink-faint); }
+.loop-room__state { font-size: var(--step--1); color: var(--ink-dim); }
+
+.loop-room__fault.is-fixed { background: var(--surface-sunk); }
+.loop-room__fault.is-fixed .loop-room__name { text-decoration: line-through; color: var(--ink-dim); }
+.loop-room__fault.is-fixed .loop-room__state { color: var(--good-ink); }
+
+.loop-room__empty { margin: 0; color: var(--ink-faint); }
+
+.loop-room__influence {
+  margin: var(--sp-4) 0 0;
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--border);
+  font-size: var(--step-1);
+  color: var(--ink-dim);
+}
+.loop-room__influence strong { color: var(--ink); font-variant-numeric: tabular-nums; }
+.loop-room__of { color: var(--ink-faint); }
+
+/* On a phone the loop reads under the order rather than beside it. */
+@media (max-width: 60rem) {
+  .loop-room { border-left: 0; border-top: 1px solid var(--border); }
+}

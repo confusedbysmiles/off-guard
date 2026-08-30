@@ -1,5 +1,6 @@
 /** The loop console. GM only, and campaign-scoped like everything else. */
 import { deleteRun, getRun, listRuns, saveRun } from '../../store/loop.js';
+import { publishTable } from '../../publish.js';
 
 export async function registerLoopRoutes(app) {
   const { db } = app;
@@ -15,13 +16,21 @@ export async function registerLoopRoutes(app) {
     run: getRun(db, request.scope, request.params.campaignId, request.params.adventureId),
   }));
 
-  app.put('/campaigns/:campaignId/loop/:adventureId', async (request) => ({
-    run: saveRun(
+  app.put('/campaigns/:campaignId/loop/:adventureId', async (request) => {
+    const run = saveRun(
       db, request.scope, request.params.campaignId, request.params.adventureId, request.body ?? {},
-    ),
-  }));
+    );
+    // The room is watching this clock. Advancing a minute on the dashboard has
+    // to move it on the television without anybody touching the television.
+    publishTable(app, request.scope, request.params.campaignId);
+    return { run };
+  });
 
-  app.delete('/campaigns/:campaignId/loop/:adventureId', async (request) => deleteRun(
-    db, request.scope, request.params.campaignId, request.params.adventureId,
-  ));
+  app.delete('/campaigns/:campaignId/loop/:adventureId', async (request) => {
+    const result = deleteRun(
+      db, request.scope, request.params.campaignId, request.params.adventureId,
+    );
+    publishTable(app, request.scope, request.params.campaignId);
+    return result;
+  });
 }

@@ -41,6 +41,7 @@ function setConnection(state) {
 function render(view) {
   $('#round').textContent = view.round ? `Round ${view.round}` : 'Not in combat';
   renderRolls(view.rolls ?? []);
+  renderLoop(view.loop ?? null);
 
   const order = $('#order');
   if (!view.combatants?.length) {
@@ -51,6 +52,82 @@ function render(view) {
 
   order.replaceChildren(...view.combatants.map((combatant) => turnRow(combatant, view.activeId)));
   announceTurn(view);
+}
+
+// --- the loop ----------------------------------------------------------------
+
+let lastSlot = null;
+
+/**
+ * The clock, and what the party knows.
+ *
+ * The clock is the largest thing on the page on purpose: in a looping adventure
+ * it is the fact everything else hangs off, and a table that has to hunt for
+ * the minute is a table that stops believing the minute.
+ *
+ * Everything here arrives resolved. The page is not given the adventure, so it
+ * cannot show a fault nobody has found, and there is nothing in its source for
+ * a curious player to read.
+ */
+function renderLoop(loop) {
+  const clock = $('#clock');
+  const panel = $('#loop-room');
+  $('#columns').classList.toggle('has-loop', Boolean(loop));
+
+  if (!loop) {
+    clock.hidden = true;
+    panel.hidden = true;
+    lastSlot = null;
+    return;
+  }
+
+  clock.hidden = false;
+  $('#clock-time').textContent = loop.clock
+    ? `${loop.clock.text}`
+    : `Minute ${loop.slot}`;
+  $('#clock-meta').textContent = [
+    loop.clock?.suffix,
+    `Loop ${loop.loop}`,
+    loop.slots ? `minute ${loop.slot} of ${loop.slots}` : null,
+  ].filter(Boolean).join(' · ');
+
+  const event = $('#clock-event');
+  event.hidden = !loop.event;
+  if (loop.event) {
+    event.textContent = loop.event.label;
+    event.dataset.tone = loop.event.tone ?? '';
+  }
+
+  // A minute that has just moved is worth a beat of attention, and nothing
+  // else on this page animates. Skipped on the first render so casting the
+  // screen mid-session does not flash.
+  if (lastSlot !== null && loop.slot !== lastSlot) {
+    clock.classList.remove('is-ticking');
+    // Reading offsetWidth restarts the animation; without it a second tick in
+    // the same paint does nothing.
+    void clock.offsetWidth;
+    clock.classList.add('is-ticking');
+  }
+  lastSlot = loop.slot;
+
+  panel.hidden = false;
+  panel.replaceChildren(
+    el('h2', { class: 'loop-room__title' }, loop.title),
+    loop.known.length
+      ? el('ul', { class: 'loop-room__list' }, ...loop.known.map((fault) => el('li', {
+        class: `loop-room__fault${fault.fixed ? ' is-fixed' : ''}`,
+      },
+      fault.n ? el('span', { class: 'loop-room__n' }, fault.n) : null,
+      el('span', { class: 'loop-room__name' }, fault.name),
+      el('span', { class: 'loop-room__state' }, fault.fixed ? 'fixed' : 'known'))))
+      : el('p', { class: 'loop-room__empty' }, 'Nothing worked out yet.'),
+    loop.influence.max
+      ? el('p', { class: 'loop-room__influence' },
+        el('span', {}, 'Influence '),
+        el('strong', {}, `${loop.influence.points}`),
+        el('span', { class: 'loop-room__of' }, ` / ${loop.influence.max}`))
+      : null,
+  );
 }
 
 /** The last few open rolls, newest first. */
