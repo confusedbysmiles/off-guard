@@ -278,3 +278,35 @@ describe('replacing a lost GM link', () => {
     expect(resolveScope(db, world.gmToken)).toBeNull();
   });
 });
+
+describe('a browser that lands on nothing', () => {
+  const asBrowser = (url) => app.inject({
+    method: 'GET', url, headers: { accept: 'text/html,application/xhtml+xml' },
+  });
+
+  it('gets the page, not raw JSON', async () => {
+    // Typing the hostname and leaving the link off is the commonest way to
+    // arrive here, and `{"error":"Not found"}` reads as a broken site.
+    const res = await asBrowser('/');
+    expect(res.statusCode).toBe(404);
+    expect(res.headers['content-type']).toMatch(/text\/html/);
+    expect(res.body).toContain('Ask your GM for a fresh one');
+  });
+
+  it('still says nothing about the URL it was given', async () => {
+    // The whole reason this handler exists: Fastify's default quotes the path,
+    // and the path is the credential.
+    const res = await asBrowser('/c/SOMEONESREALLOOKINGTOKEN');
+    expect(res.body).not.toContain('SOMEONESREALLOOKINGTOKEN');
+    const json = await app.inject({ method: 'GET', url: '/c/SOMEONESREALLOOKINGTOKEN' });
+    expect(json.body).not.toContain('SOMEONESREALLOOKINGTOKEN');
+  });
+
+  it('leaves every non-browser refusal exactly as it was', async () => {
+    for (const url of ['/api/c/nope', '/api/gm/nope/campaigns', '/nothing-here']) {
+      const res = await app.inject({ method: 'GET', url });
+      expect(res.statusCode).toBe(404);
+      expect(res.json()).toEqual({ error: 'Not found' });
+    }
+  });
+});

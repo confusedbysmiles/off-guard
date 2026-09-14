@@ -12,6 +12,7 @@
  * and refuses anything of the wrong kind, so a character token cannot reach a
  * GM route even if the route forgot to check.
  */
+import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -114,9 +115,23 @@ export async function buildApp({
    * is the credential. This says the same thing as every other refusal and says
    * nothing else, which is also what keeps a wrong link indistinguishable from
    * an unrouted one.
+   *
+   * A browser gets the same page a wrong token gets, because the commonest way
+   * to arrive here is typing the hostname and leaving the link off, and raw
+   * JSON reads as a broken site rather than as "you need your link". Anything
+   * not asking for HTML -- every API call, and the tests that pin this -- keeps
+   * the terse object. Neither form mentions the URL.
    */
+  let notFoundPage = null;
   app.setNotFoundHandler((request, reply) => {
-    reply.status(404).send({ error: 'Not found' });
+    reply.status(404);
+    if (String(request.headers.accept ?? '').includes('text/html')) {
+      if (notFoundPage === null) {
+        notFoundPage = readFileSync(resolve(PUBLIC_DIR, 'not-found.html'), 'utf8');
+      }
+      return reply.type('text/html').send(notFoundPage);
+    }
+    return reply.send({ error: 'Not found' });
   });
 
   // Static assets only. The HTML shells are served by named routes so a wrong
