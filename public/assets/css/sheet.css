@@ -356,3 +356,7 @@
 }
 
 .built-note { margin: 0 0 var(--sp-3); font-size: var(--step--1); }
+
+/* What the bag weighs, under the coins that are part of the answer. */
+.carried__bulk { margin: 0; font-variant-numeric: tabular-nums; }
+.carried__bulk.is-warn { color: var(--warn-ink); }

@@ -16,6 +16,7 @@ import { icon } from '../lib/icons.js';
 import { setUpTheme } from '../lib/theme.js';
 import { apiPath, token } from '../lib/mount.js';
 import { createNotices } from '../lib/notices.js';
+import { preservingFocus } from '../lib/focus.js';
 import { createBuildStore, STATUS } from './state.js';
 import { renderTimeline } from './timeline.js';
 import { renderSummary } from './summary.js';
@@ -52,9 +53,17 @@ function applyChoice(slot, id) {
     // Equipment keeps its runes and its name when the base item changes: a
     // player swapping a longsword for a greatsword has not thrown away the
     // striking rune they paid for.
-    if (slot.kind === 'armor') {
+    if (slot.kind === 'armor' || slot.kind === 'shield') {
       build.equipment ??= {};
-      build.equipment.armor = id ? { ...(build.equipment.armor ?? {}), id } : null;
+      build.equipment[slot.kind] = id ? { ...(build.equipment[slot.kind] ?? {}), id } : null;
+      return;
+    }
+    if (slot.kind === 'gear') {
+      build.equipment ??= {};
+      const gear = [...(build.equipment.gear ?? [])];
+      const current = gear[slot.index] ?? {};
+      gear[slot.index] = { ...current, id, quantity: current.quantity ?? 1 };
+      build.equipment.gear = gear;
       return;
     }
     if (slot.kind === 'weapon') {
@@ -136,9 +145,18 @@ store.subscribe((state) => {
   $('#outstanding').dataset.done = String(state.derived.outstanding === 0);
 
   setUpLevelControls(state);
-  renderTimeline($('#timeline'), { state, store, picker });
-  renderEquipment($('#equipment'), { state, store, picker });
-  renderSummary($('#summary'), { state });
+
+  /**
+   * Every save comes back with a fresh derivation and the panels are rebuilt
+   * from it, which is right -- and wrong for whoever is typing, because the
+   * field they are typing into is one of the children being replaced. A weapon
+   * called "Grandfather's bl" is what that looks like. See `lib/focus.js`.
+   */
+  preservingFocus(() => {
+    renderTimeline($('#timeline'), { state, store, picker });
+    renderEquipment($('#equipment'), { state, store, picker });
+    renderSummary($('#summary'), { state });
+  }, document);
 });
 
 $('#level').addEventListener('change', (event) => {

@@ -280,6 +280,7 @@ export function mount(root, store, { onImport = () => {} } = {}) {
     );
     return el('div', {},
       el('h3', { class: 'heading-inline' }, 'Shield'),
+      labelled('Which shield', text('shield.name', { placeholder: 'None' })),
       el('div', { class: 'grid grid--auto' },
         labelled('AC bonus', number('shield.bonus')),
         labelled('Hardness', number('shield.hardness')),
@@ -412,6 +413,52 @@ export function mount(root, store, { onImport = () => {} } = {}) {
     labelled('Traits', text(`strikes.${index}.traitsText`, { placeholder: 'agile, finesse' })),
   ], { name: '', mod: 0, damage: '', damageType: '', traitsText: '' });
 
+  /**
+   * Money and the bag.
+   *
+   * Every field here binds the same way the rest of the sheet does, which means
+   * a built character finds them read-only and a hand-typed or imported one
+   * finds them editable -- the builder owns what it derives and nothing else.
+   * See `lockIfDerived`.
+   *
+   * Bulk is the exception: nobody types it, it is worked out from what is on
+   * the list, and a character with no build has no list to work it out from.
+   * So it appears only when there is one.
+   */
+  function carriedSection() {
+    const bulkLine = el('p', { class: 'muted carried__bulk' });
+    onUpdate((state) => {
+      // Nothing carried is nothing to say: an empty bag weighing "—" is a
+      // line that reads like a fault.
+      const bulk = readPath(state.sheet, 'bulk');
+      bulkLine.hidden = !bulk?.tenths;
+      if (!bulk?.tenths) return;
+      bulkLine.textContent = bulk.overloaded
+        ? `${bulk.text} — over the maximum of ${bulk.maxAt}.`
+        : bulk.encumbered
+          ? `${bulk.text} — encumbered: clumsy 1 and 10 feet slower.`
+          : `${bulk.text} carried. Encumbered above ${bulk.encumberedAt}.`;
+      bulkLine.classList.toggle('is-warn', Boolean(bulk.encumbered));
+    });
+
+    const coins = el('div', { class: 'grid grid--auto' },
+      labelled('Platinum', number('coins.pp')),
+      labelled('Gold', number('coins.gp')),
+      labelled('Silver', number('coins.sp')),
+      labelled('Copper', number('coins.cp')));
+
+    return repeatingSection('Carried', 'gear', (index) => [
+      el('div', { class: 'row__head' },
+        text(`gear.${index}.name`, {
+          placeholder: 'Something', 'aria-label': `Item ${index + 1}`,
+        }),
+        removeButton('gear', index)),
+      labelled('How many', number(`gear.${index}.quantity`)),
+    ], { name: '', quantity: 1 }, { above: el('div', { class: 'stack-md' }, coins, bulkLine) });
+  }
+
+  const carried = carriedSection();
+
   const spellcasting = el('section', { class: 'card section--wide' },
     el('h2', { class: 'section__title' }, 'Spellcasting'),
     el('div', { class: 'grid grid--3' },
@@ -531,7 +578,7 @@ export function mount(root, store, { onImport = () => {} } = {}) {
     });
   }
 
-  function repeatingSection(title, listPath, rowFor, blank) {
+  function repeatingSection(title, listPath, rowFor, blank, { above = null } = {}) {
     const list = el('div', { class: 'rows' });
     onUpdate((state) => {
       const entries = readPath(state.sheet, listPath) ?? [];
@@ -543,6 +590,7 @@ export function mount(root, store, { onImport = () => {} } = {}) {
     });
     return el('section', { class: 'card' },
       el('h2', { class: 'section__title' }, title),
+      above,
       list,
       el('button', {
         class: 'btn stack-sm', type: 'button',
@@ -575,7 +623,7 @@ export function mount(root, store, { onImport = () => {} } = {}) {
   root.replaceChildren(
     guideSlot,
     identity, attributes, defence, proficiencies, skills,
-    movement, strikes, spellcasting, conditions, notes,
+    movement, strikes, carried, spellcasting, conditions, notes,
   );
 
   let updating = false;

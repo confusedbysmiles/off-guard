@@ -27,7 +27,9 @@
     <output class="build-bar__outstanding" id="outstanding" aria-live="polite"></output>
   </div>
 
-  <div class="build-bar__levels">
+  <!-- Two fixed rows rather than whatever flex-wrap decided: the bar is sticky,
+       so a layout that changes height as the name grows moves the whole page. -->
+  <div class="build-bar__meta">
     <div class="field field--inline">
       <label class="field__label" for="level">Level</label>
       <input class="input input--number" id="level" type="number" min="1" max="20" step="1">
@@ -36,6 +38,14 @@
       <label class="field__label" for="plan-to">Plan to</label>
       <input class="input input--number" id="plan-to" type="number" min="1" max="20" step="1">
     </div>
+    <!-- Equipment is not a level choice and so is not in the timeline, which
+         at level 12 puts it a long way down a long page. This is how you get
+         there. -->
+    <nav class="build-bar__jump" aria-label="Jump to a section">
+      <a class="jump" href="#timeline">Levels</a>
+      <a class="jump" href="#equipment">Equipment</a>
+      <a class="jump" href="#summary">Summary</a>
+    </nav>
   </div>
 
   <div class="build-bar__tools">
@@ -53,9 +63,10 @@
   <div class="build__timeline" id="timeline" tabindex="-1">
     <p class="build__loading" id="loading">Loading your character…</p>
   </div>
-  <!-- Not part of the timeline: equipment is not a level choice. -->
-  <section class="level build__equipment" id="equipment" aria-labelledby="equipment-heading"></section>
-  <aside class="build__summary" id="summary" aria-label="Current character"></aside>
+  <!-- Not part of the timeline: equipment is not a level choice. Two cards go
+       in here, and both are built by `build/equipment.js`. -->
+  <div class="build__equipment" id="equipment" tabindex="-1"></div>
+  <aside class="build__summary" id="summary" tabindex="-1" aria-label="Current character"></aside>
 </main>
 
 <dialog class="modal modal--picker" id="picker-dialog" aria-labelledby="picker-title"></dialog>

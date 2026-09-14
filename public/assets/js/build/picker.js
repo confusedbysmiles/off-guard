@@ -34,6 +34,21 @@ export function createPicker({ dialog, endpoint, onChoose }) {
   const results = el('ul', { class: 'picker__results' });
   const status = el('p', { class: 'muted', role: 'status', 'aria-live': 'polite' });
 
+  /**
+   * Past the level cap.
+   *
+   * Only where the cap is a convenience -- see `relaxable` on the equipment
+   * slots. A character may legitimately be carrying something far above their
+   * level, because somebody gave it to them; they may not take a level 12 feat
+   * at level 4, and no box here offers to let them.
+   */
+  const relax = el('input', {
+    type: 'checkbox', id: 'picker-relax',
+    onchange: () => run(),
+  });
+  const relaxField = el('label', { class: 'picker__relax', for: 'picker-relax' },
+    relax, el('span', {}, 'Show items above your level'));
+
   let slot = null;
   let chosen = null;
 
@@ -52,6 +67,7 @@ export function createPicker({ dialog, endpoint, onChoose }) {
       })),
     summary,
     search,
+    relaxField,
     status,
     results,
     el('menu', { class: 'picker__actions' }, clear)));
@@ -61,8 +77,10 @@ export function createPicker({ dialog, endpoint, onChoose }) {
     const params = new URLSearchParams();
     for (const [key, value] of Object.entries(slot.filter)) {
       if (value === null || value === undefined || value === '') continue;
+      if (key === 'maxLevel' && slot.relaxable && relax.checked) continue;
       params.set(key, String(value));
     }
+    summary.textContent = describeFilter(slot, relax.checked);
     if (search.value.trim()) params.set('q', search.value.trim());
     params.set('limit', '80');
     // Common first: see the note on the sort in `src/server/options.js`.
@@ -166,7 +184,8 @@ export function createPicker({ dialog, endpoint, onChoose }) {
       slot = nextSlot;
       chosen = currentValue;
       title.textContent = nextSlot.label;
-      summary.textContent = describeFilter(nextSlot);
+      relaxField.hidden = !nextSlot.relaxable;
+      relax.checked = false;
       search.value = '';
       results.replaceChildren();
       status.textContent = '';
@@ -179,13 +198,14 @@ export function createPicker({ dialog, endpoint, onChoose }) {
 }
 
 /** Said in words, so the list's narrowness is visible rather than mysterious. */
-function describeFilter(slot) {
+function describeFilter(slot, relaxed = false) {
   const filter = slot.filter ?? {};
   const parts = [];
   if (filter.trait) parts.push(titleCase(filter.trait));
   if (filter.category) parts.push(`${filter.category} ${filter.kind ?? ''}`.trim());
   else if (filter.kind) parts.push(filter.kind);
-  if (filter.maxLevel) parts.push(`level ${filter.maxLevel} and below`);
+  if (filter.maxLevel && !(relaxed && slot.relaxable)) parts.push(`level ${filter.maxLevel} and below`);
+  else if (slot.relaxable) parts.push('every level');
   if (filter.ancestry) parts.push('and versatile heritages');
   return parts.length ? `Showing ${parts.join(', ')}.` : '';
 }

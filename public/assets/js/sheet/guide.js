@@ -80,6 +80,24 @@ export function guideCard(sheet, { onImport }) {
   });
 
   sections.push({
+    id: 'guide-gear',
+    title: 'Your gear',
+    body: [
+      p('What you wear, wield and carry lives on the ', b('Build'),
+        ' page, under Equipment. Armour, a shield, your weapons and their runes, '
+        + 'everything in your bag, and your coins. What it all weighs — and '
+        + 'whether that is more than you can carry — is worked out for you.'),
+      p(b('It does not have to be in a book.'), ' If your GM handed you '
+        + 'something the catalogue has never heard of, choose ',
+      b('Describe your own'), ' and give it a damage die or an AC bonus. It '
+        + 'behaves like any other item from then on — the attack, the damage '
+        + 'and the proficiency are all worked out the same way.'),
+      p('Raising a shield is still yours to do here, on the Defence card, '
+        + 'because it only counts on the round you raise it.'),
+    ],
+  });
+
+  sections.push({
     id: 'guide-gm',
     title: 'What your GM sees',
     body: [

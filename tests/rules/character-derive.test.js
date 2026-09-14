@@ -286,3 +286,97 @@ describe('field ownership', () => {
     expect(isDerivedPath('name', {})).toBe(false);
   });
 });
+
+describe('what the character carries, on the sheet', () => {
+  const items = {
+    'equipment:half-plate': OPTIONS.equipment['equipment:half-plate'],
+    'equipment:steel-shield': OPTIONS.equipment['equipment:steel-shield'],
+    'equipment:longsword': OPTIONS.equipment['equipment:longsword'],
+    'equipment:rope': OPTIONS.equipment['equipment:rope'],
+  };
+
+  const carrying = (over = {}) => deriveCharacter(build({
+    level: 5,
+    coins: { gp: 43, sp: 12 },
+    equipment: {
+      armor: { id: 'equipment:half-plate' },
+      shield: { id: 'equipment:steel-shield' },
+      weapons: [{ id: 'equipment:longsword' }],
+      gear: [{ id: 'equipment:rope', quantity: 2 }, { name: "The duke's letter" }],
+    },
+    ...over,
+  }), { ...context, items });
+
+  it('puts the bag on the sheet as rows, not as a paragraph', () => {
+    const { sheet } = carrying();
+    expect(sheet.gear).toHaveLength(2);
+    expect(sheet.gear[0]).toMatchObject({ name: 'Rope', quantity: 2 });
+    expect(sheet.gear[1].name).toBe("The duke's letter");
+  });
+
+  it('carries the money as four denominations and none of them negative', () => {
+    expect(carrying().sheet.coins).toEqual({ pp: 0, gp: 43, sp: 12, cp: 0 });
+    expect(carrying({ coins: { gp: -5 } }).sheet.coins.gp).toBe(0);
+  });
+
+  it('weighs all of it, with Strength setting the thresholds', () => {
+    const { sheet } = carrying();
+    // Half plate worn is 2, shield 1, longsword 1, two ropes L each.
+    expect(sheet.bulk.text).toBe('4 Bulk, 2 L');
+    // Strength is +4 at level 5 on this build.
+    expect(sheet.bulk).toMatchObject({ encumberedAt: 9, maxAt: 14, encumbered: false });
+  });
+
+  it('fills in the shield fields the sheet already had', () => {
+    expect(carrying().sheet.shield).toMatchObject({
+      name: 'Steel Shield', bonus: 2, hardness: 5, hp: 20, breakThreshold: 10,
+    });
+  });
+
+  /**
+   * The one that matters. The sheet has read `shield.bonus` and `shield.raised`
+   * since long before there was a builder, and its Armour Class adds the bonus
+   * only while the box is ticked. Deriving `shield` as a whole would have
+   * locked that box on every built character and left nobody able to raise a
+   * shield at the table.
+   */
+  it('leaves raising the shield to the player', () => {
+    const carrying = { name: 'Durgan', equipment: { shield: { id: 'equipment:steel-shield' } } };
+    expect(isDerivedPath('shield.bonus', carrying)).toBe(true);
+    expect(isDerivedPath('shield.name', carrying)).toBe(true);
+    expect(isDerivedPath('shield.raised', carrying)).toBe(false);
+  });
+
+  /**
+   * The sheet had shield fields long before there was a builder. A build that
+   * says nothing about a shield must not reach over and empty them -- and must
+   * not lock them either, or somebody who typed one in would be left looking at
+   * their own numbers with no way to change them.
+   */
+  it('says nothing about a shield the build does not have', () => {
+    const without = build({ equipment: { weapons: [] } });
+    const { sheet } = deriveCharacter(without, context);
+    expect(sheet).not.toHaveProperty('shield');
+    expect(isDerivedPath('shield.bonus', without)).toBe(false);
+    expect(isDerivedPath('shield.name', without)).toBe(false);
+  });
+
+  it('takes the fields back when the shield comes off', () => {
+    const described = { name: 'Durgan', equipment: { shield: { custom: { name: 'A door' } } } };
+    expect(isDerivedPath('shield.bonus', described)).toBe(true);
+    expect(isDerivedPath('shield.bonus', { name: 'Durgan', equipment: { shield: null } })).toBe(false);
+  });
+
+  it('leaves the free-text item box alone, which is where imports still write', () => {
+    expect(isDerivedPath('items', { name: 'Durgan' })).toBe(false);
+    expect(isDerivedPath('gear', { name: 'Durgan' })).toBe(true);
+    expect(isDerivedPath('coins.gp', { name: 'Durgan' })).toBe(true);
+  });
+
+  it('says an item is missing rather than quietly weighing nothing', () => {
+    const { problems } = carrying({
+      equipment: { gear: [{ id: 'equipment:nonesuch', quantity: 1 }] },
+    });
+    expect(problems.some((p) => p.kind === 'missing-item' && p.section === 'equipment')).toBe(true);
+  });
+});

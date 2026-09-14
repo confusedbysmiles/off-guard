@@ -340,7 +340,7 @@ and the summary shows the exact value. Fixed ancestry boosts are composed in by
 the derivation rather than stored -- a dwarf's Constitution is not a choice, and
 a build that had to carry it is a build that could lose it.
 
-### Armour and weapons
+### Armour, weapons and the bag
 
 This is the part the Pathbuilder import cannot do, and the contrast is the
 clearest argument for building characters here. An export gives a finished total
@@ -360,12 +360,41 @@ Runes are the player's rather than the item's. A `+1 striking longsword` is a
 longsword with two numbers beside it, so the catalogue holds one longsword and
 the build holds the runes -- and the name is a third, separate thing. Calling it
 "Grandfather's blade" changes what the sheet says and nothing about the dice,
-the traits or the proficiency underneath. That is what "adding a custom item"
-costs here: naming it.
+the traits or the proficiency underneath.
 
 Weapon specialization comes from the class's own progression, and a striking
 rune adds *dice* rather than a bonus -- the mistake that halved every imported
 weapon above about level 4 until a real export caught it.
+
+**A shield is recorded, not added.** It is worth its bonus only on the round you
+Raise it, so choosing one fills in the fields the sheet has always had --
+`shield.bonus`, `hardness`, `hp`, `breakThreshold` -- and deliberately not
+`shield.raised`, which is a button the player presses at the table. Deriving the
+`shield` object whole would have locked that button on every built character.
+
+**Items that are in no book.** A GM hands out a homebrew axe; a book arrives
+before the compendium build catches up. So the item behind a row can be
+described instead of chosen -- a die, a damage type and a proficiency category
+are all the arithmetic ever needed, and `strikeFrom` cannot tell the difference.
+Everything typed is clamped to something the rules can mean before it reaches a
+number, because the build document is written by the player's own browser, and
+`d97` would otherwise come out the far side as a sheet full of `NaN`. A line
+with no item at all is legal too: "the duke's letter" is a real thing to be
+carrying and is in no index.
+
+**Bulk is counted in tenths.** Upstream writes a light item as `0.1`, and ten of
+those in floating point come to `0.9999999999999999` -- a character encumbered
+by rounding. So `src/rules/character/bulk.js` converts once on the way in,
+counts integers, and formats once on the way out. Worn armour counts one less
+than its printed Bulk, a thousand coins count as one, and the two thresholds
+follow Strength. Like every other problem the builder reports, it is advisory:
+carrying your friend's body out of the dungeon is a thing people do.
+
+Coins are four denominations rather than one gold field, because a party paid in
+silver has to write it down somewhere. They are on the sheet too, with the gear
+list and the Bulk, in a **Carried** card -- read-only on a built character, and
+editable on a hand-typed or imported one, from the same `lockIfDerived` rule
+every other field uses.
 
 ### Options
 
@@ -380,6 +409,14 @@ printed and checked only where they can be read -- "trained in Athletics" is
 checkable and "you have a patron" is not, and pretending otherwise would refuse
 legal choices. Common options sort first, because alphabetically an ancestry
 list opens on Anadi, Android, Athamaru and Automaton.
+
+Equipment is capped at the character's own level, which takes 5,855 items down
+to 2,283 for a level 5 character -- otherwise the list opens on a level 18
+solvent. That cap is a convenience rather than a rule, and the picker says so
+with a box that lifts it: somebody may legitimately be carrying something far
+above their level, because it was given to them. A feat slot offers no such box,
+because taking a level 12 feat at level 4 is not a thing you are allowed to
+want.
 
 Like the creature catalogue, this is a build product and is not checked in. A
 clone that has not run `npm run build:data` gets a builder that says so.

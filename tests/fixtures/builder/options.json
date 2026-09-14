@@ -946,6 +946,84 @@
    "checkPenalty": -1,
    "speedPenalty": 0,
    "strength": 0
+  },
+  "equipment:steel-shield": {
+   "id": "equipment:steel-shield",
+   "kind": "equipment",
+   "name": "Steel Shield",
+   "level": 0,
+   "rarity": "common",
+   "traits": [],
+   "source": {
+    "book": "Pathfinder Player Core",
+    "pack": "equipment",
+    "tier": "supplement",
+    "remaster": true,
+    "license": "ORC"
+   },
+   "itemType": "shield",
+   "bulk": 1,
+   "price": {
+    "gp": 2
+   },
+   "baseItem": "steel-shield",
+   "group": null,
+   "category": null,
+   "acBonus": 2,
+   "hardness": 5,
+   "hp": 20,
+   "speedPenalty": 0
+  },
+  "equipment:rope": {
+   "id": "equipment:rope",
+   "kind": "equipment",
+   "name": "Rope",
+   "level": 0,
+   "rarity": "common",
+   "traits": [],
+   "source": {
+    "book": "Pathfinder Player Core",
+    "pack": "equipment",
+    "tier": "supplement",
+    "remaster": true,
+    "license": "ORC"
+   },
+   "itemType": "equipment",
+   "bulk": 0.1,
+   "price": {
+    "sp": 5
+   },
+   "baseItem": null,
+   "group": null,
+   "category": null
+  },
+  "equipment:half-plate": {
+   "id": "equipment:half-plate",
+   "kind": "equipment",
+   "name": "Half Plate",
+   "level": 1,
+   "rarity": "common",
+   "traits": [],
+   "source": {
+    "book": "Pathfinder Player Core",
+    "pack": "equipment",
+    "tier": "supplement",
+    "remaster": true,
+    "license": "ORC"
+   },
+   "itemType": "armor",
+   "bulk": 3,
+   "price": {
+    "gp": 18
+   },
+   "baseItem": "half-plate",
+   "group": "plate",
+   "category": "heavy",
+   "acBonus": 5,
+   "dexCap": 1,
+   "checkPenalty": -3,
+   "speedPenalty": -10,
+   "strength": 3
   }
  }
 }

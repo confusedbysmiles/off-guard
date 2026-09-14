@@ -1,5 +1,5 @@
 /**
- * Armour and weapons, from the equipment a character actually carries.
+ * Armour, weapons, shields and the bag.
  *
  * This is the part the Pathbuilder import cannot do, and the reason is worth
  * stating: an export gives a finished total and leaves the sheet to work
@@ -14,10 +14,16 @@
  *
  * Runes are the player's, not the item's: a `+1 striking longsword` is a
  * longsword with two numbers beside it, so the catalogue holds one longsword
- * and the build holds the runes. That is what makes "add a custom item" a
- * matter of naming it rather than of creating a new compendium entry.
+ * and the build holds the runes.
+ *
+ * And the item behind a row need not come from the catalogue at all. See
+ * `customWeapon` and its neighbours: a die, a damage type and a proficiency
+ * category are everything the arithmetic here reads, so a homebrew axe is a
+ * record like any other -- sanitised on the way in, because the build document
+ * is written by the player's own browser.
  */
 import { PROFICIENCY_BONUS, proficiencyBonus, rankName } from '../proficiency.js';
+import { coinBulk, tenthsOf, wornTenths } from './bulk.js';
 
 /** A striking rune adds dice, not a bonus. Getting this wrong halves damage. */
 export const STRIKING_DICE = { 0: 1, 1: 2, 2: 3, 3: 4 };
@@ -155,3 +161,217 @@ export function strikeFrom(entry = {}, {
 }
 
 export { PROFICIENCY_BONUS };
+
+/**
+ * A shield, onto the fields the sheet already had for one.
+ *
+ * `shield.raised` is deliberately not among them. A shield is worth its bonus
+ * only on the round you Raise it, and raising one is something you do at the
+ * table -- so the builder says what the shield is and the player says whether
+ * it is up. The sheet's Armour Class has read both since long before there was
+ * a builder, which is why this fills in its shape rather than inventing one:
+ * two `shield` objects with different spellings would have locked the raise
+ * toggle and left nobody able to press it.
+ *
+ * The Broken Threshold is half a shield's Hit Points wherever one is not
+ * printed, which is every shield in the core rules.
+ */
+export function shieldFrom(entry = {}, record = null) {
+  if (!entry?.id && !entry?.custom && !entry?.name) return null;
+  const hp = Number(record?.hp ?? 0);
+  return {
+    name: entry.name || record?.name || String(entry.id ?? 'Shield'),
+    bonus: Number(record?.acBonus ?? 0),
+    hardness: Number(record?.hardness ?? 0),
+    hp,
+    breakThreshold: Number(record?.brokenThreshold ?? 0) || Math.floor(hp / 2),
+  };
+}
+
+/**
+ * Everything carried that is not a weapon, a shield or armour: rope, rations,
+ * potions, the sack of gems.
+ *
+ * A row is the catalogue item plus a count plus whatever the player calls it,
+ * the same three parts a weapon is made of, so "a custom item" is again a
+ * matter of naming one rather than of inventing a compendium entry. An entry
+ * with no catalogue item at all is legal and carries no Bulk -- somebody
+ * writing down "the duke's letter" should not have to find it in a book first.
+ */
+export function gearRows(entries = [], items = {}) {
+  return (entries ?? []).map((entry) => {
+    const record = recordFor(entry, items, customGear);
+    const quantity = Math.max(1, Math.trunc(Number(entry?.quantity ?? 1)) || 1);
+    return {
+      id: entry?.id ?? null,
+      name: entry?.name || record?.name || String(entry?.id ?? 'Something'),
+      baseName: record?.name ?? null,
+      quantity,
+      bulk: tenthsOf(record?.bulk ?? 0),
+      level: record?.level ?? null,
+      price: record?.price ?? null,
+      missing: Boolean(entry?.id && !record),
+    };
+  });
+}
+
+/**
+ * What all of it weighs.
+ *
+ * Worn armour, the weapons on the list, the shield, the gear and the purse.
+ * Everything a character owns is assumed to be on them: a builder has no idea
+ * what was left at the inn, and guessing would be worse than counting.
+ */
+export function carriedTenths({
+  armor = null, shield = null, weapons = [], gear = [], coins = {}, items = {},
+} = {}) {
+  let total = 0;
+
+  const armorRecord = recordFor(armor, items, customArmor);
+  if (armorRecord) total += wornTenths(tenthsOf(armorRecord.bulk));
+
+  const shieldRecord = recordFor(shield, items, customShield);
+  if (shieldRecord) total += tenthsOf(shieldRecord.bulk);
+
+  for (const entry of weapons ?? []) {
+    const record = recordFor(entry, items, customWeapon);
+    if (record) total += tenthsOf(record.bulk);
+  }
+
+  for (const row of gearRows(gear, items)) total += row.bulk * row.quantity;
+
+  return total + coinBulk(coins);
+}
+
+/**
+ * Items the catalogue does not have.
+ *
+ * A player whose GM handed them a weapon out of a homebrew document, or who is
+ * playing something the compendium build has not caught up with, needs the
+ * numbers to work -- not a name with nothing behind it. So a row can carry its
+ * own record instead of pointing at one, and everything downstream treats the
+ * two identically: `strikeFrom` cannot tell whether a longsword came from the
+ * catalogue or from somebody typing `d8`, `slashing`, `martial`.
+ *
+ * Which is exactly why these are sanitised here rather than trusted. The build
+ * document is written by the player's own browser, and a `die` of `d97` or a
+ * `dexCap` of `"none"` would otherwise reach the arithmetic and come out the
+ * far side as a sheet full of `NaN`. Every field is clamped to something the
+ * rules can actually mean, and anything unrecognised falls back rather than
+ * throwing: a half-typed custom item is the normal state of one being typed.
+ */
+const DICE = ['d4', 'd6', 'd8', 'd10', 'd12'];
+const DAMAGE_TYPES = ['bludgeoning', 'piercing', 'slashing'];
+const WEAPON_CATEGORIES = ['unarmed', 'simple', 'martial', 'advanced'];
+const ARMOR_CATEGORIES = ['unarmored', 'light', 'medium', 'heavy'];
+
+const oneOf = (value, allowed, fallback) => (allowed.includes(String(value)) ? String(value) : fallback);
+const clamp = (value, low, high, fallback = 0) => {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.min(high, Math.max(low, number));
+};
+const optional = (value, low, high) => (value === null || value === undefined || value === ''
+  ? null
+  : clamp(value, low, high, null));
+
+/** Free text -- "finesse, agile" -- as the trait slugs the rules check for. */
+export const customTraits = (text) => String(text ?? '')
+  .split(',')
+  .map((trait) => trait.trim().toLowerCase().replace(/\s+/g, '-'))
+  .filter(Boolean);
+
+/** A name, or nothing: an item with neither a name nor an id is not an item. */
+const named = (custom, fallback) => String(custom?.name ?? '').trim() || fallback;
+
+export function customWeapon(custom) {
+  if (!custom) return null;
+  const range = optional(custom.range, 0, 1000);
+  return {
+    name: named(custom, 'Custom weapon'),
+    itemType: 'weapon',
+    category: oneOf(custom.category, WEAPON_CATEGORIES, 'simple'),
+    group: null,
+    level: 0,
+    bulk: clamp(custom.bulk, 0, 100, 0),
+    price: null,
+    traits: customTraits(custom.traits),
+    damage: {
+      dice: 1,
+      die: oneOf(custom.die, DICE, 'd6'),
+      type: oneOf(custom.damageType, DAMAGE_TYPES, 'bludgeoning'),
+    },
+    range,
+    reload: null,
+    hands: null,
+    custom: true,
+  };
+}
+
+export function customArmor(custom) {
+  if (!custom) return null;
+  return {
+    name: named(custom, 'Custom armour'),
+    itemType: 'armor',
+    category: oneOf(custom.category, ARMOR_CATEGORIES, 'light'),
+    group: null,
+    level: 0,
+    bulk: clamp(custom.bulk, 0, 100, 0),
+    price: null,
+    traits: customTraits(custom.traits),
+    acBonus: clamp(custom.acBonus, 0, 10, 0),
+    // `null` and `0` are different: no cap at all, versus a cap of zero.
+    dexCap: optional(custom.dexCap, 0, 10),
+    checkPenalty: clamp(custom.checkPenalty, -10, 0, 0),
+    speedPenalty: clamp(custom.speedPenalty, -30, 0, 0),
+    strength: optional(custom.strength, -5, 10),
+    custom: true,
+  };
+}
+
+export function customShield(custom) {
+  if (!custom) return null;
+  return {
+    name: named(custom, 'Custom shield'),
+    itemType: 'shield',
+    category: null,
+    group: null,
+    level: 0,
+    bulk: clamp(custom.bulk, 0, 100, 0),
+    price: null,
+    traits: [],
+    acBonus: clamp(custom.acBonus, 0, 6, 0),
+    hardness: clamp(custom.hardness, 0, 40, 0),
+    hp: clamp(custom.hp, 0, 200, 0),
+    speedPenalty: clamp(custom.speedPenalty, -30, 0, 0),
+    custom: true,
+  };
+}
+
+export function customGear(custom) {
+  if (!custom) return null;
+  return {
+    name: named(custom, 'Something'),
+    itemType: 'equipment',
+    category: null,
+    group: null,
+    level: 0,
+    bulk: clamp(custom.bulk, 0, 100, 0),
+    price: null,
+    traits: [],
+    custom: true,
+  };
+}
+
+/**
+ * The record behind a row, from wherever it comes.
+ *
+ * A catalogue id wins where it resolves; otherwise the row's own description
+ * stands in. An id that no longer resolves returns nothing, which is how a feat
+ * or an item removed by an upstream bump shows as a gap rather than silently
+ * becoming a different thing.
+ */
+export function recordFor(entry, items = {}, describe = customGear) {
+  if (entry?.id) return items[entry.id] ?? null;
+  return entry?.custom ? describe(entry.custom) : null;
+}

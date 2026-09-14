@@ -30,6 +30,20 @@ const SKILLS = [
   'society', 'stealth', 'survival', 'thievery',
 ];
 
+/**
+ * Who the character is, as opposed to what level 1 gave them.
+ *
+ * Ancestry, heritage, background and class are not level choices -- nobody
+ * "takes elf at 1st" -- and neither are the boosts and the key attribute those
+ * four hand out. Putting them in a card of their own is what makes the page
+ * read top to bottom the way a character is actually made: who they are, then
+ * what each level adds. It also stops the first card being a wall of every
+ * decision in the game with "Level 1" written over it.
+ */
+const IDENTITY_KINDS = new Set(['ancestry', 'heritage', 'background', 'class', 'keyAttribute']);
+const isIdentity = (slot) => IDENTITY_KINDS.has(slot.kind)
+  || (slot.kind === 'attributeBoosts' && (slot.section === 'ancestry' || slot.section === 'background'));
+
 export function renderTimeline(host, { state, store, picker }) {
   const { derived } = state;
   if (!derived) {
@@ -38,27 +52,43 @@ export function renderTimeline(host, { state, store, picker }) {
   }
 
   const levels = Object.keys(derived.byLevel).map(Number).sort((a, b) => a - b);
+  const context = { store, picker, derived };
+  const cards = [];
 
-  host.replaceChildren(...levels.map((level) => {
+  for (const level of levels) {
     const slots = derived.byLevel[level] ?? [];
-    const planned = level > derived.level;
-    const open = slots.filter((s) => s.empty).length;
+    const identity = level === 1 ? slots.filter(isIdentity) : [];
+    const rest = level === 1 ? slots.filter((slot) => !isIdentity(slot)) : slots;
 
-    return el('section', {
-      class: `level${planned ? ' level--planned' : ''}`,
-      'aria-labelledby': `level-${level}-heading`,
-    },
-    el('header', { class: 'level__head' },
-      el('h3', { class: 'level__title', id: `level-${level}-heading` },
-        `Level ${level}`,
-        planned ? el('span', { class: 'pill' }, 'Planned') : null),
-      open
-        ? el('span', { class: 'level__open' }, `${open} to choose`)
-        : el('span', { class: 'level__open level__open--done' },
-          el('span', { class: 'level__tick', html: icon('check') }), 'Complete')),
-    el('div', { class: 'level__slots' },
-      ...slots.map((slot) => renderSlot(slot, { store, picker, derived }))));
-  }));
+    if (identity.length) {
+      cards.push(levelCard('character', 'Character', identity, context, false));
+    }
+    if (rest.length) {
+      cards.push(levelCard(`level-${level}`, `Level ${level}`, rest, context, level > derived.level));
+    }
+  }
+
+  host.replaceChildren(...cards);
+}
+
+/** One card: a heading, how much of it is unanswered, and its rows. */
+function levelCard(id, title, slots, context, planned) {
+  const open = slots.filter((slot) => slot.empty).length;
+
+  return el('section', {
+    class: `level${planned ? ' level--planned' : ''}`,
+    'aria-labelledby': `${id}-heading`,
+  },
+  el('header', { class: 'level__head' },
+    el('h3', { class: 'level__title', id: `${id}-heading` },
+      title,
+      planned ? el('span', { class: 'pill' }, 'Planned') : null),
+    open
+      ? el('span', { class: 'level__open' }, `${open} to choose`)
+      : el('span', { class: 'level__open level__open--done' },
+        el('span', { class: 'level__tick', html: icon('check') }), 'Complete')),
+  el('div', { class: 'level__slots' },
+    ...slots.map((slot) => renderSlot(slot, context))));
 }
 
 function renderSlot(slot, context) {

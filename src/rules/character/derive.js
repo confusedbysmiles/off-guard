@@ -31,7 +31,11 @@
  *   accepts one.
  */
 import { attributeModifiers, boostProblems } from './attributes.js';
-import { armorClassFrom, strikeFrom } from './equipment.js';
+import { encumbrance } from './bulk.js';
+import {
+  armorClassFrom, carriedTenths, customArmor, customShield, customWeapon,
+  gearRows, recordFor, shieldFrom, strikeFrom,
+} from './equipment.js';
 
 export const SKILLS = [
   'acrobatics', 'arcana', 'athletics', 'crafting', 'deception', 'diplomacy',
@@ -269,7 +273,7 @@ export function deriveCharacter(build = {}, {
 
   const worn = build.equipment?.armor ?? null;
   const armorClass = armorClassFrom({
-    armor: worn?.id ? items[worn.id] ?? null : null,
+    armor: recordFor(worn, items, customArmor),
     worn,
     proficiencies,
     dexMod: mods.dex,
@@ -283,7 +287,7 @@ export function deriveCharacter(build = {}, {
    * needs attention.
    */
   const strikes = (build.equipment?.weapons ?? []).map((entry) => strikeFrom(entry, {
-    weapon: entry?.id ? items[entry.id] ?? null : null,
+    weapon: recordFor(entry, items, customWeapon),
     proficiencies,
     mods,
     level,
@@ -303,6 +307,45 @@ export function deriveCharacter(build = {}, {
         message: `${entry.name || entry.id} is not in the catalogue, so its numbers are not worked out.`,
       });
     }
+  }
+
+  /**
+   * What is carried, and what it weighs.
+   *
+   * A shield is recorded rather than folded into AC -- see `shieldFrom` -- and
+   * the gear list is the player's own, so neither changes a number that was
+   * right before. Bulk is the one thing they do produce, and it is advisory:
+   * `encumbrance` reports the two thresholds and whether they are past, and
+   * nothing anywhere refuses to save because of it.
+   */
+  const shieldEntry = build.equipment?.shield ?? null;
+  const shield = shieldEntry
+    ? shieldFrom(shieldEntry, recordFor(shieldEntry, items, customShield))
+    : null;
+  const gear = gearRows(build.equipment?.gear ?? [], items);
+  const coins = Object.fromEntries(['pp', 'gp', 'sp', 'cp']
+    .map((key) => [key, Math.max(0, Math.trunc(Number(build.coins?.[key] ?? 0)) || 0)]));
+  const bulk = encumbrance(carriedTenths({
+    armor: worn,
+    shield: shieldEntry,
+    weapons: build.equipment?.weapons ?? [],
+    gear: build.equipment?.gear ?? [],
+    coins,
+    items,
+  }), mods.str);
+
+  for (const row of gear) {
+    if (!row.missing) continue;
+    problems.push({
+      kind: 'missing-item', section: 'equipment', id: row.id,
+      message: `${row.name} is not in the catalogue, so its Bulk is not counted.`,
+    });
+  }
+  if (shieldEntry?.id && !items[shieldEntry.id]) {
+    problems.push({
+      kind: 'missing-item', section: 'equipment', id: shieldEntry.id,
+      message: 'The shield on this character is not in the catalogue, so its numbers are not shown.',
+    });
   }
 
   const sheet = {
@@ -339,6 +382,9 @@ export function deriveCharacter(build = {}, {
       itemBonus: armorClass.itemBonus,
     },
     strikes,
+    gear,
+    coins,
+    bulk,
     hp: {
       max: hitPoints({
         ancestry, klass, conMod: mods.con, level,
@@ -353,6 +399,11 @@ export function deriveCharacter(build = {}, {
   // named, and overwriting the sheet's name with an empty string is how the
   // roster loses track of whose row is whose.
   if (build.name) sheet.name = String(build.name);
+
+  // A shield only when the build has one, for the same reason and one more:
+  // the sheet has had shield fields since long before the builder, and a build
+  // that says nothing about a shield must not reach over and empty them.
+  if (shield) sheet.shield = shield;
 
   return {
     sheet,
@@ -380,8 +431,23 @@ export function isDerivedPath(path, build = null) {
    * them at all.
    */
   if (target === 'name') return Boolean(build?.name);
+
+  /**
+   * Raising a shield is an action taken at the table, so that box is the
+   * player's on every character, built or not.
+   *
+   * The rest of the shield's fields are the build's only while it names a
+   * shield. Somebody who typed one onto their sheet before there was a builder
+   * keeps it, and somebody who takes theirs off gets their fields back rather
+   * than a row of zeros they are not allowed to correct.
+   */
+  if (target === 'shield.raised') return false;
+  if (target.startsWith('shield.')) return hasShield(build);
+
   return DERIVED_PATHS.some((owned) => target === owned || target.startsWith(`${owned}.`));
 }
+
+const hasShield = (build) => Boolean(build?.equipment?.shield?.id || build?.equipment?.shield?.custom);
 
 /** The paths `deriveCharacter` owns. Anything else on the sheet is the player's. */
 export const DERIVED_PATHS = [
@@ -396,4 +462,12 @@ export const DERIVED_PATHS = [
   'ac.rank', 'ac.dexCap', 'ac.itemBonus',
   ...SKILLS.map((s) => `skills.${s}.rank`),
   'lores', 'languages', 'speed', 'hp.max', 'focus.pool', 'strikes',
+  // What the character carries. Two things are deliberately absent. `items` is
+  // the free-text box the sheet has always had: it predates the builder, an
+  // imported character still uses it, and overwriting somebody's notes with a
+  // list they did not make there would be the worst kind of helpful. And
+  // `shield.raised` is the player's, pressed at the table -- so the shield's
+  // leaves are named one at a time rather than owning the object they are in.
+  'shield.name', 'shield.bonus', 'shield.hardness', 'shield.hp', 'shield.breakThreshold',
+  'gear', 'coins', 'bulk',
 ];

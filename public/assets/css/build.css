@@ -1,29 +1,54 @@
 /**
  * The character builder.
  *
- * Two columns where there is room: the timeline you work down, and a summary
- * that stays put so the consequence of a choice is visible without scrolling
- * back. One column when there is not, with the summary first -- on a phone the
- * useful thing is what the character currently is, not a twenty-level plan.
+ * Two columns where there is room: the timeline you work down with the
+ * equipment panels under it, and a summary beside them that stays put, so the
+ * consequence of a choice is visible without scrolling back. One column when
+ * there is not, in the order the page is read rather than reshuffled -- a
+ * summary hoisted above the timeline on a phone is a screenful of answers in
+ * front of the questions.
  *
  * Deliberately roomier than the sheet. The sheet is thumbed one-handed at a
  * table and every tap target is sized for that; this page is read.
  */
 
+/**
+ * Two rows on a phone, one on a laptop, and never anything in between: the bar
+ * is sticky, and a `flex-wrap` that reflowed as the name got longer moved the
+ * whole page down while somebody was typing into it.
+ */
 .build-bar {
   position: sticky;
   top: 0;
   z-index: 5;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   align-items: center;
-  gap: var(--sp-4);
+  gap: var(--sp-2) var(--sp-4);
   padding: var(--sp-3) var(--sp-4);
   background: var(--surface);
   border-bottom: 1px solid var(--border);
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "identity tools"
+    "meta     meta";
 }
 
-.build-bar__identity { flex: 1 1 14rem; min-width: 0; }
+@media (min-width: 60rem) {
+  .build-bar {
+    grid-template-columns: minmax(0, 18rem) minmax(0, 1fr) auto;
+    grid-template-areas: "identity meta tools";
+  }
+}
+
+.build-bar__identity { grid-area: identity; min-width: 0; }
+.build-bar__meta {
+  grid-area: meta;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.build-bar__tools { grid-area: tools; }
 
 .build-bar__name {
   width: 100%;
@@ -44,8 +69,24 @@
 }
 .build-bar__outstanding[data-done="true"] { color: var(--good-ink); }
 
-.build-bar__levels { display: flex; gap: var(--sp-3); }
-.build-bar__tools { display: flex; align-items: center; gap: var(--sp-2); margin-inline-start: auto; }
+.build-bar__tools { display: flex; align-items: center; gap: var(--sp-2); }
+
+/* Jumping to a section, because the page is three of them and two are below a
+   timeline that is twenty cards long by level 20. */
+.build-bar__jump { display: flex; flex-wrap: wrap; gap: var(--sp-1); margin-inline-start: auto; }
+
+.jump {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0 var(--sp-2);
+  font-size: var(--step--1);
+  color: var(--ink-dim);
+  text-decoration: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.jump:hover { color: var(--ink); border-color: var(--border-strong); background: var(--surface-2); }
 
 .field--inline { display: flex; align-items: center; gap: var(--sp-2); }
 .field--inline .field__label { margin: 0; white-space: nowrap; }
@@ -53,18 +94,46 @@
 
 /* --- layout ------------------------------------------------------------- */
 
+/**
+ * One column when there is not room, and two when there is: the timeline you
+ * work down with the equipment under it, and a summary beside them that stays
+ * put, so the consequence of a choice is visible without scrolling back.
+ *
+ * Named areas rather than auto-placement, which is what this used to use and
+ * got wrong. Equipment asks for column 1; auto-placement honours that by
+ * starting a new row, and the summary -- placed after it -- landed in row 2.
+ * Sticky did what it was told from there, which was to hold a panel below two
+ * thousand pixels of timeline. The right column was empty for the whole of the
+ * page anyone actually reads.
+ */
 .build {
   display: grid;
   gap: var(--sp-5);
   padding: var(--sp-5) var(--sp-4);
   max-width: 78rem;
   margin-inline: auto;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "timeline"
+    "equipment"
+    "summary";
 }
 
+.build__timeline { grid-area: timeline; }
+.build__equipment { grid-area: equipment; }
+.build__summary { grid-area: summary; }
+
 @media (min-width: 60rem) {
-  .build { grid-template-columns: minmax(0, 1fr) 20rem; align-items: start; }
-  .build__summary { position: sticky; top: 5.5rem; }
+  .build {
+    grid-template-columns: minmax(0, 1fr) 20rem;
+    grid-template-areas:
+      "timeline  summary"
+      "equipment summary";
+    align-items: start;
+  }
+  /* Sticky within its area, which now spans both rows -- so it follows the
+     timeline and the equipment panel rather than waiting underneath them. */
+  .build__summary { position: sticky; top: 6.5rem; max-height: calc(100vh - 8rem); overflow-y: auto; }
 }
 
 .build__loading { color: var(--ink-faint); }
@@ -289,6 +358,16 @@
 .picker__head h2 { margin: 0; font-size: var(--step-2); }
 .picker__summary { margin: 0; font-size: var(--step--1); }
 
+/* Only on the pickers where the level cap is a convenience: see `relaxable`. */
+.picker__relax {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--step--1);
+  color: var(--ink-dim);
+}
+.picker__relax input { width: 1.1rem; height: 1.1rem; accent-color: var(--primary); }
+
 .picker__results {
   list-style: none;
   margin: 0;
@@ -333,9 +412,27 @@
 
 /* --- equipment ---------------------------------------------------------- */
 
-/* Its own panel below the timeline: equipment is not a level choice. */
-.build__equipment { grid-column: 1; }
+/* Its own panels below the timeline: equipment is not a level choice. */
+.build__equipment { display: flex; flex-direction: column; gap: var(--sp-4); }
+.build__equipment:focus { outline: none; }
 
+/* A shorter label column than the timeline's. These rows carry an item, its
+   runes and a way to remove it, and 11rem of "Weapon 1" was pushing the third
+   of those onto a line of its own. */
+.build__equipment .slot-row { grid-template-columns: 7rem minmax(0, 1fr); }
+
+@media (max-width: 40rem) {
+  .build__equipment .slot-row { grid-template-columns: 1fr; }
+}
+
+/**
+ * A line of an equipment row: the item, or the things done to it.
+ *
+ * Every control states the width it needs to stay readable and wraps rather
+ * than shrinking below it. What this replaced let the one control whose text
+ * nobody can guess -- the item's name -- give up its space to two dropdowns
+ * that say the same thing at any size, and a longsword read "Longs…".
+ */
 .equip-row {
   display: flex;
   flex-wrap: wrap;
@@ -343,6 +440,36 @@
   gap: var(--sp-2);
 }
 .equip-row + .equip-row { margin-block-start: var(--sp-2); }
-.equip-row .slot-choice { flex: 1 1 12rem; width: auto; }
-.equip-row .input { flex: 1 1 12rem; }
-.equip-row .input--compact { flex: 0 0 auto; min-height: var(--tap); }
+.equip-row .slot-choice { flex: 1 1 10rem; width: auto; min-width: 0; }
+.equip-row .slot-choice__value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.equip-row > .input { flex: 1 1 10rem; min-width: 0; }
+.equip-row > .input--number { flex: 0 0 4.5rem; }
+.equip-row .input--compact { flex: 0 1 auto; min-width: 5.5rem; max-width: 10rem; min-height: var(--tap); }
+.equip-row .btn { flex: none; }
+
+/* --- an item that is in no book ----------------------------------------- */
+
+.custom {
+  margin-block-start: var(--sp-2);
+  padding: var(--sp-3);
+  background: var(--surface-sunk);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.custom__fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  gap: var(--sp-2);
+}
+
+.custom__drop { margin-block-start: var(--sp-2); font-size: var(--step--1); }
+
+.micro { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.micro__label { font-size: var(--step--2); color: var(--ink-faint); }
+.micro .input { width: 100%; min-height: var(--tap); }
+.micro .input--number { width: 100%; }
+
+.bulk { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--sp-2); margin: 0; }
+.bulk strong { font-size: var(--step-1); font-variant-numeric: tabular-nums; }
+.bulk--over strong { color: var(--warn-ink); }

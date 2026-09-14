@@ -287,6 +287,10 @@ function normalizeEquipment(doc, ctx) {
       acBonus: Number(s.acBonus ?? 0),
       hardness: Number(s.hardness ?? 0),
       hp: Number(s.hp?.max ?? 0),
+      // Printed per shield, and half the Hit Points for every shield that
+      // prints no number of its own.
+      brokenThreshold: Number(s.hp?.brokenThreshold ?? 0)
+        || Math.floor(Number(s.hp?.max ?? 0) / 2),
       speedPenalty: Number(s.speedPenalty ?? 0),
     };
   }

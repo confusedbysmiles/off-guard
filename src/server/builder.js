@@ -31,6 +31,8 @@ export const blankBuild = () => ({
   attributes: { ancestry: [], background: [], class: null, 1: [], 5: [], 10: [], 15: [], 20: [] },
   skills: { trained: [], increases: {}, lores: [] },
   feats: {},
+  equipment: { armor: null, shield: null, weapons: [], gear: [] },
+  coins: { pp: 0, gp: 0, sp: 0, cp: 0 },
 });
 
 /**
@@ -52,6 +54,7 @@ export function resolveBuild(options, build = {}) {
     build.equipment?.armor?.id,
     build.equipment?.shield?.id,
     ...(build.equipment?.weapons ?? []).map((w) => w?.id),
+    ...(build.equipment?.gear ?? []).map((g) => g?.id),
   ].filter(Boolean);
   for (const id of new Set(wanted)) {
     const record = options.get(id);
@@ -121,6 +124,8 @@ export function builderState(options, build = {}) {
       itemType: record.itemType,
       category: record.category,
       level: record.level,
+      bulk: record.bulk ?? 0,
+      price: record.price ?? null,
     }])),
     slots,
     byLevel,

@@ -10,7 +10,8 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import {
-  armorClassFrom, attackAttribute, damageAttribute, strikeFrom,
+  armorClassFrom, attackAttribute, carriedTenths, customArmor, customWeapon,
+  damageAttribute, gearRows, recordFor, shieldFrom, strikeFrom,
   weaponSpecializationDamage,
 } from '../../src/rules/character/equipment.js';
 import { deriveCharacter } from '../../src/rules/character/derive.js';
@@ -235,5 +236,132 @@ describe('equipment through the whole derivation', () => {
     // And falls back to unarmoured rather than to nothing at all.
     expect(sheet.ac.rank).toBe('trained');
     expect(sheet.ac.itemBonus).toBe(0);
+  });
+});
+
+describe('items that are in no book', () => {
+  it('gives a described weapon the same strike a catalogue one would get', () => {
+    const described = customWeapon({
+      name: 'The axe from the barrow', category: 'martial',
+      die: 'd8', damageType: 'slashing', bulk: 1,
+    });
+    const strike = strikeFrom({ custom: true, striking: 1 }, {
+      weapon: described, proficiencies: FIGHTER_PROF, mods: { str: 4 }, level: 5,
+    });
+    // Expert martial at 5 is +4 rank and +5 level, plus +4 Strength: +13.
+    expect(strike.mod).toBe(13);
+    expect(strike.damage).toBe('2d8+4');
+    expect(strike.baseName).toBe('The axe from the barrow');
+  });
+
+  it('reads finesse off a described weapon, because it is a trait like any other', () => {
+    const described = customWeapon({ name: 'Duelling pin', traits: 'Finesse, Agile' });
+    expect(described.traits).toEqual(['finesse', 'agile']);
+    expect(attackAttribute(described, { str: 1, dex: 4 })).toMatchObject({ key: 'dex', mod: 4 });
+  });
+
+  /**
+   * The build document is written by the player's own browser, which is trusted
+   * to be theirs and not to be well-behaved. Everything below would otherwise
+   * reach the arithmetic and come out as a sheet full of NaN.
+   */
+  it('refuses a die, a category or a damage type the rules have no meaning for', () => {
+    const nonsense = customWeapon({
+      die: 'd97', category: 'legendary', damageType: 'emotional', range: 'far',
+    });
+    expect(nonsense.damage.die).toBe('d6');
+    expect(nonsense.category).toBe('simple');
+    expect(nonsense.damage.type).toBe('bludgeoning');
+    expect(nonsense.range).toBe(null);
+  });
+
+  it('clamps described armour to numbers armour can have', () => {
+    const armor = customArmor({ acBonus: 99, dexCap: '', checkPenalty: 5, bulk: -3 });
+    expect(armor.acBonus).toBe(10);
+    // An empty cap is no cap, which is not a cap of zero.
+    expect(armor.dexCap).toBe(null);
+    expect(armor.checkPenalty).toBe(0);
+    expect(armor.bulk).toBe(0);
+    expect(customArmor({ dexCap: 0 }).dexCap).toBe(0);
+  });
+
+  it('is only a record when somebody asked for one', () => {
+    expect(recordFor({ id: null }, {})).toBe(null);
+    expect(recordFor({ id: 'equipment:longsword' }, { 'equipment:longsword': longsword }))
+      .toBe(longsword);
+    // A catalogue id wins: the description is kept, and ignored until it does
+    // not point at anything any more.
+    const both = { id: 'equipment:longsword', custom: { name: 'Mine' } };
+    expect(recordFor(both, { 'equipment:longsword': longsword }, customWeapon)).toBe(longsword);
+    // An id that no longer resolves is a gap, not a silent fallback.
+    expect(recordFor(both, {}, customWeapon)).toBe(null);
+  });
+});
+
+describe('the bag', () => {
+  const items = {
+    'equipment:rope': item('equipment:rope'),
+    'equipment:half-plate': item('equipment:half-plate'),
+    'equipment:steel-shield': item('equipment:steel-shield'),
+    'equipment:longsword': longsword,
+  };
+
+  it('multiplies a line out without multiplying the Bulk into it', () => {
+    const [rope] = gearRows([{ id: 'equipment:rope', quantity: 3 }], items);
+    expect(rope).toMatchObject({ name: 'Rope', quantity: 3, bulk: 1 });
+  });
+
+  it('takes a line with no catalogue item at all', () => {
+    const [letter] = gearRows([{ name: "The duke's letter" }], {});
+    expect(letter).toMatchObject({ name: "The duke's letter", quantity: 1, bulk: 0, missing: false });
+  });
+
+  it('marks an item whose entry has gone rather than dropping the line', () => {
+    const [gone] = gearRows([{ id: 'equipment:nonesuch', quantity: 2 }], items);
+    expect(gone.missing).toBe(true);
+    expect(gone.quantity).toBe(2);
+  });
+
+  it('adds up everything carried, with the worn armour counting one less', () => {
+    const total = carriedTenths({
+      armor: { id: 'equipment:half-plate' },
+      shield: { id: 'equipment:steel-shield' },
+      weapons: [{ id: 'equipment:longsword' }],
+      gear: [{ id: 'equipment:rope', quantity: 2 }],
+      coins: { gp: 43 },
+      items,
+    });
+    // Half plate 3, worn as 2. Shield 1, longsword 1, two ropes at L. 43 coins
+    // weigh nothing.
+    expect(total).toBe(20 + 10 + 10 + 2);
+  });
+
+  it('counts a described item by the Bulk it was described with', () => {
+    const total = carriedTenths({
+      gear: [{ custom: { name: 'Iron coffer', bulk: 2 }, quantity: 2 }],
+      items: {},
+    });
+    expect(total).toBe(40);
+  });
+});
+
+describe('a shield', () => {
+  const steel = item('equipment:steel-shield');
+
+  it('lands on the fields the sheet already had for one', () => {
+    const shield = shieldFrom({ id: 'equipment:steel-shield' }, steel);
+    expect(shield).toMatchObject({ name: 'Steel Shield', bonus: 2, hardness: 5, hp: 20 });
+    // Raising it is the player's, at the table. Nothing here says anything
+    // about it, which is what leaves the sheet's toggle theirs to press.
+    expect(shield).not.toHaveProperty('raised');
+  });
+
+  it('breaks at half its hit points where no threshold is printed', () => {
+    expect(shieldFrom({ id: 'x' }, steel).breakThreshold).toBe(10);
+    expect(shieldFrom({ id: 'x' }, { ...steel, brokenThreshold: 7 }).breakThreshold).toBe(7);
+  });
+
+  it('is nothing at all when there is no shield', () => {
+    expect(shieldFrom({}, null)).toBe(null);
   });
 });
