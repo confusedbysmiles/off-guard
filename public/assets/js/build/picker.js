@@ -35,19 +35,26 @@ export function createPicker({ dialog, endpoint, onChoose }) {
   const status = el('p', { class: 'muted', role: 'status', 'aria-live': 'polite' });
 
   /**
-   * Past the level cap.
+   * Past the filters that are conveniences.
    *
-   * Only where the cap is a convenience -- see `relaxable` on the equipment
-   * slots. A character may legitimately be carrying something far above their
-   * level, because somebody gave it to them; they may not take a level 12 feat
-   * at level 4, and no box here offers to let them.
+   * A slot names those in `relaxable` -- an equipment slot's level cap, and a
+   * weapon slot's list of the categories you are trained in. Both are lists
+   * this page narrowed to be useful, and both can be legitimately wrong about
+   * one item: a thing given to you above your level, a weapon your class is
+   * trained in by name rather than by category. So one box lifts all of them.
+   *
+   * A feat slot names none, and gets no box. Its level cap is the rules.
    */
+  const relaxLabel = el('span', {});
   const relax = el('input', {
     type: 'checkbox', id: 'picker-relax',
     onchange: () => run(),
   });
   const relaxField = el('label', { class: 'picker__relax', for: 'picker-relax' },
-    relax, el('span', {}, 'Show items above your level'));
+    relax, relaxLabel);
+
+  /** What the narrowing cannot see, where the slot knows of something. */
+  const note = el('p', { class: 'faint picker__note' });
 
   let slot = null;
   let chosen = null;
@@ -66,6 +73,7 @@ export function createPicker({ dialog, endpoint, onChoose }) {
         onclick: () => dialog.close(),
       })),
     summary,
+    note,
     search,
     relaxField,
     status,
@@ -74,10 +82,12 @@ export function createPicker({ dialog, endpoint, onChoose }) {
 
   async function run() {
     if (!slot?.filter) return;
+    const lifted = relax.checked ? (slot.relaxable ?? []) : [];
     const params = new URLSearchParams();
     for (const [key, value] of Object.entries(slot.filter)) {
       if (value === null || value === undefined || value === '') continue;
-      if (key === 'maxLevel' && slot.relaxable && relax.checked) continue;
+      if (Array.isArray(value) && !value.length) continue;
+      if (lifted.includes(key)) continue;
       params.set(key, String(value));
     }
     summary.textContent = describeFilter(slot, relax.checked);
@@ -184,7 +194,10 @@ export function createPicker({ dialog, endpoint, onChoose }) {
       slot = nextSlot;
       chosen = currentValue;
       title.textContent = nextSlot.label;
-      relaxField.hidden = !nextSlot.relaxable;
+      relaxField.hidden = !(nextSlot.relaxable ?? []).length;
+      relaxLabel.textContent = nextSlot.relaxLabel ?? 'Show items above your level';
+      note.textContent = nextSlot.note ?? '';
+      note.hidden = !nextSlot.note;
       relax.checked = false;
       search.value = '';
       results.replaceChildren();
@@ -197,15 +210,34 @@ export function createPicker({ dialog, endpoint, onChoose }) {
   };
 }
 
+/** What the catalogue is called when it is one kind of thing. */
+const ITEM_NOUN = {
+  weapon: 'weapons', armor: 'armour', shield: 'shields',
+};
+
+/** `['simple', 'martial']` -> `simple and martial`. */
+const listOf = (values) => (values.length < 2
+  ? values.join('')
+  : `${values.slice(0, -1).join(', ')} and ${values.at(-1)}`);
+
 /** Said in words, so the list's narrowness is visible rather than mysterious. */
 function describeFilter(slot, relaxed = false) {
   const filter = slot.filter ?? {};
+  const relaxable = slot.relaxable ?? [];
+  const lifted = new Set(relaxed ? relaxable : []);
+  const noun = ITEM_NOUN[filter.itemType] ?? filter.kind;
   const parts = [];
+
   if (filter.trait) parts.push(titleCase(filter.trait));
-  if (filter.category) parts.push(`${filter.category} ${filter.kind ?? ''}`.trim());
-  else if (filter.kind) parts.push(filter.kind);
-  if (filter.maxLevel && !(relaxed && slot.relaxable)) parts.push(`level ${filter.maxLevel} and below`);
-  else if (slot.relaxable) parts.push('every level');
+
+  const categories = lifted.has('categories') ? [] : (filter.categories ?? []);
+  if (categories.length) parts.push(`${listOf(categories)} ${noun}`);
+  else if (filter.category) parts.push(`${filter.category} ${filter.kind ?? ''}`.trim());
+  else if (noun) parts.push(noun);
+
+  if (filter.maxLevel && !lifted.has('maxLevel')) parts.push(`level ${filter.maxLevel} and below`);
+  else if (relaxable.includes('maxLevel')) parts.push('every level');
+
   if (filter.ancestry) parts.push('and versatile heritages');
   return parts.length ? `Showing ${parts.join(', ')}.` : '';
 }

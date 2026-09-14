@@ -98,6 +98,7 @@ export async function registerCharacterRoutes(app) {
       q: query.q ?? '',
       kind: query.kind || null,
       category: query.category || null,
+      categories: asArray(query.categories),
       trait: query.trait || null,
       traits: asArray(query.traits),
       maxLevel: asNumber(query.maxLevel),

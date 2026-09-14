@@ -70,17 +70,28 @@ export function openOptions({ dataDir = DATA_DIR } = {}) {
    * is a perfectly good choice for a level 6 slot.
    */
   function search({
-    q = '', kind = null, category = null, trait = null, traits = [],
+    q = '', kind = null, category = null, categories = [], trait = null, traits = [],
     maxLevel = null, minLevel = null, rarity = null, tradition = null,
     ancestry = null, itemType = null, source = null, remasterOnly = false,
     skill = null, limit = 50, offset = 0, sort = 'name',
   } = {}) {
     const needle = String(q ?? '').trim().toLowerCase();
+    /**
+     * Several categories at once, which `category` cannot express.
+     *
+     * The question a builder asks about a weapon is "which of these may I
+     * use", and the answer is a set: a wizard is trained in unarmed and simple
+     * attacks and nothing else. Kept separate from `category` rather than
+     * folded into it, because one of them is a fact about the item and the
+     * other is a fact about who is looking.
+     */
+    const anyOf = (categories ?? []).filter(Boolean).map((c) => String(c).toLowerCase());
     const wanted = [trait, ...(traits ?? [])].filter(Boolean).map((t) => String(t).toLowerCase());
 
     const matched = rows.filter((row) => {
       if (kind && row.kind !== kind) return false;
       if (category && row.category !== category) return false;
+      if (anyOf.length && !anyOf.includes(String(row.category))) return false;
       if (itemType && row.itemType !== itemType) return false;
       if (needle && !row.search.includes(needle)) return false;
       if (maxLevel !== null && row.level > Number(maxLevel)) return false;

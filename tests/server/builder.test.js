@@ -62,6 +62,33 @@ describe('the builder API', () => {
     expect(res.json().rows.map((r) => r.name)).toContain('Rock Dwarf');
   });
 
+  /**
+   * The question a builder asks about a weapon is "which of these may I use",
+   * and the answer is a set of categories rather than one. A wizard is trained
+   * in unarmed and simple attacks, which is 338 of the catalogue's 1,013
+   * weapons -- the difference between a list and a search box.
+   */
+  it('narrows equipment to several categories at once', async () => {
+    const all = await player('/builder/options?kind=equipment&itemType=weapon');
+    const simple = await player('/builder/options?kind=equipment&itemType=weapon&categories=simple');
+    const names = (res) => res.json().rows.map((row) => row.name);
+
+    expect(names(all)).toEqual(expect.arrayContaining(['Longsword', 'Dagger']));
+    // The longsword is martial and the dagger is simple.
+    expect(names(simple)).toContain('Dagger');
+    expect(names(simple)).not.toContain('Longsword');
+
+    const both = await player('/builder/options?kind=equipment&itemType=weapon&categories=simple,martial');
+    expect(names(both)).toEqual(expect.arrayContaining(['Longsword', 'Dagger']));
+  });
+
+  it('narrows by nothing when the list of categories is empty', async () => {
+    // What an unclassed character sends: "untrained in everything" is not what
+    // an empty slot means, so an empty list must not filter to nothing.
+    const res = await player('/builder/options?kind=equipment&itemType=weapon&categories=');
+    expect(res.json().rows.map((r) => r.name)).toContain('Longsword');
+  });
+
   it('returns one option in full', async () => {
     const res = await player('/builder/options/class:fighter');
     expect(res.json().option.name).toBe('Fighter');

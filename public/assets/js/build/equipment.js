@@ -44,22 +44,63 @@ const ARMOR_CATEGORIES = ['unarmored', 'light', 'medium', 'heavy'];
  *
  * Capped at the character's own level, because the catalogue holds 5,855 items
  * and an alphabetical list of them opens on a level 18 solvent for a level 5
- * character. `relaxable` marks the cap as a convenience rather than a rule --
- * the picker offers a way past it, unlike the one on a feat slot, where taking
- * something above your level is not a thing you are allowed to want.
+ * character. `relaxable` names the filters that are a convenience rather than a
+ * rule, and the picker offers one box that lifts all of them -- unlike a feat
+ * slot, whose level cap is the rules and gets no box, because taking a level 12
+ * feat at level 4 is not a thing you are allowed to want.
  */
 const itemSlot = (kind, label, itemType, level) => ({
   id: kind,
   kind,
   label,
-  relaxable: true,
+  relaxable: ['maxLevel'],
+  relaxLabel: 'Show items above your level',
   filter: { kind: 'equipment', itemType, maxLevel: level },
 });
 
 const ARMOR_SLOT = (level) => itemSlot('armor', 'Armour', 'armor', level);
 const SHIELD_SLOT = (level) => itemSlot('shield', 'Shield', 'shield', level);
-const WEAPON_SLOT = (level) => itemSlot('weapon', 'Weapon', 'weapon', level);
 const GEAR_SLOT = (level) => itemSlot('gear', 'Carried item', null, level);
+
+/** The weapon proficiencies a class tracks. Anything else is not a category. */
+const ATTACK_CATEGORIES = ['unarmed', 'simple', 'martial', 'advanced'];
+
+/**
+ * Weapons the character can actually use.
+ *
+ * A wizard sees 338 of the 1,013 weapons in the catalogue rather than all of
+ * them, which is the difference between a list and a search box.
+ *
+ * Two reasons it lifts rather than enforces. A class can be proficient with
+ * weapons outside its categories, named rather than ranked -- a cleric's
+ * deity's favored weapon, an alchemist's bombs, which are martial weapons a
+ * class untrained in martial weapons throws all day -- and a feat can grant one
+ * the same way. Neither is a rank, so this filter cannot see either, and the
+ * three classes that have one say so beside the box that turns this off.
+ *
+ * A character with no class yet is filtered by nothing: "untrained in
+ * everything" is not what an empty slot means.
+ */
+const WEAPON_SLOT = (level, proficiencies) => {
+  const attacks = proficiencies?.attacks ?? {};
+  const trained = ATTACK_CATEGORIES.filter((key) => (attacks[key] ?? 'untrained') !== 'untrained');
+  const specific = attacks.other?.name ?? null;
+
+  return {
+    ...itemSlot('weapon', 'Weapon', 'weapon', level),
+    relaxable: trained.length ? ['maxLevel', 'categories'] : ['maxLevel'],
+    relaxLabel: trained.length
+      ? 'Show every weapon, including ones you are not trained in'
+      : 'Show items above your level',
+    note: specific && trained.length
+      ? `Your class is also proficient with ${specific}, which the catalogue records`
+        + ' by name rather than by category. Tick the box if what you want is not here.'
+      : null,
+    filter: {
+      kind: 'equipment', itemType: 'weapon', maxLevel: level, categories: trained,
+    },
+  };
+};
 
 /**
  * Two panels, in the order a character is dressed: what is on them, then what
@@ -73,7 +114,11 @@ export function renderEquipment(host, { state, store, picker }) {
   const equipment = build.equipment ?? {};
   const sheet = derived.sheet ?? {};
   const items = derived.items ?? {};
-  const context = { store, picker, derived, items, sheet, level: derived.level ?? 1 };
+  const context = {
+    store, picker, derived, items, sheet,
+    level: derived.level ?? 1,
+    proficiencies: derived.proficiencies ?? null,
+  };
 
   host.replaceChildren(
     panel('equipment-heading', 'Worn and wielded', wieldedCount(sheet),
@@ -334,7 +379,7 @@ function shieldRow(shield, { store, picker, derived, items, level }) {
     hint);
 }
 
-function weaponRow(entry, index, { store, picker, items, sheet, level }) {
+function weaponRow(entry, index, { store, picker, items, sheet, level, proficiencies }) {
   const write = (mutate) => store.update((next) => {
     const list = [...(next.equipment?.weapons ?? [])];
     list[index] = { ...(list[index] ?? {}) };
@@ -343,7 +388,9 @@ function weaponRow(entry, index, { store, picker, items, sheet, level }) {
     next.equipment.weapons = list;
   });
 
-  const slot = { ...WEAPON_SLOT(level), id: `weapon-${index}`, index, kind: 'weapon' };
+  const slot = {
+    ...WEAPON_SLOT(level, proficiencies), id: `weapon-${index}`, index, kind: 'weapon',
+  };
   const record = recordFor(entry, items);
   const strike = (sheet.strikes ?? [])[index] ?? null;
 

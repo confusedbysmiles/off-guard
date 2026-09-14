@@ -27,6 +27,9 @@ function indexRow(record, shard) {
     tier: record.source?.tier ?? 'core', remaster: record.source?.remaster ?? true,
     ...(record.kind === 'heritage' ? { ancestry: record.ancestry } : {}),
     ...(record.kind === 'background' ? { trainedSkills: record.trainedSkills } : {}),
+    ...(record.kind === 'equipment' ? {
+      itemType: record.itemType, category: record.category, group: record.group,
+    } : {}),
   };
 }
 
@@ -40,6 +43,23 @@ export function stubOptions() {
     if (!records.length) continue;
     writeFileSync(resolve(dataDir, 'options', `${kind}.json`), JSON.stringify(records));
     for (const record of records) rows.push(indexRow(record, kind));
+  }
+
+  /**
+   * Equipment shards by item type, as the real build does -- `equipment/weapon`
+   * rather than one `equipment` file -- because that sharding is what makes one
+   * question one file read, and a stub that flattened it would not exercise it.
+   */
+  mkdirSync(resolve(dataDir, 'options', 'equipment'), { recursive: true });
+  const byType = new Map();
+  for (const record of Object.values(FIXTURE.equipment ?? {})) {
+    const shard = `equipment/${record.itemType}`;
+    if (!byType.has(shard)) byType.set(shard, []);
+    byType.get(shard).push(record);
+    rows.push(indexRow(record, shard));
+  }
+  for (const [shard, records] of byType) {
+    writeFileSync(resolve(dataDir, 'options', `${shard}.json`), JSON.stringify(records));
   }
 
   writeFileSync(resolve(dataDir, 'options-index.json'), JSON.stringify({

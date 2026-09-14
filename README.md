@@ -412,11 +412,19 @@ list opens on Anadi, Android, Athamaru and Automaton.
 
 Equipment is capped at the character's own level, which takes 5,855 items down
 to 2,283 for a level 5 character -- otherwise the list opens on a level 18
-solvent. That cap is a convenience rather than a rule, and the picker says so
-with a box that lifts it: somebody may legitimately be carrying something far
-above their level, because it was given to them. A feat slot offers no such box,
-because taking a level 12 feat at level 4 is not a thing you are allowed to
-want.
+solvent. Weapons are narrowed again to the categories the class is trained in,
+which is 338 of 1,013 for a wizard: the difference between a list and a search
+box.
+
+Both are conveniences rather than rules, and one box lifts both. It has to
+exist, because a class can be proficient with weapons that are named rather than
+ranked -- a cleric's deity's favored weapon, an alchemist's bombs, which are
+martial weapons a class untrained in martial weapons throws all day -- and so
+can a feat. None of those is a rank, so the filter cannot see any of them; the
+three classes that have one say so in the picker, above the box.
+
+A feat slot offers no box at all, because taking a level 12 feat at level 4 is
+not a thing you are allowed to want.
 
 Like the creature catalogue, this is a build product and is not checked in. A
 clone that has not run `npm run build:data` gets a builder that says so.
