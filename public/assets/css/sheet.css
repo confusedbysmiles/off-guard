@@ -87,6 +87,16 @@
   font-size: var(--step-1);
 }
 
+/*
+ * A class that sets `display` beats the user agent's `[hidden] { display: none }`,
+ * and this sheet is built almost entirely out of such classes -- `.field` is
+ * `display: flex`. Every other stylesheet here has met this and patched the one
+ * selector that bit it; the sheet gets the general rule, because the rows the
+ * builder takes over are hidden by class-free code that has no way to know what
+ * each row is made of.
+ */
+[hidden] { display: none !important; }
+
 .grid { display: grid; gap: var(--sp-3); }
 .grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -212,8 +222,11 @@
 .hp-bar[data-hurt='badly']::-webkit-progress-value { background: var(--bad); }
 .hp-bar[data-hurt='badly']::-moz-progress-bar      { background: var(--bad); }
 
-.damage-entry { display: flex; gap: var(--sp-2); align-items: stretch; }
-.damage-entry .input { flex: 1; }
+/* The number box takes the width, and drops to a line of its own before it
+   gets too narrow to read what it is asking for. */
+.damage-entry { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: stretch; }
+.damage-entry .input { flex: 1 1 8rem; min-width: 0; }
+.damage-entry .btn { flex: 0 0 auto; }
 
 /* --- Repeating rows (strikes, lores, conditions) ------------------------ */
 
@@ -360,3 +373,62 @@
 /* What the bag weighs, under the coins that are part of the answer. */
 .carried__bulk { margin: 0; font-variant-numeric: tabular-nums; }
 .carried__bulk.is-warn { color: var(--warn-ink); }
+
+/* --- a card, or a part of one, that folds away -------------------------- */
+
+/*
+ * `.section__title` is a flex row, and a <summary> that is display:flex loses
+ * its disclosure triangle -- so the marker lives on the summary and the title
+ * keeps its own layout inside it.
+ */
+.fold__summary {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  cursor: pointer;
+  list-style-position: inside;
+}
+.fold__summary::-webkit-details-marker { color: var(--ink-faint); }
+.fold__summary .faint { font-size: var(--step--1); }
+
+/* On a whole card the title is an h2 and already carries the rule beneath it. */
+.fold__summary--card { align-items: center; gap: var(--sp-3); }
+.fold__summary--card .section__title { flex: 1; margin-bottom: 0; border-bottom: 0; }
+
+details.card > .fold__summary--card { border-bottom: 1px solid var(--border); padding-bottom: var(--sp-2); }
+details.card[open] > .fold__summary--card { margin-bottom: var(--sp-3); }
+
+.fold { padding: var(--sp-2) 0; border-top: 1px solid var(--border); }
+.fold[open] { padding-bottom: var(--sp-3); }
+
+.identity__summary { margin: 0 0 var(--sp-3); font-size: var(--step-0); }
+
+/* --- vitals ------------------------------------------------------------- */
+
+/*
+ * Three abreast where there is room and stacked where there is not. They are
+ * the numbers reached for while the dice are still rolling, so they get the
+ * top of the page and the size to go with it.
+ */
+.vitals__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--sp-3);
+}
+
+/* Current hit points: play state, given the shape of a computed statistic
+   because it is the number looked at most, not because it is computed. */
+.vital__now {
+  width: 4.5rem;
+  padding: 0;
+  font-size: var(--step-3);
+  font-weight: 600;
+  color: var(--ink);
+  text-align: start;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px dashed var(--border-strong);
+  border-radius: 0;
+}
+.vital__now:focus { border-bottom-style: solid; border-color: var(--focus); }
+.vital__now:read-only { border-bottom-color: transparent; }

@@ -877,33 +877,86 @@ test.describe('a built character’s sheet', () => {
     .locator('input, select, textarea')
     .first();
 
-  test('says the character is built, and locks what the builder works out', async ({ page }) => {
-    await page.goto(`/c/${world.builtCharacterToken}`);
-    await expect(page.locator('.built-note')).toBeVisible();
+  /** The identity card is folded shut on a character that has been named. */
+  const openIdentity = async (page) => {
+    await page.locator('#identity > summary').click();
+    await expect(page.locator('#identity')).toHaveAttribute('open', '');
+  };
 
+  test('says the character is built, and does not offer what the builder owns', async ({ page }) => {
+    await page.goto(`/c/${world.builtCharacterToken}`);
+    await openIdentity(page);
+    await expect(page.locator('.built-note')).toBeVisible();
+    await expect(page.locator('.identity__summary')).toContainText('level');
+
+    // Gone, rather than standing there greyed out. A row the builder owns is
+    // not a control the player has to work out they cannot use.
     for (const label of ['Ancestry', 'Class', 'Level']) {
-      await expect(field(page, label), label).toHaveAttribute('readonly', '');
+      await expect(field(page, label), label).toBeHidden();
     }
-    // A select has no readonly, so the lock is a disable.
+    // Where a field does remain, the lock is what it always was. A select has
+    // no readonly, so this one is a disable.
     await expect(field(page, 'AC proficiency')).toBeDisabled();
   });
 
   test('leaves everything the builder does not set alone', async ({ page }) => {
     await page.goto(`/c/${world.builtCharacterToken}`);
+    await openIdentity(page);
 
     // Play state, free text and the player's own name are never derived.
     const player = field(page, 'Player');
+    await expect(player).toBeVisible();
     await expect(player).not.toHaveAttribute('readonly', '');
     await player.fill('Robin');
     await expect(page.locator('#save-state')).toHaveText(/Saved/, { timeout: 5000 });
 
-    const current = field(page, 'Current');
-    await expect(current).not.toHaveAttribute('readonly', '');
+    // The subclass is deliberately not derived: the builder has no slot for a
+    // bloodline or an instinct yet, so locking it would leave nowhere to set it.
+    await expect(field(page, 'Subclass')).toBeVisible();
+
+    // Current hit points are the purest play state there is, and live in
+    // Vitals rather than in a labelled box now.
+    await expect(page.getByLabel('Current hit points')).not.toHaveAttribute('readonly', '');
+    // Raising a shield happens at the table, so the builder never owns it.
+    await expect(page.locator('#shield-raised')).toBeEnabled();
   });
 
   test('does not lock a sheet that was typed in by hand', async ({ page }) => {
     await page.goto(`/c/${world.plainCharacterToken}`);
+    await openIdentity(page);
     await expect(page.locator('.built-note')).toBeHidden();
-    await expect(field(page, 'Ancestry')).not.toHaveAttribute('readonly', '');
+    // Every row is there, because there is no builder to have taken any of them.
+    for (const label of ['Ancestry', 'Class', 'Level']) {
+      await expect(field(page, label), label).toBeVisible();
+      await expect(field(page, label), label).not.toHaveAttribute('readonly', '');
+    }
+  });
+
+  /**
+   * The order of the page, which is the reason it was rearranged.
+   *
+   * What is touched every round comes before what is written once. This is the
+   * kind of thing that regresses silently, because every card still works.
+   */
+  test('leads with what is used at the table, not with a form', async ({ page }) => {
+    await page.goto(`/c/${world.builtCharacterToken}`);
+
+    const topOf = (selector) => page.locator(selector).first()
+      .evaluate((node) => Math.round(node.getBoundingClientRect().top + window.scrollY));
+    const card = (title) => `section.card:has(> .section__title:text-is("${title}"))`;
+
+    const vitals = await topOf(card('Vitals'));
+    const strikes = await topOf(card('Strikes'));
+    const skills = await topOf(card('Skills'));
+    const identity = await topOf('#identity');
+
+    expect(vitals).toBeLessThan(strikes);
+    expect(strikes).toBeLessThan(skills);
+    expect(skills).toBeLessThan(identity);
+
+    // And the three numbers reached for mid-roll are in the first card.
+    for (const label of ['Hit points', 'Armour Class', 'Perception']) {
+      await expect(page.locator('.vitals__stats').getByText(label, { exact: true })).toBeVisible();
+    }
   });
 });

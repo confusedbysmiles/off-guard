@@ -28,6 +28,24 @@ export function guideCard(sheet, { onImport }) {
   const blank = !name && !sheet?.class && !sheet?.level;
   const conditions = sheet?.conditions ?? [];
 
+  /**
+   * The one card this page deliberately buried.
+   *
+   * Everything on the sheet is ordered by how often it is touched, which puts
+   * a character's name and ancestry last -- right for every session after the
+   * first, and wrong for the first, when naming them is the whole job. So the
+   * guide, which only appears on an empty sheet, points at it.
+   */
+  const goToIdentity = () => {
+    const card = document.getElementById('identity');
+    if (!card) return;
+    card.open = true;
+    // A jump rather than a smooth scroll: it is most of a page away, and
+    // animating that distance is a long ride to somewhere you asked to be.
+    card.scrollIntoView({ block: 'start' });
+    card.querySelector('input')?.focus({ preventScroll: true });
+  };
+
   const sections = [];
 
   if (blank) {
@@ -42,7 +60,14 @@ export function guideCard(sheet, { onImport }) {
             class: 'link-button', type: 'button', onclick: onImport,
           }, 'upload the file'), '. Everything comes across — attributes, '
             + 'proficiencies, strikes with their runes, spells.'],
-          [b('Type it.'), ' Every box is editable and saves as you go.'],
+          [b('Type it.'), ' Every box is editable and saves as you go. Start by ',
+            el('button', {
+              class: 'link-button', type: 'button', onclick: goToIdentity,
+            }, 'naming them'), ' — that card is at the foot of the page, because '
+            + 'once it is filled in you never open it again.'],
+          [b('Build it.'), ' The ', b('Build'), ' button at the top walks you '
+            + 'through ancestry, class, feats and equipment, and fills this '
+            + 'sheet in as you go.'],
         ),
         p('Importing overwrites what is here, so import first and type after.'),
       ],
