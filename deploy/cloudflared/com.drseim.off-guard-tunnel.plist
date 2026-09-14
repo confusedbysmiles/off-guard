@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  The Cloudflare tunnel, as a launchd agent.
+
+  A template. `./deploy/cloudflared/setup.sh <hostname>` installs it and fills
+  in the real paths.
+
+  Why an agent and not `sudo cloudflared service install`, which is what
+  Cloudflare's own documentation tells you to run:
+
+  That command installs a *system* daemon, which runs as root. Root's
+  configuration lives in /etc/cloudflared, and the config this repository
+  writes lives in ~/.cloudflared, because that is where `cloudflared tunnel
+  login` puts the certificate and the credentials it issues. A root daemon
+  cannot read either. The result is a daemon that launchd reports as healthy
+  and running, forever, while the tunnel has no connection at all -- which is
+  a 1033 to everyone holding a link, and nothing in `launchctl print` that
+  looks wrong.
+
+  That is not hypothetical. It is how this deployment spent two weeks: the
+  tunnel was alive only because a `cloudflared tunnel run` was sitting in a
+  terminal window, and a reboot took the site down silently.
+
+  An agent runs as the user whose credentials these are, reads the config
+  where it actually is, and restarts on its own. Off-Guard itself is already
+  an agent for the same reason, so the two halves of this deployment now have
+  the same lifetime: both up when you are logged in, both down when you are
+  not.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.drseim.off-guard-tunnel</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/bin/cloudflared</string>
+    <!-- Named explicitly. Leaving it implicit is what made the system daemon
+         a no-op: `cloudflared` with no subcommand does not run a tunnel. -->
+    <string>--config</string>
+    <string>/Users/YOU/.cloudflared/config.yml</string>
+    <string>--no-autoupdate</string>
+    <string>tunnel</string>
+    <string>run</string>
+    <string>off-guard</string>
+  </array>
+
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+
+  <!-- Ten seconds between restarts. A tunnel that cannot reach Cloudflare
+       because the house internet is down should retry, not spin. -->
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+
+  <key>StandardOutPath</key>
+  <string>/Users/YOU/Library/Logs/off-guard-tunnel.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/YOU/Library/Logs/off-guard-tunnel.log</string>
+
+  <key>ProcessType</key>
+  <string>Background</string>
+</dict>
+</plist>

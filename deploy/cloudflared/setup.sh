@@ -121,15 +121,87 @@ else
   echo "             ./deploy/macos/install.sh" >&2
 fi
 
-cat <<EOF
+# --- 6. run it, and keep running it -------------------------------------------
+#
+# As a launchd *agent*, not `sudo cloudflared service install`.
+#
+# That command -- which this script used to end by recommending -- installs a
+# system daemon running as root. Root reads /etc/cloudflared; the certificate
+# and credentials `cloudflared tunnel login` issues live in ~/.cloudflared. The
+# daemon therefore has no tunnel to run, and says nothing about it: launchctl
+# reports it healthy and running forever while the hostname serves 1033 to
+# everyone holding a link.
+#
+# This deployment lost two weeks to exactly that. The tunnel was alive only
+# because a `cloudflared tunnel run` was sitting in a terminal window, and a
+# reboot ended it with no sign anywhere that anything had stopped.
 
-Now run it in the foreground and watch:
+AGENT_LABEL="com.drseim.off-guard-tunnel"
+AGENT_TEMPLATE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/${AGENT_LABEL}.plist"
+AGENT_TARGET="$HOME/Library/LaunchAgents/${AGENT_LABEL}.plist"
+DOMAIN="gui/$(id -u)"
 
-  cloudflared tunnel run $TUNNEL
+CLOUDFLARED_BIN="$(command -v cloudflared)"
+mkdir -p "$HOME/Library/LaunchAgents" "$HOME/Library/Logs"
 
-Then open https://$HOSTNAME_ARG/healthz in a browser. When that returns
-{"ok":true}, stop it with Ctrl-C and make it permanent:
+sed \
+  -e "s|<string>/opt/homebrew/bin/cloudflared</string>|<string>${CLOUDFLARED_BIN}</string>|" \
+  -e "s|/Users/YOU/.cloudflared/config.yml|${CONFIG}|" \
+  -e "s|/Users/YOU/Library/Logs|${HOME}/Library/Logs|" \
+  -e "s|<string>off-guard</string>|<string>${TUNNEL}</string>|" \
+  "$AGENT_TEMPLATE" > "$AGENT_TARGET"
 
-  sudo cloudflared service install
+if grep -q "/Users/YOU" "$AGENT_TARGET"; then
+  echo "A placeholder survived substitution; refusing to install a broken agent." >&2
+  grep -n "/Users/YOU" "$AGENT_TARGET" >&2
+  rm -f "$AGENT_TARGET"
+  exit 1
+fi
+plutil -lint "$AGENT_TARGET" > /dev/null
+
+# Anything already running this tunnel has to stop first: a second connector
+# does not fail over, it load-balances, and half the requests would reach a
+# process nobody is managing.
+launchctl bootout "$DOMAIN/$AGENT_LABEL" 2>/dev/null || true
+pkill -f "cloudflared.*tunnel run ${TUNNEL}" 2>/dev/null || true
+sleep 2
+
+launchctl bootstrap "$DOMAIN" "$AGENT_TARGET"
+launchctl kickstart -k "$DOMAIN/$AGENT_LABEL"
+
+echo "Agent:       $AGENT_LABEL"
+
+# --- 7. prove the hostname actually answers -----------------------------------
+#
+# Through Cloudflare, not against localhost. The whole failure this script now
+# guards against looked perfect from the inside.
+
+for _ in $(seq 1 30); do
+  if curl -fsS "https://${HOSTNAME_ARG}/healthz" > /dev/null 2>&1; then
+    cat <<EOF
+
+https://${HOSTNAME_ARG} is answering.
+
+  tunnel:  $TUNNEL ($UUID)
+  config:  $CONFIG
+  log:     $HOME/Library/Logs/off-guard-tunnel.log
+
+It comes back by itself on reboot, as long as you are logged in -- the same
+condition Off-Guard itself runs under.
+
+If you previously ran \`sudo cloudflared service install\`, remove that daemon:
+it does nothing, and a second connector for this tunnel would split traffic.
+
+  sudo launchctl bootout system/com.cloudflare.cloudflared
+  sudo rm /Library/LaunchDaemons/com.cloudflare.cloudflared.plist
 
 EOF
+    exit 0
+  fi
+  sleep 2
+done
+
+echo "The agent loaded but https://${HOSTNAME_ARG} is not answering." >&2
+echo "What the tunnel says:" >&2
+tail -20 "$HOME/Library/Logs/off-guard-tunnel.log" >&2 2>/dev/null || true
+exit 1
