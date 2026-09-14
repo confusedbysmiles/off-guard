@@ -310,3 +310,42 @@ describe('a browser that lands on nothing', () => {
     }
   });
 });
+
+/**
+ * The ceiling on traffic from one address.
+ *
+ * Separate from the failure counter above, and defending a different thing:
+ * that one stops somebody guessing a token, this one stops one address burying
+ * the server. It is deliberately generous, because a GM's dashboard makes
+ * several requests per action and a cap tight enough to inconvenience an
+ * attacker would throttle a table mid-session.
+ *
+ * Pinned here because it was not, and the end-to-end suite paid for it. A
+ * browser running seventy scripted tests goes through 600 requests a minute
+ * easily, and what that looks like is not an error anybody reads -- it is six
+ * panels failing to load and a test timing out somewhere different each run.
+ */
+describe('the ceiling on one address', () => {
+  it('is six hundred a minute unless a caller says otherwise', async () => {
+    const path = `/api/gm/${world.gmToken}/campaigns`;
+    let limited = 0;
+    for (let i = 0; i < 601; i += 1) {
+      const res = await app.inject({ method: 'GET', url: path });
+      if (res.statusCode === 429) limited += 1;
+    }
+    // Exactly one over the line, so the number itself is what is pinned.
+    expect(limited).toBe(1);
+  });
+
+  it('lets one be set, which is how the end-to-end suite runs at all', async () => {
+    const own = await buildApp({ db, logger: false, limits: { max: 2 } });
+    await own.ready();
+    const path = `/api/gm/${world.gmToken}/campaigns`;
+    const statuses = [];
+    for (let i = 0; i < 3; i += 1) {
+      statuses.push((await own.inject({ method: 'GET', url: path })).statusCode);
+    }
+    expect(statuses).toEqual([200, 200, 429]);
+    await own.close();
+  });
+});

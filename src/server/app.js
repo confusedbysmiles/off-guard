@@ -49,6 +49,7 @@ export async function buildApp({
   db, catalogue = null, builderOptions = null, reference = null, bus = null, logger = false,
   trustProxy = true,
   basePath = '',
+  limits = null,
 } = {}) {
   const mount = normalizeBasePath(basePath);
   const app = Fastify({
@@ -82,6 +83,21 @@ export async function buildApp({
     global: false,
     max: 600,
     timeWindow: '1 minute',
+    /**
+     * Overridable for one caller only: the end-to-end suite.
+     *
+     * A ceiling sized for one GM at a table is not sized for a browser running
+     * seventy scripted tests in ninety seconds, and what that looked like was
+     * not a rate-limit error -- it was six panels quietly failing to load and a
+     * test timing out on an element that never arrived, in a different place
+     * each run depending on where the minute boundary fell. Hours were spent
+     * on "flaky end-to-end tests" that were one limiter doing its job.
+     *
+     * The limit itself is not what those tests are for. What it defends
+     * against -- guessing a token -- is the failure counter below, and that is
+     * covered deterministically in the unit tests.
+     */
+    ...(limits ?? {}),
   });
 
   app.addHook('onSend', async (request, reply, payload) => {

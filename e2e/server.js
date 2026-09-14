@@ -14,7 +14,14 @@ const port = Number(process.argv[2] ?? 8799);
 const world = buildFixture(port);
 const db = openDatabase(world.database, {});
 
-const app = await buildApp({ db, catalogue: openCatalogue(), logger: false });
+/**
+ * No per-address ceiling here. See the note on `limits` in `buildApp`: this
+ * suite makes more requests in a minute than a table makes in an evening, and
+ * throttling it produces test failures that look like anything but throttling.
+ */
+const app = await buildApp({
+  db, catalogue: openCatalogue(), logger: false, limits: { max: 100000 },
+});
 await app.listen({ host: '127.0.0.1', port });
 
 process.on('SIGTERM', async () => { await app.close(); db.close(); process.exit(0); });

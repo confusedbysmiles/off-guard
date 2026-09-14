@@ -438,7 +438,18 @@ test.describe('the setup tab', () => {
     await expect(page.locator('.roster__row', { hasText: 'Vashti' })).toBeVisible();
     await expect(page.locator('.link-row', { hasText: 'Vashti' })).toContainText('no link yet');
 
-    await page.locator('body').press('t');
+    /**
+     * Clicked, not pressed.
+     *
+     * Adding somebody leaves the caret in the form so the next player can be
+     * typed straight in, and a keyboard shortcut fired from a text field is
+     * deliberately ignored -- that is the whole reason `T` does not throw you
+     * out of a box you are typing in. So `press('t')` here was asking the
+     * dashboard to do the one thing it is built not to do, and the tab quite
+     * correctly never changed.
+     */
+    await expect(page.locator('#new-character-player')).toBeFocused();
+    await page.locator('#tabs').getByRole('button', { name: 'Table' }).click();
     await expect(page.locator('.pc', { hasText: 'Vashti' })).toBeVisible();
   });
 
@@ -768,9 +779,56 @@ test.describe('the clock on the shared screen', () => {
     { data: { state: runState(slot), title: 'Nine Minutes to the Toast' } },
   );
 
+  /**
+   * A shared-screen link of this block's own, minted on first use.
+   *
+   * Not `world.tableToken`. The links panel above rotates the shared screen
+   * deliberately -- proving that rotation kills the link it replaced is one of
+   * the things this suite exists to check -- and a rotated link is a dead link
+   * for everything after it. Every test in this block was loading a 404 page
+   * and failing on the elements it did not contain, which is a failure that
+   * reads like the clock is broken and means nothing of the kind.
+   *
+   * There cannot be a second standing table link to use instead: minting one
+   * revokes the campaign's previous one by design, so there is exactly one
+   * live shared screen per campaign. Minting at the point of use is what makes
+   * this block independent of what came before it.
+   */
+  /**
+   * End whichever fight is running, rather than the one the fixture started.
+   *
+   * `world.combatId` stops being the current fight the moment anything else
+   * rolls initiative -- which the encounter tests above do, twice. Ending a
+   * combat that ended long ago succeeds quietly and changes nothing, so the
+   * screen stayed on the fight it was already showing and this test failed
+   * claiming the shared screen would not go idle.
+   */
+  const endTheFight = async (request) => {
+    const res = await request.get(
+      `/api/gm/${world.gmToken}/campaigns/${world.campaignId}/combat`,
+    );
+    const running = (await res.json()).combat;
+    expect(running?.id, 'a fight to end').toBeTruthy();
+    await request.post(
+      `/api/gm/${world.gmToken}/campaigns/${world.campaignId}/combat/${running.id}/end`,
+    );
+  };
+
+  let link = null;
+  const sharedScreen = async (request) => {
+    if (!link) {
+      const res = await request.post(
+        `/api/gm/${world.gmToken}/campaigns/${world.campaignId}/tokens/table`,
+      );
+      expect(res.status(), 'minting a shared-screen link').toBe(201);
+      link = (await res.json()).token.token;
+    }
+    return `/table/${link}`;
+  };
+
   test('is the biggest thing on the screen, beside the initiative order', async ({ page, request }) => {
     await setSlot(request, 7);
-    await page.goto(`/table/${world.tableToken}`);
+    await page.goto(await sharedScreen(request));
     await expect(page.locator('#connection')).toHaveAttribute('data-state', 'live');
 
     await expect(page.locator('#clock-time')).toHaveText('7:57');
@@ -790,7 +848,7 @@ test.describe('the clock on the shared screen', () => {
 
   test('moves a minute when the GM does, without anybody touching it', async ({ page, request }) => {
     await setSlot(request, 7);
-    await page.goto(`/table/${world.tableToken}`);
+    await page.goto(await sharedScreen(request));
     await expect(page.locator('#clock-time')).toHaveText('7:57');
 
     await setSlot(request, 8);
@@ -805,7 +863,7 @@ test.describe('the clock on the shared screen', () => {
 
   test('shows what the party knows and nothing they do not', async ({ page, request }) => {
     await setSlot(request, 7);
-    await page.goto(`/table/${world.tableToken}`);
+    await page.goto(await sharedScreen(request));
 
     const panel = page.locator('#loop-room');
     await expect(panel).toContainText('The wine is a fake');
@@ -823,7 +881,7 @@ test.describe('the clock on the shared screen', () => {
     // the clock and what the party knows have to stand on their own -- without
     // "No fight running" being the loudest thing in the room.
     await setSlot(request, 7);
-    await page.goto(`/table/${world.tableToken}`);
+    await page.goto(await sharedScreen(request));
     await expect(page.locator('#connection')).toHaveAttribute('data-state', 'live');
 
     // A fight is running in the fixture: two columns.
@@ -831,9 +889,7 @@ test.describe('the clock on the shared screen', () => {
     await expect(page.locator('#columns')).not.toHaveClass(/is-idle/);
     await expect(page.locator('#order .turn').first()).toBeVisible();
 
-    await request.post(
-      `/api/gm/${world.gmToken}/campaigns/${world.campaignId}/combat/${world.combatId}/end`,
-    );
+    await endTheFight(request);
 
     // No reload: the screen rearranges itself when the fight ends.
     await expect(page.locator('#columns')).toHaveClass(/is-idle/, { timeout: 8000 });
@@ -858,7 +914,7 @@ test.describe('the clock on the shared screen', () => {
     await request.delete(
       `/api/gm/${world.gmToken}/campaigns/${world.campaignId}/loop/${ADVENTURE}`,
     );
-    await page.goto(`/table/${world.tableToken}`);
+    await page.goto(await sharedScreen(request));
     await expect(page.locator('#clock')).toBeHidden();
     await expect(page.locator('#loop-room')).toBeHidden();
     await expect(page.locator('#order')).toBeVisible();
