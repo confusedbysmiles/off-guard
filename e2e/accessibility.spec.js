@@ -88,6 +88,49 @@ for (const [label, path] of SURFACES) {
   });
 }
 
+/**
+ * The sheet shows one panel at a time, so the audit above only ever sees the
+ * one it opened on. A control that lost its name on the Gear panel would sail
+ * through. This walks all five.
+ */
+test.describe('the character sheet, panel by panel', () => {
+  test('names every control on every panel', async ({ page }) => {
+    await page.goto(`/c/${world.characterToken}`);
+    const tabs = page.locator('.sheet-tabs button');
+    await expect(tabs).toHaveCount(5);
+
+    for (const label of await tabs.allTextContents()) {
+      await page.locator('.sheet-tabs').getByRole('button', { name: label, exact: true }).click();
+      await expect(page.locator(`#panel-${label.toLowerCase()}`)).toBeVisible();
+      const audit = await page.evaluate(NAME_AUDIT);
+      expect(audit.total, `${label} has controls`).toBeGreaterThan(0);
+      expect(audit.unnamed, `unnamed controls on ${label}`).toEqual([]);
+      expect(audit.placeholderOnly, `placeholder used as a label on ${label}`).toEqual([]);
+    }
+  });
+
+  /**
+   * Every statistic's controls start folded, and a fold is only honest if it
+   * says so: a screen reader needs to know the button opens something and
+   * which thing it opened.
+   */
+  test('says which of its folds are open', async ({ page }) => {
+    await page.goto(`/c/${world.characterToken}`);
+    const heads = page.locator('.stat-row__head');
+    expect(await heads.count()).toBeGreaterThan(0);
+
+    const first = heads.first();
+    await expect(first).toHaveAttribute('aria-expanded', 'false');
+    const controls = await first.getAttribute('aria-controls');
+    expect(controls, 'a fold names the thing it opens').toBeTruthy();
+    await expect(page.locator(`#${controls}`)).toBeHidden();
+
+    await first.click();
+    await expect(first).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.locator(`#${controls}`)).toBeVisible();
+  });
+});
+
 test.describe('the GM dashboard, in more detail', () => {
   test('names every control on the initiative tracker too', async ({ page }) => {
     await page.goto(`/gm/${world.gmToken}`);

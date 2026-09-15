@@ -11,6 +11,15 @@ import { loadWorld, PORTS } from './world.js';
 
 const world = loadWorld(PORTS.desktop);
 
+/**
+ * The sheet is five panels behind a tab bar, so a test that wants a field has
+ * to say which panel it is on. Combat is where a sheet opens.
+ */
+async function sheetTab(page, label) {
+  await page.locator('.sheet-tabs').getByRole('button', { name: label, exact: true }).click();
+  await expect(page.locator(`#panel-${label.toLowerCase()}`)).toBeVisible();
+}
+
 test.describe('the player’s character sheet', () => {
   test('loads and computes its own numbers', async ({ page }) => {
     await page.goto(`/c/${world.characterToken}`);
@@ -19,9 +28,15 @@ test.describe('the player’s character sheet', () => {
     await expect(page.locator('#campaign-name')).toContainText('Abomination Vaults');
 
     // AC: 10 + 1 capped Dex + 9 expert at level 5 + 6 item.
-    const ac = page.locator('.stat', { hasText: 'Armour Class' });
-    await expect(ac.locator('.stat__total')).toHaveText('26');
-    await expect(ac.locator('.stat__working')).toContainText('capped');
+    const ac = page.locator('.stat-row', { hasText: 'Armour Class' });
+    await expect(ac.locator('.stat-row__value')).toHaveText('26');
+    await expect(ac.locator('.stat-row__rank')).toHaveText('Expert');
+
+    // The working is in the fold, not in a tooltip: this sheet is read on a
+    // phone, where there is no hover to put an explanation behind.
+    await expect(ac.locator('.stat-row__working')).toBeHidden();
+    await ac.locator('.stat-row__head').click();
+    await expect(ac.locator('.stat-row__working')).toContainText('capped');
   });
 
   test('never puts the token in the title', async ({ page }) => {
@@ -33,11 +48,13 @@ test.describe('the player’s character sheet', () => {
 
   test('saves an edit and says so', async ({ page }) => {
     await page.goto(`/c/${world.characterToken}`);
+    await sheetTab(page, 'Feats');
     const notes = page.getByLabel('Notes', { exact: true });
     await notes.fill('Owes the innkeeper 4 gp');
     await expect(page.locator('#save-state')).toHaveText('Saved', { timeout: 5000 });
 
     await page.reload();
+    // The panel a browser was last looking at is where it comes back to.
     await expect(page.getByLabel('Notes', { exact: true })).toHaveValue('Owes the innkeeper 4 gp');
   });
 
@@ -608,7 +625,10 @@ test.describe('a link before the character has a name', () => {
     await player.goto(url);
     await expect(player.locator('#character-name')).toHaveText('Robin’s character');
 
-    // Naming the character is the player's to do, and it reaches the GM.
+    // Naming the character is the player's to do, and it reaches the GM. On a
+    // sheet with nothing on it the Character card opens itself, because then
+    // naming them is the whole job -- but it is still on its own panel.
+    await sheetTab(player, 'Character');
     await player.getByLabel('Character name', { exact: true }).fill('Wren Dallow');
     await expect(player.locator('#save-state')).toHaveText('Saved', { timeout: 5000 });
     await expect(player.locator('#character-name')).toHaveText('Wren Dallow');
@@ -933,9 +953,12 @@ test.describe('a built character’s sheet', () => {
     .locator('input, select, textarea')
     .first();
 
-  /** The identity card is folded shut on a character that has been named. */
+  /** On its own panel, and folded shut on a character that has been named. */
   const openIdentity = async (page) => {
-    await page.locator('#identity > summary').click();
+    await sheetTab(page, 'Character');
+    if (!(await page.locator('#identity').getAttribute('open'))) {
+      await page.locator('#identity > summary').click();
+    }
     await expect(page.locator('#identity')).toHaveAttribute('open', '');
   };
 
@@ -951,8 +974,12 @@ test.describe('a built character’s sheet', () => {
       await expect(field(page, label), label).toBeHidden();
     }
     // Where a field does remain, the lock is what it always was. A select has
-    // no readonly, so this one is a disable.
-    await expect(field(page, 'AC proficiency')).toBeDisabled();
+    // no readonly, so this one is a disable -- and it is in Armour Class's own
+    // fold on the Combat panel now, rather than in a card of loose parts.
+    await sheetTab(page, 'Combat');
+    const ac = page.locator('.stat-row', { hasText: 'Armour Class' });
+    await ac.locator('.stat-row__head').click();
+    await expect(ac.getByLabel('Proficiency')).toBeDisabled();
   });
 
   test('leaves everything the builder does not set alone', async ({ page }) => {
@@ -971,7 +998,8 @@ test.describe('a built character’s sheet', () => {
     await expect(field(page, 'Subclass')).toBeVisible();
 
     // Current hit points are the purest play state there is, and live in
-    // Vitals rather than in a labelled box now.
+    // Vitals rather than in a labelled box now -- on the Combat panel.
+    await sheetTab(page, 'Combat');
     await expect(page.getByLabel('Current hit points')).not.toHaveAttribute('readonly', '');
     // Raising a shield happens at the table, so the builder never owns it.
     await expect(page.locator('#shield-raised')).toBeEnabled();
@@ -994,25 +1022,52 @@ test.describe('a built character’s sheet', () => {
    * What is touched every round comes before what is written once. This is the
    * kind of thing that regresses silently, because every card still works.
    */
-  test('leads with what is used at the table, not with a form', async ({ page }) => {
+  /**
+   * The shape of the page, which is the reason it was rearranged twice.
+   *
+   * A sheet opens on what a fight needs, and everything else is a tab away
+   * rather than a thousand pixels down. This is the kind of thing that
+   * regresses silently, because every card still works wherever it lands.
+   */
+  test('opens on what a fight needs, with the rest a tab away', async ({ page }) => {
     await page.goto(`/c/${world.builtCharacterToken}`);
 
-    const topOf = (selector) => page.locator(selector).first()
-      .evaluate((node) => Math.round(node.getBoundingClientRect().top + window.scrollY));
-    const card = (title) => `section.card:has(> .section__title:text-is("${title}"))`;
-
-    const vitals = await topOf(card('Vitals'));
-    const strikes = await topOf(card('Strikes'));
-    const skills = await topOf(card('Skills'));
-    const identity = await topOf('#identity');
-
-    expect(vitals).toBeLessThan(strikes);
-    expect(strikes).toBeLessThan(skills);
-    expect(skills).toBeLessThan(identity);
-
-    // And the three numbers reached for mid-roll are in the first card.
-    for (const label of ['Hit points', 'Armour Class', 'Perception']) {
-      await expect(page.locator('.vitals__stats').getByText(label, { exact: true })).toBeVisible();
+    await expect(page.locator('.sheet-tab[aria-current="page"]')).toHaveText('Combat');
+    await expect(page.locator('#panel-combat')).toBeVisible();
+    for (const other of ['skills', 'feats', 'gear', 'character']) {
+      await expect(page.locator(`#panel-${other}`)).toBeHidden();
     }
+
+    // The three numbers reached for mid-roll are on the panel it opens on.
+    const combat = page.locator('#panel-combat');
+    await expect(combat.getByText('Hit points', { exact: true })).toBeVisible();
+    await expect(combat.locator('.stat-row', { hasText: 'Armour Class' })).toBeVisible();
+    await expect(combat.locator('.stat-row', { hasText: 'Perception' })).toBeVisible();
+
+    // And the panel is a screen or two rather than a scroll of five thousand.
+    // The panel rather than the page: a first visit also has the Start here
+    // card open above it, which is a different thing and folds away for good.
+    const height = await combat.evaluate((node) => Math.round(node.scrollHeight));
+    expect(height).toBeLessThan(2000);
+  });
+
+  /**
+   * Every statistic keeps its machinery folded away. The number is what the
+   * sheet is for; the proficiency and the override are what it is set by.
+   */
+  test('keeps a statistic’s controls folded until asked', async ({ page }) => {
+    await page.goto(`/c/${world.plainCharacterToken}`);
+    await sheetTab(page, 'Skills');
+
+    const row = page.locator('.stat-row', { hasText: 'Athletics' });
+    const head = row.locator('.stat-row__head');
+    await expect(head).toHaveAttribute('aria-expanded', 'false');
+    await expect(row.getByLabel('Proficiency')).toBeHidden();
+
+    await head.click();
+    await expect(head).toHaveAttribute('aria-expanded', 'true');
+    await expect(row.getByLabel('Proficiency')).toBeVisible();
+    // A sheet with no build behind it owns every one of its own fields.
+    await expect(row.getByLabel('Proficiency')).toBeEnabled();
   });
 });

@@ -19,6 +19,9 @@ import {
   ATTRIBUTES, CONDITIONS, NOTES_SECTIONS, RANKS, SAVES, SKILLS, VALUED_CONDITIONS,
 } from './fields.js';
 
+/** Which panel this browser was last looking at. */
+const TAB_KEY = 'off-guard:sheet-tab';
+
 export function mount(root, store, { onImport = () => {} } = {}) {
   const updaters = [];
   const onUpdate = (fn) => updaters.push(fn);
@@ -73,7 +76,7 @@ export function mount(root, store, { onImport = () => {} } = {}) {
   );
 
   const area = (path, attrs = {}) =>
-    bind(el('textarea', { class: 'textarea', rows: 5, ...attrs }), path);
+    bind(el('textarea', { class: 'textarea', rows: 3, ...attrs }), path);
 
   const labelled = (label, control) => {
     const id = `f-${Math.random().toString(36).slice(2, 9)}`;
@@ -91,38 +94,79 @@ export function mount(root, store, { onImport = () => {} } = {}) {
   );
 
   /**
-   * One computed statistic, with an override.
+   * A statistic the way a sheet shows one, rather than the way a form does.
    *
-   * The computed value is always shown, even when overridden, because the
-   * question a player actually asks is "why is this different from what I
-   * expected" and hiding the calculation makes that unanswerable.
+   * What it is, what it comes to, and its machinery one tap away. The number
+   * is the biggest thing in the row, because the number is what somebody
+   * reached for the sheet to find.
+   *
+   * What this replaced put a proficiency dropdown in the middle of every row,
+   * drawn larger and brighter than the modifier beside it -- sixteen times on
+   * the skills card, and on a built character every one of them disabled,
+   * since the builder owns the ranks. A page of loud controls nobody may touch,
+   * around the values everybody wants.
    */
-  function stat(label, { compute, overridePath, workingOf }) {
-    const total = el('strong', { class: 'stat__total tabular' }, '—');
-    const working = el('span', { class: 'stat__working' });
-    const mark = el('span', { class: 'override-mark' });
-    const override = bind(
-      el('input', {
-        class: 'stat__override', type: 'number', inputmode: 'numeric',
-        'aria-label': `${label} override`, placeholder: 'auto',
-      }),
-      overridePath,
-      { parse: (v) => (v === '' ? null : Number(v)), format: (v) => (v ?? '') },
-    );
+  let rowSeq = 0;
+  function statRow({
+    label, sub = null, compute, format = formatMod, detail = [], workingOf = workingText,
+  }) {
+    const id = `row-${rowSeq += 1}`;
+    const value = el('strong', { class: 'stat-row__value tabular' }, '—');
+    const rank = el('span', { class: 'stat-row__rank' });
+    /**
+     * The arithmetic, in the fold rather than in a tooltip.
+     *
+     * "Why is this not the number I expected" is the question the working
+     * exists to answer, and a `title` answers it only for somebody with a
+     * mouse. This sheet is used on a phone, where there is no hover at all.
+     */
+    const working = el('p', { class: 'stat-row__working' });
+    const body = el('div', { class: 'stat-row__detail', id, hidden: true },
+      working,
+      el('div', { class: 'grid grid--auto' }, ...detail));
+
+    const head = el('button', {
+      class: 'stat-row__head', type: 'button',
+      'aria-expanded': 'false', 'aria-controls': id,
+      onclick: () => {
+        const open = body.hidden;
+        body.hidden = !open;
+        head.setAttribute('aria-expanded', String(open));
+      },
+    },
+    el('span', { class: 'stat-row__name' },
+      label,
+      sub ? el('span', { class: 'stat-row__sub' }, sub) : null),
+    rank,
+    value,
+    el('span', { class: 'stat-row__chevron', 'aria-hidden': 'true', html: icon('chevron') }));
+
+    const row = el('div', { class: 'stat-row' });
 
     onUpdate((state) => {
       const result = compute(state.sheet);
-      total.textContent = result.format ? result.format(result.total) : formatMod(result.total);
-      working.textContent = workingOf ? workingOf(result) : '';
-      const isOverridden = result.overridden;
-      mark.textContent = isOverridden ? 'set by hand' : '';
-      override.classList.toggle('is-overridden', isOverridden);
-      total.title = isOverridden ? `Computed: ${result.computed}` : '';
+      value.textContent = format(result.total);
+      value.classList.toggle('is-overridden', Boolean(result.overridden));
+
+      /**
+       * The rank, only when there is one worth saying.
+       *
+       * Most characters are untrained in most skills, and "Untrained" written
+       * fourteen times down a column is a column nobody reads. Left blank, the
+       * few rows that do carry a word are the trained ones, which is the thing
+       * the eye was hunting for.
+       */
+      const named = String(result.components?.rank ?? '');
+      const untrained = !named || named === 'untrained';
+      rank.textContent = result.overridden ? 'by hand' : (untrained ? '' : titleCase(named));
+      row.classList.toggle('stat-row--untrained', untrained && !result.overridden);
+      working.textContent = result.overridden
+        ? `Set by hand. Worked out, it would be ${format(result.computed)}.`
+        : (result.components ? workingOf(result) : '');
     });
 
-    return el('div', { class: 'stat' },
-      el('span', { class: 'stat__label' }, el('span', {}, label), mark),
-      el('div', { class: 'stat__value' }, total, working, override));
+    row.replaceChildren(head, body);
+    return row;
   }
 
   // --- the statistic definitions ----------------------------------------
@@ -247,49 +291,56 @@ export function mount(root, store, { onImport = () => {} } = {}) {
 
   const vitals = el('section', { class: 'card section--wide' },
     el('h2', { class: 'section__title' }, 'Vitals'),
-    el('div', { class: 'vitals__stats' },
-      hp.display,
-      stat('Armour Class', {
-        compute: (sheet) => {
-          const shieldRaised = Boolean(readPath(sheet, 'shield.raised'));
-          const result = armorClass({
-            dexMod: attrMod(sheet, 'dex'),
-            dexCap: readPath(sheet, 'ac.dexCap') ?? null,
-            rank: readPath(sheet, 'ac.rank') ?? 'untrained',
-            level: level(sheet),
-            itemBonus: Number(readPath(sheet, 'ac.itemBonus') ?? 0),
-            other: Number(readPath(sheet, 'ac.other') ?? 0),
-            shieldBonus: Number(readPath(sheet, 'shield.bonus') ?? 0),
-            shieldRaised,
-            override: readPath(sheet, 'ac.override') ?? null,
-          });
-          return { ...result, format: (n) => String(n) };
-        },
-        overridePath: 'ac.override',
+    hp.display,
+    hp.controls,
+    el('div', { class: 'stat-rows stack-md' },
+      statRow({
+        label: 'Armour Class',
+        format: String,
+        compute: (sheet) => armorClass({
+          dexMod: attrMod(sheet, 'dex'),
+          dexCap: readPath(sheet, 'ac.dexCap') ?? null,
+          rank: readPath(sheet, 'ac.rank') ?? 'untrained',
+          level: level(sheet),
+          itemBonus: Number(readPath(sheet, 'ac.itemBonus') ?? 0),
+          other: Number(readPath(sheet, 'ac.other') ?? 0),
+          shieldBonus: Number(readPath(sheet, 'shield.bonus') ?? 0),
+          shieldRaised: Boolean(readPath(sheet, 'shield.raised')),
+          override: readPath(sheet, 'ac.override') ?? null,
+        }),
         workingOf: (r) => `10 ${formatMod(r.components.dexApplied)} dex`
-          + (r.components.dexCapped ? ' (capped)' : '')
+          + (r.components.dexCapped ? ' (capped by your armour)' : '')
           + ` ${formatMod(r.components.proficiency)} prof`
           + (r.components.itemBonus ? ` ${formatMod(r.components.itemBonus)} item` : '')
           + (r.components.shield ? ` ${formatMod(r.components.shield)} shield` : ''),
+        detail: [
+          labelled('Proficiency', rankSelect('ac.rank')),
+          labelled('Item bonus', number('ac.itemBonus')),
+          labelled('Dex cap', number('ac.dexCap')),
+          labelled('Set by hand', number('ac.override', { placeholder: 'auto' })),
+        ],
       }),
       perception()),
-    hp.controls,
     el('div', { class: 'grid grid--auto stack-md' },
       labelled('Max', number('hp.max')),
       labelled('Temporary', number('hp.temp')),
       labelled('Hero points', number('heroPoints'))),
     shield());
 
+  /**
+   * What hurts this character less, or more.
+   *
+   * Three free-text lines and nothing computed, so they are shown only when
+   * they say something -- most characters have none of the three, and three
+   * empty boxes labelled Immunities is how a sheet starts looking like a form
+   * somebody abandoned halfway.
+   */
+  const resistanceFields = ['immunities', 'weaknesses', 'resistances']
+    .map((path) => labelled(titleCase(path), text(path)));
+
   const armour = el('section', { class: 'card' },
-    el('h2', { class: 'section__title' }, 'Armour and resistances'),
-    el('div', { class: 'grid grid--3' },
-      labelled('AC proficiency', rankSelect('ac.rank')),
-      labelled('Item bonus', number('ac.itemBonus')),
-      labelled('Dex cap', number('ac.dexCap'))),
-    el('div', { class: 'grid grid--3 stack-md' },
-      labelled('Immunities', text('immunities')),
-      labelled('Weaknesses', text('weaknesses')),
-      labelled('Resistances', text('resistances'))));
+    el('h2', { class: 'section__title' }, 'Immunities, weaknesses and resistances'),
+    el('div', { class: 'grid grid--3' }, ...resistanceFields));
 
   function hitPoints() {
     // A <progress> element rather than a styled div: it is the semantics a
@@ -435,7 +486,8 @@ export function mount(root, store, { onImport = () => {} } = {}) {
    * saves, where the rest of the rank selects are.
    */
   function perception() {
-    return stat('Perception', {
+    return statRow({
+      label: 'Perception',
       compute: (sheet) => statistic({
         attributeMod: attrMod(sheet, 'wis'),
         rank: readPath(sheet, 'perception.rank') ?? 'untrained',
@@ -443,69 +495,78 @@ export function mount(root, store, { onImport = () => {} } = {}) {
         itemBonus: Number(readPath(sheet, 'perception.itemBonus') ?? 0),
         override: readPath(sheet, 'perception.override') ?? null,
       }),
-      overridePath: 'perception.override',
-      workingOf: workingText,
+      detail: [
+        labelled('Item bonus', number('perception.itemBonus')),
+        labelled('Set by hand', number('perception.override', { placeholder: 'auto' })),
+      ],
     });
   }
 
+  const saveNote = el('p', { class: 'faint stat-rows__note' });
+  onUpdate((state) => {
+    const notes = SAVES
+      .map(([key, name]) => [name, readPath(state.sheet, `saves.${key}.note`)])
+      .filter(([, note]) => (note ?? '').trim());
+    saveNote.hidden = !notes.length;
+    saveNote.textContent = notes.map(([name, note]) => `${name}: ${note}`).join(' · ');
+  });
+
   const proficiencies = el('section', { class: 'card' },
     el('h2', { class: 'section__title' }, 'Saves and Class DC'),
-    el('div', { class: 'grid' },
-      el('div', { class: 'grid grid--2' },
-        labelled('Perception proficiency', rankSelect('perception.rank')),
-        labelled('Senses', text('senses'))),
-      ...SAVES.map(([key, name, attribute]) => el('div', { class: 'grid grid--2' },
-        stat(name, {
-          compute: (sheet) => statistic({
-            attributeMod: attrMod(sheet, attribute),
-            rank: readPath(sheet, `saves.${key}.rank`) ?? 'untrained',
-            level: level(sheet),
-            itemBonus: Number(readPath(sheet, `saves.${key}.itemBonus`) ?? 0),
-            override: readPath(sheet, `saves.${key}.override`) ?? null,
-          }),
-          overridePath: `saves.${key}.override`,
-          workingOf: workingText,
+    el('div', { class: 'stat-rows' },
+      ...SAVES.map(([key, name, attribute]) => statRow({
+        label: name,
+        compute: (sheet) => statistic({
+          attributeMod: attrMod(sheet, attribute),
+          rank: readPath(sheet, `saves.${key}.rank`) ?? 'untrained',
+          level: level(sheet),
+          itemBonus: Number(readPath(sheet, `saves.${key}.itemBonus`) ?? 0),
+          override: readPath(sheet, `saves.${key}.override`) ?? null,
         }),
-        el('div', { class: 'grid' },
+        detail: [
           labelled('Proficiency', rankSelect(`saves.${key}.rank`)),
-          labelled('Note', text(`saves.${key}.note`, { placeholder: 'e.g. +1 vs magic' }))))),
-      el('div', { class: 'grid grid--2' },
-        stat('Class DC', {
-          compute: (sheet) => {
-            const key = sheet.keyAttribute || 'str';
-            const result = classDc({
-              attributeMod: attrMod(sheet, key),
-              rank: readPath(sheet, 'classDc.rank') ?? 'untrained',
-              level: level(sheet),
-              override: readPath(sheet, 'classDc.override') ?? null,
-            });
-            return { ...result, format: (n) => String(n) };
-          },
-          overridePath: 'classDc.override',
-          workingOf: (r) => `10 ${formatMod(r.components.attributeMod)} key `
-            + `${formatMod(r.components.proficiency)} prof`,
+          labelled('Item bonus', number(`saves.${key}.itemBonus`)),
+          labelled('Set by hand', number(`saves.${key}.override`, { placeholder: 'auto' })),
+          labelled('Note', text(`saves.${key}.note`, { placeholder: 'e.g. +1 vs magic' })),
+        ],
+      })),
+      statRow({
+        label: 'Class DC',
+        format: String,
+        compute: (sheet) => classDc({
+          attributeMod: attrMod(sheet, sheet.keyAttribute || 'str'),
+          rank: readPath(sheet, 'classDc.rank') ?? 'untrained',
+          level: level(sheet),
+          override: readPath(sheet, 'classDc.override') ?? null,
         }),
-        labelled('Class DC proficiency', rankSelect('classDc.rank')))));
+        workingOf: (r) => `10 ${formatMod(r.components.attributeMod)} key attribute `
+          + `${formatMod(r.components.proficiency)} prof`,
+        detail: [
+          labelled('Proficiency', rankSelect('classDc.rank')),
+          labelled('Set by hand', number('classDc.override', { placeholder: 'auto' })),
+        ],
+      })),
+    // A note on a save is worth reading without opening anything, and is
+    // almost always absent -- so it appears only when there is one.
+    saveNote);
 
   const skills = el('section', { class: 'card section--wide' },
     el('h2', { class: 'section__title' }, 'Skills'),
-    el('div', { class: 'skills' },
-      ...SKILLS.map(([key, name, attribute]) => {
-        const total = el('span', { class: 'skill__total' }, '—');
-        onUpdate((state) => {
-          const result = skillStat(key, attribute)(state.sheet);
-          total.textContent = formatMod(result.total);
-          total.classList.toggle('override-mark', result.overridden);
-          total.title = result.overridden
-            ? `Set by hand. Computed: ${formatMod(result.computed)}`
-            : `${titleCase(attribute)} ${formatMod(result.components.attributeMod)}, `
-              + `${result.components.rank}`;
-        });
-        return el('div', { class: 'skill' },
-          el('span', { class: 'skill__name' }, name, el('span', { class: 'faint' }, ` ${attribute}`)),
-          rankSelect(`skills.${key}.rank`),
-          total);
-      })),
+    el('div', { class: 'stat-rows' },
+      ...SKILLS.map(([key, name, attribute]) => statRow({
+        label: name,
+        sub: attribute,
+        compute: skillStat(key, attribute),
+        detail: [
+          labelled('Proficiency', rankSelect(`skills.${key}.rank`)),
+          labelled('Item bonus', number(`skills.${key}.itemBonus`)),
+          labelled('Other', number(`skills.${key}.other`)),
+          labelled('Set by hand', number(`skills.${key}.override`, { placeholder: 'auto' })),
+        ],
+      }))),
+    el('div', { class: 'grid grid--2 stack-md' },
+      labelled('Perception proficiency', rankSelect('perception.rank')),
+      labelled('Senses', text('senses'))),
     lores());
 
   function lores() {
@@ -600,14 +661,26 @@ export function mount(root, store, { onImport = () => {} } = {}) {
         }),
         removeButton('gear', index)),
       labelled('How many', number(`gear.${index}.quantity`)),
-    ], { name: '', quantity: 1 }, { above: el('div', { class: 'stack-md' }, coins, bulkLine) });
+    ], { name: '', quantity: 1 }, {
+      above: el('div', { class: 'stack-md' }, coins, bulkLine), wide: true,
+    });
   }
 
   const carried = carriedSection();
 
-  const spellcasting = el('section', { class: 'card section--wide' },
-    el('h2', { class: 'section__title' }, 'Spellcasting'),
-    el('div', { class: 'grid grid--3' },
+  /**
+   * Spellcasting, folded away for the characters who do none.
+   *
+   * Most do none, and five empty boxes headed Tradition, Spell DC and Spell
+   * attack is how a sheet starts looking like a form somebody gave up on. It
+   * opens itself for anyone who casts -- once, on the first sheet that arrives
+   * -- and is a line of text otherwise, one tap from being a card again.
+   */
+  const spellcastingSummary = el('span', { class: 'faint' });
+  const spellcastingFold = el('details', { class: 'fold' },
+    el('summary', { class: 'fold__summary' },
+      el('strong', {}, 'Spellcasting'), spellcastingSummary),
+    el('div', { class: 'grid grid--3 stack-md' },
       labelled('Tradition', text('spellcasting.tradition')),
       labelled('Spell DC', number('spellcasting.dc')),
       labelled('Spell attack', number('spellcasting.attackMod'))),
@@ -615,6 +688,28 @@ export function mount(root, store, { onImport = () => {} } = {}) {
     el('div', { class: 'grid grid--2 stack-md' },
       labelled('Focus points', number('focus.current')),
       labelled('Focus pool', number('focus.pool'))));
+
+  let castingSettled = false;
+  onUpdate((state) => {
+    const sheet = state.sheet ?? {};
+    const tradition = String(readPath(sheet, 'spellcasting.tradition') ?? '').trim();
+    const dc = Number(readPath(sheet, 'spellcasting.dc') ?? 0);
+    const pool = Number(readPath(sheet, 'focus.pool') ?? 0);
+    const ranks = (readPath(sheet, 'spellcasting.ranks') ?? []).length;
+    const casts = Boolean(tradition || dc || pool || ranks);
+
+    spellcastingSummary.textContent = casts
+      ? [tradition && titleCase(tradition), dc && `DC ${dc}`, pool && `${pool} focus`]
+        .filter(Boolean).join(' · ')
+      : 'None';
+
+    if (castingSettled || !state.character) return;
+    castingSettled = true;
+    spellcastingFold.open = casts;
+  });
+
+  const spellcasting = el('section', { class: 'card section--wide' },
+    spellcastingFold);
 
   function slotTracks() {
     const wrap = el('div', { class: 'stack-md' });
@@ -724,7 +819,7 @@ export function mount(root, store, { onImport = () => {} } = {}) {
     });
   }
 
-  function repeatingSection(title, listPath, rowFor, blank, { above = null } = {}) {
+  function repeatingSection(title, listPath, rowFor, blank, { above = null, wide = false } = {}) {
     const list = el('div', { class: 'rows' });
     onUpdate((state) => {
       const entries = readPath(state.sheet, listPath) ?? [];
@@ -734,7 +829,7 @@ export function mount(root, store, { onImport = () => {} } = {}) {
       // The rows were rebuilt, so their bound updaters have to run once now.
       for (const fn of updaters) fn(store.state);
     });
-    return el('section', { class: 'card' },
+    return el('section', { class: `card${wide ? ' section--wide' : ''}` },
       el('h2', { class: 'section__title' }, title),
       above,
       list,
@@ -767,27 +862,57 @@ export function mount(root, store, { onImport = () => {} } = {}) {
   });
 
   /**
-   * The order of the page, which is the whole point of it.
+   * Five panels, not one page.
    *
-   * Play order, not the order a form is filled in. What you touch every round
-   * comes first -- what is left of you, what you hit with, what is on you --
-   * then what you roll, then what you look up, then what you set once.
+   * Everything a sheet holds is on it somewhere, and scrolling five thousand
+   * pixels to find the one number you want is not a sheet, it is a filing
+   * cabinet. Grouped by the question being asked -- what is happening in this
+   * fight, what can I roll, what do I know, what am I carrying, who am I --
+   * so the answer is one tap and a short scroll rather than a hunt.
    *
-   * The sheet was laid out the other way round when it was the only place a
-   * character existed and every field on it had to be typed. The builder is
-   * that place now, so the sheet can stop being a form and be a sheet.
+   * Ordered by how often a table reaches for them, so the tab you land on is
+   * usually the tab you wanted.
    */
+  const PANELS = [
+    ['combat', 'Combat', [vitals, strikes, conditions, proficiencies, armour]],
+    ['skills', 'Skills', [skills]],
+    ['feats', 'Feats', [notes, spellcasting]],
+    ['gear', 'Gear', [carried]],
+    ['character', 'Character', [attributes, movement, identity]],
+  ];
+
+  const panels = new Map(PANELS.map(([id, , cards]) => [
+    id, el('div', { class: 'sheet__panel', id: `panel-${id}`, hidden: true }, ...cards),
+  ]));
+
+  const tabs = new Map(PANELS.map(([id, label]) => [
+    id,
+    el('button', {
+      class: 'sheet-tab', type: 'button',
+      onclick: () => showPanel(id),
+    }, label),
+  ]));
+
+  function showPanel(id) {
+    for (const [key, panel] of panels) panel.hidden = key !== id;
+    for (const [key, tab] of tabs) {
+      if (key === id) tab.setAttribute('aria-current', 'page');
+      else tab.removeAttribute('aria-current');
+    }
+    try { localStorage.setItem(TAB_KEY, id); } catch { /* private mode */ }
+  }
+
   root.replaceChildren(
     guideSlot,
-    // Every round.
-    vitals, strikes, conditions,
-    // Rolled.
-    proficiencies, skills, spellcasting,
-    // Looked up.
-    carried, movement, armour, attributes,
-    // Written once.
-    notes, identity,
+    el('nav', { class: 'sheet-tabs', 'aria-label': 'Sections' }, ...tabs.values()),
+    ...panels.values(),
   );
+
+  // Where you left off, because a session is not one sitting -- but Combat if
+  // this browser has never said otherwise, which is what a table opens on.
+  let wanted = 'combat';
+  try { wanted = localStorage.getItem(TAB_KEY) ?? 'combat'; } catch { /* private mode */ }
+  showPanel(panels.has(wanted) ? wanted : 'combat');
 
   let updating = false;
   return function update(state) {

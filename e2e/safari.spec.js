@@ -32,11 +32,12 @@ test.describe('the character sheet', () => {
     await expect(page.locator('#character-name')).toHaveText('Kestrel Vane');
 
     // The rules engine, running in this engine's JavaScript rather than V8.
-    const ac = page.locator('.stat', { hasText: 'Armour Class' });
-    await expect(ac.locator('.stat__total')).toHaveText('26');
+    const ac = page.locator('.stat-row', { hasText: 'Armour Class' });
+    await expect(ac.locator('.stat-row__value')).toHaveText('26');
 
     // The store writes locally first and mirrors into localStorage before the
     // network is touched. Safari is the browser most likely to refuse that.
+    await page.locator('.sheet-tabs').getByRole('button', { name: 'Feats', exact: true }).click();
     const notes = page.getByLabel('Notes', { exact: true });
     await notes.fill('Rope, 50 feet');
     await expect(page.locator('#save-state')).toHaveText('Saved', { timeout: 5000 });

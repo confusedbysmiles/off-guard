@@ -15,7 +15,22 @@
 body { background: #FFFFFF; color: #000000; font-size: 10pt; }
 
 .sheet-bar, .notices, .modal, .sheet-bar__tools, .skip-link,
-.btn, .damage-entry, .stat__override { display: none !important; }
+.btn, .damage-entry, .sheet-tabs { display: none !important; }
+
+/*
+ * Paper has no tabs. The screen shows one panel at a time and hides the rest
+ * with `hidden`, which the sheet's own stylesheet enforces with `!important`
+ * -- so this needs both the specificity and the flag to beat it, or a printed
+ * sheet is whichever quarter of itself the player happened to be looking at.
+ *
+ * `display: block` rather than the screen's grid, so each card is a single
+ * item flowing through the two print columns below.
+ */
+.sheet__panel[hidden], .sheet__panel { display: block !important; }
+
+/* Every statistic's controls are folded away on screen; on paper the numbers
+   are already printed beside them, and the machinery is not worth the ink. */
+.stat-row__detail { display: none !important; }
 
 .sheet-bar { display: block !important; background: none !important; color: #000 !important;
   box-shadow: none; padding: 0 0 6mm; border-bottom: 1pt solid #000; }

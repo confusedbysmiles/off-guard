@@ -60,7 +60,8 @@
 
 
 .sheet {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: var(--sp-4);
   padding: var(--sp-3);
   max-width: 1180px;
@@ -68,11 +69,56 @@
 }
 .sheet:focus { outline: none; }
 
+/* --- the panels, and the bar that picks one ----------------------------- */
+
+/*
+ * Sticky under the header, because the tab you want is often not the tab you
+ * are at the bottom of. It scrolls sideways on a narrow phone rather than
+ * wrapping to two rows: a bar that changes height moves the page under you,
+ * and this one sits directly below a bar that is already sticky.
+ */
+.sheet-tabs {
+  position: sticky;
+  top: 3.4rem;
+  z-index: 10;
+  display: flex;
+  gap: var(--sp-1);
+  padding: var(--sp-2) 0;
+  margin: calc(var(--sp-3) * -1) 0 0;
+  background: var(--bg);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.sheet-tabs::-webkit-scrollbar { display: none; }
+
+.sheet-tab {
+  flex: none;
+  min-height: var(--tap);
+  padding: 0 var(--sp-3);
+  font: inherit;
+  font-size: var(--step-0);
+  color: var(--ink-dim);
+  white-space: nowrap;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.sheet-tab:hover { color: var(--ink); background: var(--surface-2); }
+.sheet-tab[aria-current='page'] {
+  color: var(--primary-ink);
+  background: var(--primary-sunk);
+  border-color: var(--primary);
+}
+
+.sheet__panel {
+  display: grid;
+  gap: var(--sp-4);
+  align-items: start;
+}
+
 @media (min-width: 60rem) {
-  .sheet {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: start;
-  }
+  .sheet__panel { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .section--wide { grid-column: 1 / -1; }
 }
 
@@ -142,39 +188,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-.stat__override {
-  width: 4.5rem;
-  min-height: var(--tap);
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-  background: var(--surface-sunk);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: var(--sp-1);
-}
-
-/* --- Skills ------------------------------------------------------------ */
-
-.skills { display: grid; gap: var(--sp-2); }
-
-.skill {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  align-items: center;
-  gap: var(--sp-2);
-  padding: var(--sp-1) var(--sp-2);
-  border-radius: var(--radius-sm);
-  background: var(--surface-2);
-  min-height: var(--tap);
-}
-
-.skill__name { font-size: var(--step-0); }
-.skill__total {
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  min-width: 3ch;
-  text-align: right;
-}
+/* Skills are `.stat-row`s now, like every other statistic on the sheet. */
 
 .rank-select {
   min-height: var(--tap);
@@ -190,7 +204,7 @@
  * on a phone while holding dice, which is the case that decides the default.
  */
 @media (min-width: 60rem) and (pointer: fine) {
-  .rank-select, .stat__override, .input--compact { min-height: 36px; }
+  .rank-select, .input--compact { min-height: 36px; }
 }
 
 /* --- Hit points -------------------------------------------------------- */
@@ -227,6 +241,14 @@
 .damage-entry { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: stretch; }
 .damage-entry .input { flex: 1 1 8rem; min-width: 0; }
 .damage-entry .btn { flex: 0 0 auto; }
+
+/* On a phone the three of them do not fit abreast, and what wrapping gave was
+   a stray Heal button on a line of its own. The box takes the first line and
+   the two buttons split the second. */
+@media (max-width: 30rem) {
+  .damage-entry .input { flex: 1 1 100%; }
+  .damage-entry .btn { flex: 1 1 0; justify-content: center; }
+}
 
 /* --- Repeating rows (strikes, lores, conditions) ------------------------ */
 
@@ -403,6 +425,81 @@ details.card[open] > .fold__summary--card { margin-bottom: var(--sp-3); }
 
 .identity__summary { margin: 0 0 var(--sp-3); font-size: var(--step-0); }
 
+/* --- a statistic, and its machinery one tap away ------------------------ */
+
+/*
+ * The number is the largest thing in the row. Everything that produces it --
+ * a proficiency, an item bonus, an override -- is behind the row rather than
+ * in it, because a sheet is read a hundred times for every time it is edited
+ * and those controls were drawn louder than the values they belong to.
+ */
+.stat-rows { display: flex; flex-direction: column; }
+.stat-rows__note { margin: var(--sp-3) 0 0; }
+
+.stat-row + .stat-row { border-top: 1px solid var(--border); }
+
+.stat-row__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 3.5rem 1rem;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  min-height: var(--tap);
+  padding: var(--sp-2) 0;
+  font: inherit;
+  text-align: start;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.stat-row__head:hover { color: var(--primary-ink); }
+
+.stat-row__name { font-size: var(--step-0); }
+.stat-row__sub {
+  margin-inline-start: var(--sp-2);
+  font-size: var(--step--2);
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* The rank is worth knowing and is not worth a control: it changes once a
+   level, in the builder, and reads as a word. */
+.stat-row__rank { font-size: var(--step--1); color: var(--ink-faint); }
+
+.stat-row__value {
+  font-size: var(--step-2);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+.stat-row__value.is-overridden { color: var(--warn-ink); }
+
+/* Trained in nothing is the common case and the quiet one, so the rows that
+   do carry a rank are the ones that stand out on the way past. */
+.stat-row--untrained .stat-row__name { color: var(--ink-dim); }
+.stat-row--untrained .stat-row__value { color: var(--ink-dim); font-weight: 500; }
+
+.stat-row__chevron { display: inline-flex; color: var(--ink-faint); }
+.stat-row__chevron .icon { width: 1em; height: 1em; transition: transform 120ms ease; }
+.stat-row__head[aria-expanded='true'] .stat-row__chevron .icon { transform: rotate(90deg); }
+@media (prefers-reduced-motion: reduce) {
+  .stat-row__chevron .icon { transition: none; }
+}
+
+.stat-row__detail {
+  padding: var(--sp-2) 0 var(--sp-3);
+  border-top: 1px dashed var(--border);
+}
+
+.stat-row__working {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--step--1);
+  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+}
+.stat-row__working:empty { display: none; }
+
 /* --- vitals ------------------------------------------------------------- */
 
 /*
@@ -410,12 +507,6 @@ details.card[open] > .fold__summary--card { margin-bottom: var(--sp-3); }
  * the numbers reached for while the dice are still rolling, so they get the
  * top of the page and the size to go with it.
  */
-.vitals__stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-  gap: var(--sp-3);
-}
-
 /* Current hit points: play state, given the shape of a computed statistic
    because it is the number looked at most, not because it is computed. */
 .vital__now {

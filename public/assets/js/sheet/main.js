@@ -238,7 +238,10 @@ function addImportButton() {
   const section = document.createElement('section');
   section.className = 'card section--wide';
   section.append(button);
-  $('#sheet').append(section);
+  // With the sheet in panels, a card appended to the page itself hangs below
+  // whichever one is showing. Importing replaces who the character is, so it
+  // belongs with the rest of that: on Character, beside the identity card.
+  ($('#panel-character') ?? $('#sheet')).append(section);
 }
 
 const flushSoon = debounce(() => store.flush(), 2000);
