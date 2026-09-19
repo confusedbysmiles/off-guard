@@ -92,19 +92,42 @@ fi
 
 NODE="$(command -v node || true)"
 if [[ -z "$NODE" ]]; then
-  echo "node is not on your PATH. Install Node 20 or newer first." >&2
+  echo "node is not on your PATH. Install Node 22 or newer first." >&2
   exit 1
 fi
 
 NODE_MAJOR="$("$NODE" -e 'process.stdout.write(String(process.versions.node.split(".")[0]))')"
-if (( NODE_MAJOR < 20 )); then
-  echo "node $NODE_MAJOR is too old; Off-Guard needs 20 or newer." >&2
+if (( NODE_MAJOR < 22 )); then
+  echo "node $NODE_MAJOR is too old; Off-Guard needs 22 or newer." >&2
+  echo "better-sqlite3 is the one that insists, and it insists by crashing." >&2
   exit 1
 fi
 
 DB_DIR="$HOME/Library/Application Support/off-guard"
 LOG_DIR="$HOME/Library/Logs"
 mkdir -p "$DB_DIR" "$LOG_DIR" "$HOME/Library/LaunchAgents"
+
+# better-sqlite3 is a native module, and requiring it is not the test.
+#
+# It ships prebuilt binaries, so on a Node it does not support it loads
+# perfectly and then segfaults the moment a statement runs. The version gate
+# above catches the usual way that happens; this catches the rest -- a
+# Homebrew upgrade that rebuilt Node under a node_modules built for the last
+# one, most of all. So open a database and use it.
+if [[ -d "$ROOT/node_modules" ]] && ! "$NODE" -e '
+  const Database = require("better-sqlite3");
+  const db = new Database(":memory:");
+  db.exec("CREATE TABLE t (x INTEGER)");
+  db.prepare("INSERT INTO t VALUES (1)").run();
+  if (db.prepare("SELECT x FROM t").get().x !== 1) process.exit(1);
+  db.close();
+' 2>/dev/null; then
+  echo "better-sqlite3 does not work under ${NODE}." >&2
+  echo "It loads and then fails when used, which usually means this Node is" >&2
+  echo "not the one it was built for. Rebuild it:" >&2
+  echo "  cd $ROOT && npm rebuild better-sqlite3" >&2
+  exit 1
+fi
 
 if [[ ! -d "$ROOT/node_modules" ]]; then
   echo "Dependencies are not installed. Run: npm ci" >&2

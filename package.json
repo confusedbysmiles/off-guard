@@ -5,7 +5,7 @@
   "description": "Self-hosted Pathfinder 2e table application: GM dashboard, player character sheets, shared initiative screen.",
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "backup": "node tools/backup.js",

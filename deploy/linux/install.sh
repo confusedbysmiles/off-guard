@@ -60,8 +60,9 @@ if [[ -z "$NODE" ]]; then
 fi
 
 NODE_MAJOR="$("$NODE" -e 'process.stdout.write(String(process.versions.node.split(".")[0]))')"
-if (( NODE_MAJOR < 20 )); then
-  echo "node $NODE_MAJOR is too old; Off-Guard needs 20 or newer." >&2
+if (( NODE_MAJOR < 22 )); then
+  echo "node $NODE_MAJOR is too old; Off-Guard needs 22 or newer." >&2
+  echo "better-sqlite3 is the one that insists, and it insists by crashing." >&2
   exit 1
 fi
 
@@ -70,12 +71,26 @@ if [[ ! -d "$ROOT/node_modules" ]]; then
   exit 1
 fi
 
-# better-sqlite3 is a native module: a node_modules copied from another machine,
-# or built against a different Node, fails at require time and the service dies
-# in a loop with the reason in the journal and nowhere else.
-if ! "$NODE" -e 'require("better-sqlite3")' 2>/dev/null; then
-  echo "better-sqlite3 will not load under ${NODE}." >&2
-  echo "It is a native module: run \`npm rebuild better-sqlite3\` in ${ROOT}." >&2
+# better-sqlite3 is a native module, and requiring it is not the test.
+#
+# It ships prebuilt binaries, so on a Node it does not support it loads
+# perfectly and then segfaults the moment a statement runs -- which is what a
+# Debian 13 box on Node 20 did: `require` returned, the installer said
+# everything was fine, and the service crash-looped with "Segmentation fault"
+# in the journal and nothing else anywhere. So open a database and use it.
+if ! "$NODE" -e '
+  const Database = require("better-sqlite3");
+  const db = new Database(":memory:");
+  db.exec("CREATE TABLE t (x INTEGER)");
+  db.prepare("INSERT INTO t VALUES (1)").run();
+  if (db.prepare("SELECT x FROM t").get().x !== 1) process.exit(1);
+  db.close();
+' 2>/dev/null; then
+  echo "better-sqlite3 does not work under ${NODE}." >&2
+  echo "It loads and then fails when used, which usually means this Node is" >&2
+  echo "older than the one it was built for. Check \`node -v\` against:" >&2
+  echo "  $("$NODE" -e 'process.stdout.write(require("better-sqlite3/package.json").engines.node)' 2>/dev/null || echo '>=22')" >&2
+  echo "Otherwise, rebuild it: \`npm rebuild better-sqlite3\` in ${ROOT}." >&2
   exit 1
 fi
 

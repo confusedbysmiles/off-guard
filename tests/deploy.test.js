@@ -151,6 +151,48 @@ describe('the systemd unit and its installer', () => {
   });
 });
 
+/**
+ * The version of Node every installer insists on.
+ *
+ * `better-sqlite3` ships prebuilt binaries, so on a Node it does not support
+ * it loads perfectly and then segfaults the first time a statement runs. A
+ * Debian 13 box on Node 20 did exactly that: the installer's check was
+ * `require("better-sqlite3")`, which returned happily, and the service would
+ * have crash-looped with "Segmentation fault" in the journal and nothing else
+ * anywhere. The floor these scripts enforce has to be the dependency's own,
+ * and the check has to use the thing rather than load it.
+ */
+describe('the Node every installer insists on', () => {
+  const required = JSON.parse(read('node_modules/better-sqlite3/package.json')).engines.node;
+  const floor = Number(required.replace(/[^\d]/g, ''));
+
+  it('is the one better-sqlite3 asks for', () => {
+    expect(Number.isInteger(floor)).toBe(true);
+    expect(JSON.parse(read('package.json')).engines.node).toBe(`>=${floor}`);
+  });
+
+  it.each(['deploy/linux/install.sh', 'deploy/macos/install.sh'])(
+    '%s refuses anything older',
+    (file) => {
+      const script = read(file);
+      expect(script, 'no major-version gate').toContain('NODE_MAJOR');
+      expect(script).toContain(`NODE_MAJOR < ${floor}`);
+      expect(script).not.toMatch(/NODE_MAJOR < (?!22\b)\d+/);
+    },
+  );
+
+  it.each(['deploy/linux/install.sh', 'deploy/macos/install.sh'])(
+    '%s proves better-sqlite3 works rather than that it loads',
+    (file) => {
+      const script = read(file);
+      // Requiring it is not the test: it is the thing that passed.
+      expect(script).toContain('better-sqlite3');
+      expect(script, 'the check never runs a statement').toMatch(/CREATE TABLE|db\.exec/);
+      expect(script).not.toMatch(/-e\s*'require\("better-sqlite3"\)'/);
+    },
+  );
+});
+
 describe('the shell scripts', () => {
   it.each(MANIFESTS.filter((f) => f.endsWith('.sh')))('%s is executable', (file) => {
     expect(statSync(file).mode & 0o111).toBeGreaterThan(0);

@@ -27,19 +27,49 @@ around moving one file safely.
 
 ## Before you start
 
-On the new machine:
+**Check the Node version first.** `better-sqlite3` needs Node 22 or newer, and
+it does not say so in a way you will notice: it ships prebuilt binaries, so on
+Node 20 it installs without complaint, `require` returns an object, and the
+first statement segfaults the process. A Debian 13 box with Node 20 got all the
+way to a green install and would have crash-looped with `Segmentation fault` in
+the journal and nothing else anywhere.
+
+```bash
+node -v                # 22 or newer, or nothing below will hold
+```
+
+Debian and Ubuntu ship an older Node than this; `nodejs` from the distribution
+is usually not enough. [NodeSource](https://github.com/nodesource/distributions)
+or `nvm` both work.
+
+Then, on the new machine:
 
 ```bash
 git clone https://github.com/confusedbysmiles/off-guard.git
 cd off-guard
-npm ci                 # compiles better-sqlite3 for this architecture
+npm ci                 # fetches a prebuilt better-sqlite3 for this platform
 npm test               # nothing here needs a data build
 npm run build:data     # ~7 minutes cold, and it needs the network once
 ```
 
-If `npm ci` fails on `better-sqlite3`, that machine is missing a C++ toolchain:
-`sudo apt install build-essential python3` on Debian and Ubuntu. It is needed
-once, at install, and never at runtime.
+`npm ci` falls back to compiling `better-sqlite3` where there is no prebuild,
+and then the machine needs a C++ toolchain: `sudo apt install build-essential
+python3` on Debian and Ubuntu. It is needed once, at install, and never at
+runtime.
+
+**`npm test` is the check that matters, and it is why it is here rather than
+after the move.** It is the first thing that opens a database and runs
+statements against it, so it is the first thing a broken native module takes
+down — as 16 test files exiting with no error at all, which is what a segfault
+looks like from inside a test runner.
+
+`npm run build:data` needs the network and about 7 minutes. If the old machine
+has a built `data/` already, copying it is faster and guarantees both machines
+hold the same catalogue:
+
+```bash
+rsync -a --info=progress2 data/ new-machine:~/off-guard/data/   # ~102 MB
+```
 
 Get that far *before* you stop the old server. Everything above is safe to do
 while the table is still being served from the old machine, and it is where the
