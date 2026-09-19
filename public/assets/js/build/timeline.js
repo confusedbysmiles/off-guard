@@ -11,7 +11,7 @@
  * looks answered, and what that answer is worth appears in the summary panel
  * after the server has said.
  */
-import { el, titleCase } from '../lib/dom.js';
+import { el, debounce, titleCase } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
 
 const ATTRIBUTES = [
@@ -97,31 +97,153 @@ function renderSlot(slot, context) {
     case 'keyAttribute': return keyAttributeSlot(slot, context);
     case 'trainedSkills': return trainedSkillsSlot(slot, context);
     case 'skillIncrease': return skillIncreaseSlot(slot, context);
+    case 'background': return backgroundSlot(slot, context);
     default: return pickerSlot(slot, context);
   }
 }
 
 /** A slot answered from the catalogue: ancestry, class, a feat. */
-function pickerSlot(slot, { picker }) {
+function pickerSlot(slot, context) {
+  // The visible text is "Choose…" on every one of these and the slot's name is
+  // in a sibling, which is why the button carries an `aria-label`: without it
+  // a screen reader reads a column of identical buttons.
+  return slotShell(slot, pickerButton(slot, context),
+    slot.blockedBy ? `Choose an ${slot.blockedBy} first.` : null);
+}
+
+/**
+ * A background, chosen or written.
+ *
+ * The catalogue has 514 of them and a table still ends up needing one it does
+ * not: a GM writes a background for their own setting, or a book lands before
+ * the compendium build catches up. So this slot has the picker every other
+ * identity slot has, and a way past it.
+ *
+ * What the player fills in is what the rules actually read -- two boosts, a
+ * trained skill, a Lore -- and nothing else. The skill feat a background
+ * grants is recorded and shown rather than applied, because this engine does
+ * not apply a catalogue background's granted feat either. See
+ * `customBackground`.
+ */
+const isDescribed = (filled) => Boolean(filled && typeof filled === 'object' && filled.custom);
+
+function backgroundSlot(slot, context) {
+  const { store } = context;
+  const described = isDescribed(slot.filled) ? (slot.filled.custom ?? {}) : null;
+
+  /**
+   * `resetBoosts` for the fields that change what may be boosted. Picking a
+   * new background clears the boosts chosen under the old one, and narrowing
+   * the list a described one offers has to do the same -- otherwise a boost
+   * into Strength survives Strength being taken off the list.
+   */
+  const write = (mutate, { resetBoosts = false } = {}) => store.update((build) => {
+    const custom = { ...(build.background?.custom ?? {}) };
+    mutate(custom);
+    build.background = { custom };
+    if (resetBoosts) build.attributes = { ...(build.attributes ?? {}), background: [] };
+  });
+
+  const describe = el('button', {
+    class: 'btn btn--quiet', type: 'button',
+    onclick: () => write(() => {}, { resetBoosts: true }),
+  }, 'Describe your own');
+
+  const drop = el('button', {
+    class: 'btn btn--quiet custom__drop', type: 'button',
+    onclick: () => store.update((build) => {
+      build.background = null;
+      build.attributes = { ...(build.attributes ?? {}), background: [] };
+    }),
+  }, 'Use the catalogue instead');
+
+  return slotShell(slot,
+    el('div', {},
+      el('div', { class: 'equip-row' },
+        pickerButton(slot, context),
+        described ? null : describe),
+      described ? describedBackground(described, { write, drop }) : null),
+    slot.blockedBy ? `Choose an ${slot.blockedBy} first.` : null);
+}
+
+function describedBackground(custom, { write, drop }) {
+  const chosen = new Set((custom.boosts ?? []).filter(Boolean));
+
+  const field = (id, label, control) => el('label', { class: 'micro', for: id },
+    el('span', { class: 'micro__label' }, label), control);
+
+  const text = (id, label, key, placeholder, limit = 60) => field(id, label, el('input', {
+    class: 'input', type: 'text', id, placeholder, maxlength: String(limit),
+    value: custom[key] ?? '', 'aria-label': label,
+    oninput: debounce((event) => {
+      const value = event.target.value;
+      write((next) => { next[key] = value || undefined; });
+    }, 400),
+  }));
+
+  return el('div', { class: 'custom' },
+    el('div', { class: 'custom__fields' },
+      text('custom-background-name', 'Name', 'name', 'Caravan guard'),
+      field('custom-background-skill', 'Trained skill', el('select', {
+        class: 'input input--compact', id: 'custom-background-skill',
+        'aria-label': 'Skill this background trains',
+        onchange: (event) => {
+          const value = event.target.value;
+          write((next) => { next.skill = value || undefined; });
+        },
+      },
+      el('option', { value: '', selected: !custom.skill }, 'None'),
+      ...SKILLS.map((skill) => el('option', {
+        value: skill, selected: custom.skill === skill,
+      }, titleCase(skill))))),
+      text('custom-background-lore', 'Lore', 'lore', 'Caravan Lore'),
+      text('custom-background-feat', 'Skill feat', 'feat', 'Hefty Hauler')),
+
+    /**
+     * The boost a background narrows. The other one is free, always, so it is
+     * stated rather than offered -- there is nothing here to decide about it.
+     */
+    el('p', { class: 'micro__label stack-md' }, 'Boost one of these, and one free'),
+    el('div', {
+      class: 'boosts', role: 'group',
+      'aria-label': 'Attributes this background may boost',
+    }, ...ATTRIBUTES.map(([key, short]) => {
+      const on = chosen.has(key);
+      return el('button', {
+        class: `boost${on ? ' boost--on' : ''}`,
+        type: 'button',
+        'aria-pressed': String(on),
+        'aria-label': ATTRIBUTE_NAMES[key] ?? key,
+        onclick: () => write((next) => {
+          const list = (next.boosts ?? []).filter(Boolean);
+          next.boosts = on ? list.filter((a) => a !== key) : [...list, key];
+        }, { resetBoosts: true }),
+      }, short);
+    })),
+    el('p', { class: 'faint slot-row__hint' },
+      chosen.size
+        ? 'Leaving none selected would offer all six.'
+        : 'None selected, so all six are offered.'),
+
+    drop);
+}
+
+/** The picker button every identity slot shares. */
+function pickerButton(slot, { picker }) {
   const label = slot.filledMissing
     ? `${slot.filled} — no longer in the catalogue`
     : (slot.filledName ?? 'Choose…');
 
-  return slotShell(slot,
-    el('button', {
-      class: `slot-choice${slot.empty ? ' slot-choice--empty' : ''}${slot.filledMissing ? ' slot-choice--broken' : ''}`,
-      type: 'button',
-      disabled: Boolean(slot.blockedBy),
-      // The visible text is "Choose…" on every one of these, and the slot's
-      // name is in a sibling. Without this a screen reader reads a column of
-      // identical buttons.
-      'aria-label': `${slot.label}${slot.level > 1 ? `, level ${slot.level}` : ''}: ${
-        slot.empty ? 'not yet chosen' : label}`,
-      onclick: () => picker.open(slot, slot.filled),
-    },
-    el('span', { class: 'slot-choice__value' }, label),
-    el('span', { class: 'slot-choice__hint', html: icon('chevron') })),
-    slot.blockedBy ? `Choose an ${slot.blockedBy} first.` : null);
+  return el('button', {
+    class: `slot-choice${slot.empty ? ' slot-choice--empty' : ''}${slot.filledMissing ? ' slot-choice--broken' : ''}`,
+    type: 'button',
+    disabled: Boolean(slot.blockedBy),
+    'aria-label': `${slot.label}${slot.level > 1 ? `, level ${slot.level}` : ''}: ${
+      slot.empty ? 'not yet chosen' : label}`,
+    onclick: () => picker.open(slot, typeof slot.filled === 'string' ? slot.filled : null),
+  },
+  el('span', { class: 'slot-choice__value' }, label),
+  el('span', { class: 'slot-choice__hint', html: icon('chevron') }));
 }
 
 /**

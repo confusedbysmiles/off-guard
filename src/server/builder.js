@@ -17,6 +17,7 @@
  * a hundred paths per character in `character_field`.
  */
 import { deriveCharacter } from '../rules/character/derive.js';
+import { isCustomBackground, resolveBackground } from '../rules/character/background.js';
 import { slotsFor, outstanding } from '../rules/character/slots.js';
 import { readPath } from './store/characters.js';
 
@@ -65,7 +66,9 @@ export function resolveBuild(options, build = {}) {
     items,
     ancestry: build.ancestry ? options.get(build.ancestry) : null,
     heritage: build.heritage ? options.get(build.heritage) : null,
-    background: build.background ? options.get(build.background) : null,
+    // A string is a catalogue id; an object carries a background somebody
+    // wrote themselves. See `resolveBackground`.
+    background: resolveBackground(build.background, (id) => options.get(id)),
     klass,
     progression: build.class ? options.progressionFor(build.class) : null,
   };
@@ -91,6 +94,13 @@ export function builderState(options, build = {}) {
    * before the page can render is not a page, it is a progress bar.
    */
   for (const slot of slots) {
+    // A slot answered by a description rather than by an id: it already knows
+    // its own name, because the player typed it.
+    if (slot.kind === 'background' && isCustomBackground(slot.filled)) {
+      slot.filledName = resolved.background?.name ?? 'Custom background';
+      slot.filledCustom = true;
+      continue;
+    }
     if (typeof slot.filled !== 'string' || !slot.filled.includes(':')) continue;
     const record = options.get(slot.filled);
     slot.filledName = record?.name ?? null;
@@ -103,7 +113,9 @@ export function builderState(options, build = {}) {
   const missing = [];
   for (const [field, id] of [
     ['ancestry', build.ancestry], ['heritage', build.heritage],
-    ['background', build.background], ['class', build.class],
+    // A described background names nothing, so it can never be missing.
+    ['background', isCustomBackground(build.background) ? null : build.background],
+    ['class', build.class],
   ]) {
     if (id && !resolved[field === 'class' ? 'klass' : field]) {
       missing.push({ field, id, message: `This build names ${id}, which is not in the catalogue.` });

@@ -193,7 +193,7 @@ export function slotsFor(build = {}, {
     slot.planned = slot.level > current;
     slot.empty = Array.isArray(slot.filled)
       ? slot.filled.length < (slot.count ?? 1)
-      : (slot.filled === null || slot.filled === undefined || slot.filled === '');
+      : isBlank(slot.filled);
   }
 
   slots.sort((a, b) => a.level - b.level || ORDER.indexOf(a.kind) - ORDER.indexOf(b.kind));
@@ -202,6 +202,20 @@ export function slotsFor(build = {}, {
   for (const slot of slots) (byLevel[slot.level] ??= []).push(slot);
 
   return { slots, byLevel, level: current, planTo: horizon };
+}
+
+/**
+ * Whether a slot has been answered.
+ *
+ * An object is a choice somebody described rather than picked -- a background
+ * of their own. Opening that form is not the same as filling it in, so it
+ * counts as answered once it has a name: otherwise "everything chosen" would
+ * appear the moment the form opened, over a background that grants nothing.
+ */
+function isBlank(filled) {
+  if (filled === null || filled === undefined || filled === '') return true;
+  if (typeof filled === 'object') return !String(filled.custom?.name ?? '').trim();
+  return false;
 }
 
 /** Within a level, the order a character is actually built in. */

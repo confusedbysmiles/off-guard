@@ -89,6 +89,65 @@ describe('the builder API', () => {
     expect(res.json().rows.map((r) => r.name)).toContain('Longsword');
   });
 
+/**
+ * A background that is in no book, through the API the browser uses.
+ *
+ * The rules-level tests cover what it derives; this covers the part that would
+ * break first -- `resolveBuild` handing the derivation a string where it now
+ * sometimes gets an object, and the timeline having nothing to call a slot
+ * whose answer has no id.
+ */
+describe('a background somebody wrote', () => {
+  const CARAVAN = {
+    name: 'Caravan guard',
+    boosts: ['str', 'con'],
+    skill: 'athletics',
+    lore: 'Caravan Lore',
+    feat: 'Hefty Hauler',
+  };
+
+  const save = (background) => player('/builder', {
+    method: 'PATCH',
+    payload: { build: { ...FIGHTER, background, attributes: { ...FIGHTER.attributes, background: ['str'] } } },
+  });
+
+  it('trains its skill, carries its Lore, and names itself', async () => {
+    const res = await save({ custom: CARAVAN });
+    expect(res.statusCode).toBe(200);
+    const { builder } = res.json();
+
+    expect(builder.sheet.background).toBe('Caravan guard');
+    expect(builder.sheet.skills.athletics.rank).toBe('trained');
+    expect(builder.sheet.lores).toContainEqual({ name: 'Caravan Lore', rank: 'trained' });
+  });
+
+  it('is not reported missing, having named nothing to miss', async () => {
+    const { builder } = (await save({ custom: CARAVAN })).json();
+    expect(builder.missing).toEqual([]);
+    const slot = builder.slots.find((s) => s.kind === 'background');
+    expect(slot).toMatchObject({ filledName: 'Caravan guard', filledCustom: true, empty: false });
+  });
+
+  it('offers the boosts it narrowed, and one free', async () => {
+    const { builder } = (await save({ custom: CARAVAN })).json();
+    const boosts = builder.slots.find((s) => s.id === 'background-boosts');
+    expect(boosts.options[0]).toEqual(['str', 'con']);
+    expect(boosts.options[1]).toHaveLength(6);
+  });
+
+  it('survives the round trip, so reopening the page shows what was typed', async () => {
+    await save({ custom: CARAVAN });
+    const { build } = (await player('/builder')).json();
+    expect(build.background).toEqual({ custom: CARAVAN });
+  });
+
+  it('still takes a catalogue id, which is what most builds hold', async () => {
+    const { builder } = (await save('background:acolyte')).json();
+    expect(builder.sheet.background).toBe('Acolyte');
+    expect(builder.slots.find((s) => s.kind === 'background').filledCustom).toBeUndefined();
+  });
+});
+
   it('returns one option in full', async () => {
     const res = await player('/builder/options/class:fighter');
     expect(res.json().option.name).toBe('Fighter');
