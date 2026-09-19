@@ -7,8 +7,10 @@
  */
 import { applyPatch, getOwnCharacter, versionsFor } from '../store/characters.js';
 import { getCampaign } from '../store/campaigns.js';
-import { diffImport, mapPathbuilder } from '../../shared/pathbuilder.js';
+import { diffImport, mapPathbuilder, readPath } from '../../shared/pathbuilder.js';
 import { builderState, buildWrites, startingBuild, validBuild } from '../builder.js';
+import { buildFromImport, checkAgainst } from '../../rules/character/from-import.js';
+import { isDerivedPath } from '../../rules/character/derive.js';
 import { fetchBuild, fetchEnabled } from '../pathbuilder-fetch.js';
 import { characterChannel, streamTo } from '../events.js';
 
@@ -18,6 +20,31 @@ const asArray = (value) => {
 };
 
 const asNumber = (value) => (value === undefined || value === '' ? null : Number(value));
+
+/**
+ * A catalogue record by its printed name.
+ *
+ * What an import has is what a book prints -- "Fey-Touched Gnome", "Codebreaker"
+ * -- and what a build stores is an id. Exact match, case-insensitive, and
+ * nothing cleverer: a near match would silently make somebody a different
+ * ancestry, and "we could not find it" is an answer the player can act on
+ * whereas "we found something else" is not.
+ *
+ * Homebrew comes through this too, because `options` is the campaign's view --
+ * so a table that wrote its own ancestry can import a character who has it.
+ */
+function byName(options, kind, name) {
+  const needle = String(name ?? '').trim().toLowerCase();
+  if (!needle) return null;
+  const { rows } = options.search({
+    kind: kind === 'equipment' ? null : kind,
+    itemType: kind === 'equipment' ? 'armor' : null,
+    q: needle,
+    limit: 50,
+  });
+  const match = rows.find((row) => row.name.toLowerCase() === needle);
+  return match ? options.get(match.id) : null;
+}
 
 export async function registerCharacterRoutes(app) {
   const { db } = app;
@@ -70,7 +97,70 @@ export async function registerCharacterRoutes(app) {
 
     const { sheet, warnings } = mapPathbuilder(exported);
     const current = getOwnCharacter(db, request.scope).sheet;
-    return { sheet, warnings, changes: diffImport(current, sheet) };
+    const options = app.optionsFor(request.scope.campaignId);
+
+    /**
+     * The same file, read a second way: as the choices that would have
+     * produced it.
+     *
+     * An import that writes a sheet and leaves the builder empty makes an
+     * imported character and a built one two different kinds of thing, and the
+     * application then disagrees with itself about who owns the numbers. So
+     * the export is also reconstructed into a build, and what the player is
+     * shown is what will actually be on the sheet afterwards: the build's own
+     * derivation for everything the build determines, and the file's values
+     * for everything else.
+     */
+    const { build, notes } = buildFromImport(exported, {
+      sheet,
+      find: (kind, name) => byName(options, kind, name),
+    });
+    const state = builderState(options, build);
+
+    const derived = buildWrites(build, state, current).filter((write) => write.path !== 'build');
+    const fromFile = diffImport(current, sheet)
+      .filter((change) => !isDerivedPath(change.path, build));
+    const changes = [
+      ...fromFile,
+      ...derived.map((write) => ({
+        path: write.path,
+        from: readPath(current, write.path) ?? null,
+        to: write.value,
+        isNew: readPath(current, write.path) === undefined,
+        fromBuild: true,
+      })),
+    ].sort((a, b) => a.path.localeCompare(b.path));
+
+    return {
+      sheet,
+      warnings,
+      changes,
+      /**
+       * The same import with the reconstruction declined: the file's own
+       * values, and no build.
+       *
+       * Both lists rather than one, because the choice changes what is
+       * written -- a build's derivation of Perception is not the number in the
+       * file when the two disagree -- and a diff that does not match what the
+       * button will do is worse than no diff.
+       */
+      withoutBuild: diffImport(current, sheet),
+      builder: {
+        build,
+        notes,
+        // Where the reconstruction and the file disagree. Shown, never hidden:
+        // only the player can say whether a difference matters.
+        differences: checkAgainst(sheet, state.sheet),
+        summary: {
+          level: state.level,
+          ancestry: state.sheet.ancestry,
+          heritage: state.sheet.heritage,
+          background: state.sheet.background,
+          class: state.sheet.class,
+          outstanding: state.outstanding,
+        },
+      },
+    };
   });
 
   /**
@@ -83,6 +173,18 @@ export async function registerCharacterRoutes(app) {
     const writes = changes
       .filter((change) => typeof change?.path === 'string')
       .map((change) => ({ path: change.path, value: change.to }));
+
+    /**
+     * The build document, when the player kept it.
+     *
+     * Written alongside rather than instead: the sheet writes above are what
+     * the preview showed, and this is what makes the builder agree with them.
+     * Sent back by the client like the changes are, and no more trusted than
+     * the builder's own save, which takes a build from the same place.
+     */
+    const build = request.body?.build ?? null;
+    if (build && validBuild(build)) writes.push({ path: 'build', value: build });
+
     return applyPatch(db, request.scope, request.scope.characterId, writes, { by: 'import' });
   });
 

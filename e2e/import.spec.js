@@ -77,3 +77,69 @@ test('says so when the file is not JSON', async ({ page }) => {
   });
   await expect(page.locator('#import-body')).toContainText('not readable JSON');
 });
+
+/**
+ * The build the import reconstructs.
+ *
+ * An import used to write a sheet and leave the builder empty, so an imported
+ * character and a built one were two different kinds of thing that the
+ * application disagreed about. The file is now read a second way -- as the
+ * choices that would have produced it -- and the character can be levelled up
+ * afterwards like any other.
+ */
+test.describe('the builder, filled in from the file', () => {
+  test('says what it worked out, and fills the builder in', async ({ page, request }) => {
+    const { token } = await table.addCharacter(request, 'Reconstructed');
+    await openImport(page, token);
+    await page.locator('#pb-file').setInputFiles(EXPORT);
+
+    const card = page.locator('.import-builder');
+    await expect(card).toContainText('Also fill in the character builder');
+    // The four choices it resolved out of the catalogue, by name.
+    await expect(card).toContainText('Human');
+    await expect(card).toContainText('Fighter');
+    await expect(card).toContainText('Level 5');
+    await expect(page.locator('#import-build')).toBeChecked();
+
+    await page.locator('#import-confirm').click();
+    await expect(page.locator('#import-dialog')).toBeHidden();
+
+    await page.goto(`/build/${token}`);
+    await expect(page.locator('.slot-row', { hasText: 'Ancestry' }).first()).toContainText('Human');
+    await expect(page.locator('.slot-row', { hasText: 'Class' }).first()).toContainText('Fighter');
+    await expect(page.locator('#summary')).toContainText('Fighter');
+  });
+
+  test('leaves the builder alone when the player unticks it', async ({ page, request }) => {
+    const { token } = await table.addCharacter(request, 'Sheet only');
+    await openImport(page, token);
+    await page.locator('#pb-file').setInputFiles(EXPORT);
+
+    await page.locator('#import-build').uncheck();
+    await page.locator('#import-confirm').click();
+    await expect(page.locator('#import-dialog')).toBeHidden();
+
+    // The sheet took the file's values...
+    await expect(page.locator('#character-name')).toHaveText(/Kestrel Vane/);
+    // ...and nothing was chosen on their behalf.
+    await page.goto(`/build/${token}`);
+    await expect(page.locator('.slot-row', { hasText: 'Ancestry' }).first())
+      .toContainText('Choose');
+  });
+
+  test('a character imported with their build survives the builder', async ({ page, request }) => {
+    const { token } = await table.addCharacter(request, 'Levelling up');
+    await openImport(page, token);
+    await page.locator('#pb-file').setInputFiles(EXPORT);
+    await page.locator('#import-confirm').click();
+    await expect(page.locator('#import-dialog')).toBeHidden();
+
+    // The thing that used to cost an import everything it had.
+    await page.goto(`/build/${token}`);
+    await page.locator('#coins-gp').click();
+
+    await page.goto(`/c/${token}`);
+    await page.locator('.sheet-tabs').getByRole('button', { name: 'Character', exact: true }).click();
+    await expect(page.locator('#character-name')).toHaveText(/Kestrel Vane/);
+  });
+});

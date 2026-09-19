@@ -27,6 +27,7 @@ export async function openImportDialog({ store, endpoint }) {
     placeholder: 'e.g. 145200', disabled: !capabilities.buildId,
   });
   const message = el('p', { class: 'muted' });
+  const builderBox = el('div', { class: 'import-builder' });
   const diff = el('div', { class: 'diff' });
 
   const preview = async (payload) => {
@@ -72,59 +73,113 @@ export async function openImportDialog({ store, endpoint }) {
     }
   };
 
+  /**
+   * What the import would do, and the one choice inside it.
+   *
+   * The file is read two ways: as a set of sheet values, and as the choices
+   * that would have produced them. Keeping the second is what makes the
+   * character editable in the builder afterwards, and it is the default --
+   * but it is a real choice, because where the reconstruction and the file
+   * disagree the reconstruction wins, and only the player can say whether
+   * that is what they want. So the disagreements are listed, not buried.
+   */
   function renderDiff(result) {
-    const { changes, warnings } = result;
-    if (!changes.length) {
-      message.textContent = 'Nothing to change — this sheet already matches that build.';
-      return;
-    }
-    message.textContent = `${changes.length} field${changes.length === 1 ? '' : 's'} would change. `
-      + 'Uncheck anything you want to keep as it is.';
+    let useBuild = Boolean(result.builder?.build);
 
-    diff.replaceChildren(...changes.map((change, index) => {
-      const box = el('input', {
-        type: 'checkbox', checked: true, id: `diff-${index}`,
-        'aria-label': `Apply ${prettyPath(change.path)}`,
-      });
-      box.dataset.index = String(index);
-      return el('div', { class: 'diff__row' },
-        box,
-        el('label', { for: `diff-${index}` },
-          el('div', { class: 'diff__path' }, prettyPath(change.path)),
-          el('div', { class: 'diff__values' },
-            change.isNew ? null : el('span', { class: 'diff__from' }, preview_(change.from)),
-            change.isNew ? null : ' → ',
-            el('span', { class: 'diff__to' }, preview_(change.to)))));
-    }));
+    const keep = el('input', {
+      type: 'checkbox', id: 'import-build', checked: useBuild,
+      onchange: (event) => { useBuild = event.target.checked; paint(); },
+    });
 
-    if (warnings.length) {
-      diff.append(el('div', { class: 'notice' },
+    function builderCard() {
+      const { summary, notes = [], differences = [] } = result.builder ?? {};
+      if (!summary) return null;
+
+      const named = [summary.ancestry, summary.heritage, summary.background, summary.class]
+        .filter(Boolean).join(' · ');
+
+      return el('div', { class: 'notice' },
         el('div', { class: 'notice__body' },
-          el('strong', {}, 'Not imported'),
-          ...warnings.map((w) => el('p', { class: 'muted' }, w)))));
+          el('label', { class: 'import-builder__keep', for: 'import-build' },
+            keep, el('strong', {}, 'Also fill in the character builder')),
+          el('p', { class: 'muted' },
+            named ? `Level ${summary.level} — ${named}.` : `Level ${summary.level}.`,
+            summary.outstanding
+              ? ` ${summary.outstanding} choices the file does not record, mostly feats, will be waiting for you there.`
+              : ''),
+          ...notes.map((note) => el('p', { class: 'faint' }, note)),
+          differences.length
+            ? el('p', { class: 'muted' },
+              el('strong', {}, `${differences.length} number${differences.length === 1 ? '' : 's'} would differ from the file: `),
+              differences.map((d) => `${d.label} ${JSON.stringify(d.imported)} → ${JSON.stringify(d.derived)}`).join(', '),
+              '. Untick the box above to keep the file’s values and leave the builder empty.')
+            : null));
     }
 
-    confirm.disabled = false;
-    confirm.onclick = async (event) => {
-      event.preventDefault();
-      const accepted = [...diff.querySelectorAll('input[type=checkbox]')]
-        .filter((box) => box.checked)
-        .map((box) => changes[Number(box.dataset.index)]);
-      const applied = await fetch(`${endpoint}/import/apply`, {
-        method: 'POST',
-        headers: { accept: 'application/json', 'content-type': 'application/json' },
-        body: JSON.stringify({ changes: accepted }),
-      });
-      // It used to close the dialog whatever came back, so a refused write
-      // looked exactly like a successful one.
-      if (!applied.ok) {
-        message.textContent = `Those changes were not saved (${applied.status}). Nothing has changed.`;
+    function paint() {
+      const changes = useBuild ? (result.changes ?? []) : (result.withoutBuild ?? []);
+      builderBox.replaceChildren(builderCard() ?? '');
+
+      if (!changes.length) {
+        message.textContent = 'Nothing to change — this sheet already matches that build.';
+        diff.replaceChildren();
+        confirm.disabled = true;
         return;
       }
-      dialog.close();
-      // The server is now ahead of the local copy, so reload rather than guess.
-      await store.load();
-    };
+
+      message.textContent = `${changes.length} field${changes.length === 1 ? '' : 's'} would change. `
+        + 'Uncheck anything you want to keep as it is.';
+
+      diff.replaceChildren(...changes.map((change, index) => {
+        const box = el('input', {
+          type: 'checkbox', checked: true, id: `diff-${index}`,
+          'aria-label': `Apply ${prettyPath(change.path)}`,
+        });
+        box.dataset.index = String(index);
+        return el('div', { class: 'diff__row' },
+          box,
+          el('label', { for: `diff-${index}` },
+            el('div', { class: 'diff__path' }, prettyPath(change.path)),
+            el('div', { class: 'diff__values' },
+              change.isNew ? null : el('span', { class: 'diff__from' }, preview_(change.from)),
+              change.isNew ? null : ' → ',
+              el('span', { class: 'diff__to' }, preview_(change.to)))));
+      }));
+
+      if (result.warnings?.length) {
+        diff.append(el('div', { class: 'notice' },
+          el('div', { class: 'notice__body' },
+            el('strong', {}, 'Not imported'),
+            ...result.warnings.map((w) => el('p', { class: 'muted' }, w)))));
+      }
+
+      confirm.disabled = false;
+      confirm.onclick = async (event) => {
+        event.preventDefault();
+        const accepted = [...diff.querySelectorAll('input[type=checkbox]')]
+          .filter((box) => box.checked)
+          .map((box) => changes[Number(box.dataset.index)]);
+        const applied = await fetch(`${endpoint}/import/apply`, {
+          method: 'POST',
+          headers: { accept: 'application/json', 'content-type': 'application/json' },
+          body: JSON.stringify({
+            changes: accepted,
+            build: useBuild ? result.builder?.build ?? null : null,
+          }),
+        });
+        // It used to close the dialog whatever came back, so a refused write
+        // looked exactly like a successful one.
+        if (!applied.ok) {
+          message.textContent = `Those changes were not saved (${applied.status}). Nothing has changed.`;
+          return;
+        }
+        dialog.close();
+        // The server is now ahead of the local copy, so reload rather than guess.
+        await store.load();
+      };
+    }
+
+    paint();
   }
 
   file.addEventListener('change', async () => {
@@ -153,6 +208,7 @@ export async function openImportDialog({ store, endpoint }) {
       el('div', { class: 'row-inline' }, buildId, fetchById),
       el('small', { class: 'faint' }, capabilities.buildIdNote ?? '')),
     message,
+    builderBox,
     diff,
   );
 

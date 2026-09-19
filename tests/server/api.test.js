@@ -346,3 +346,64 @@ describe('an import, and then the builder', () => {
     expect(after.coins.gp).toBe(187);
   });
 });
+
+/**
+ * The build an import reconstructs, against the real catalogue.
+ *
+ * The unit tests check the arithmetic with hand-made records. This checks the
+ * claim the whole feature rests on: that a real Pathbuilder export, read
+ * backwards into choices and then derived forwards again, comes out as the
+ * same character. Zero differences is the requirement, not "close".
+ */
+describe('reconstructing a build from a real export', () => {
+  const real = JSON.parse(readFileSync(
+    new URL('../fixtures/pathbuilder/rogue-6.json', import.meta.url), 'utf8',
+  ));
+  const post = (path, payload) => app.inject({
+    method: 'POST', url: `/api/c/${world.tuesday.characterToken}${path}`, payload,
+  });
+
+  it('derives the same character it was given', async () => {
+    const preview = (await post('/import/preview', { json: real })).json();
+    expect(preview.builder.differences).toEqual([]);
+    expect(preview.builder.notes).toEqual([]);
+  });
+
+  it('resolves every name in the file to a catalogue option', async () => {
+    const { builder } = (await post('/import/preview', { json: real })).json();
+    expect(builder.summary).toMatchObject({
+      level: 6, ancestry: 'Goblin', heritage: 'Aiuvarin',
+      background: 'Codebreaker', class: 'Rogue',
+    });
+    expect(builder.build.ancestry).toBe('ancestry:goblin');
+    expect(builder.build.class).toBe('class:rogue');
+  });
+
+  it('leaves the builder holding a character who can be levelled up', async () => {
+    const preview = (await post('/import/preview', { json: real })).json();
+    await post('/import/apply', { changes: preview.changes, build: preview.builder.build });
+
+    const state = (await app.inject({
+      method: 'GET', url: `/api/c/${world.tuesday.characterToken}/builder`,
+    })).json();
+    expect(state.build.class).toBe('class:rogue');
+    expect(state.missing).toEqual([]);
+    expect(state.sheet.class).toBe('Rogue');
+    // The things the file carried that no build choice produces are still there.
+    expect(state.sheet.coins.gp).toBe(187);
+  });
+
+  it('offers the file’s own values as the alternative, with no build', async () => {
+    const preview = (await post('/import/preview', { json: real })).json();
+    await post('/import/apply', { changes: preview.withoutBuild, build: null });
+
+    const state = (await app.inject({
+      method: 'GET', url: `/api/c/${world.tuesday.characterToken}/builder`,
+    })).json();
+    expect(state.build.class).toBe(null);
+    const sheet = (await app.inject({
+      method: 'GET', url: `/api/c/${world.tuesday.characterToken}`,
+    })).json().character.sheet;
+    expect(sheet.class).toBe('Rogue');
+  });
+});

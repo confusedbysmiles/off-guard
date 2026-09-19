@@ -13,7 +13,7 @@ a setting rather than a tool.
 
 **Status: complete, and running.** It has been live since 29 August 2026 on a
 Mac under launchd, reached through a Cloudflare Tunnel, and has been played on
-from a laptop, a phone and an iPad. 1,010 unit tests and 88 end-to-end tests, run
+from a laptop, a phone and an iPad. 1,028 unit tests and 91 end-to-end tests, run
 at a host root and at a subdirectory, in Chromium and — for the parts where
 engines differ — in WebKit. See [deploy/GOING-LIVE.md](deploy/GOING-LIVE.md).
 
@@ -235,6 +235,29 @@ try to defeat that: it identifies itself honestly as Off-Guard, and when the
 answer is not a build it says so and points at the export file. Set
 `OFF_GUARD_PATHBUILDER_FETCH=off` to remove the outbound request entirely. It is
 the application's only one.
+
+**The file is read twice: as a sheet, and as the choices behind it.** An import
+that wrote the sheet and left the builder empty made an imported character and a
+built one two different kinds of thing, and the application then disagreed with
+itself about who owned the numbers — opening the builder once cost an import its
+class, its hit points, its money and its bag. So the export is also
+reconstructed into an ordinary build: the four identity choices resolved from
+their printed names against the campaign's own catalogue, homebrew included, the
+attribute boosts solved backwards from the final scores, the skill training and
+increases worked out from the ranks, and the purse and the bag carried over. The
+character can then be levelled up in the builder like any other.
+
+Pathbuilder exports results rather than choices, so what comes back is *an*
+account of how the character got here rather than *the* one — two accounts that
+produce the same numbers are the same character. That is only acceptable if the
+numbers really do come out the same, so nothing is trusted: the reconstruction
+is derived and compared against the sheet that was imported, field by field, and
+every difference is listed in the dialog with both values. Where it cannot find
+a name it says so and leaves that choice empty rather than picking a near match,
+because "we could not find Fey-Touched Gnome" is something a player can act on
+and "we made you something else" is not. A real level 6 rogue round-trips with
+zero differences; the checking is there for the ones that will not, and the box
+can be unticked to keep the file's values and leave the builder alone.
 
 A re-import at level-up is safe by construction. The mapper produces a fixed set
 of paths and nothing else, so the free-text feats, features, reactions, items

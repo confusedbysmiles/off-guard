@@ -523,3 +523,12 @@ details.card[open] > .fold__summary--card { margin-bottom: var(--sp-3); }
 }
 .vital__now:focus { border-bottom-style: solid; border-color: var(--focus); }
 .vital__now:read-only { border-bottom-color: transparent; }
+
+/* The one choice inside the import: keep the reconstructed build, or take the
+   file's numbers as they are. */
+.import-builder__keep {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  cursor: pointer;
+}
