@@ -24,6 +24,8 @@ const ATTRIBUTE_NAMES = {
   int: 'Intelligence', wis: 'Wisdom', cha: 'Charisma',
 };
 
+const RANKS = ['untrained', 'trained', 'expert', 'master', 'legendary'];
+
 const SKILLS = [
   'acrobatics', 'arcana', 'athletics', 'crafting', 'deception', 'diplomacy',
   'intimidation', 'medicine', 'nature', 'occultism', 'performance', 'religion',
@@ -97,6 +99,7 @@ function renderSlot(slot, context) {
     case 'keyAttribute': return keyAttributeSlot(slot, context);
     case 'trainedSkills': return trainedSkillsSlot(slot, context);
     case 'skillIncrease': return skillIncreaseSlot(slot, context);
+    case 'lores': return loresSlot(slot, context);
     case 'background': return backgroundSlot(slot, context);
     default: return pickerSlot(slot, context);
   }
@@ -387,6 +390,68 @@ function skillIncreaseSlot(slot, { store, derived }) {
     ...SKILLS.map((skill) => el('option', {
       value: skill, selected: slot.filled === skill,
     }, `${titleCase(skill)} — ${titleCase(ranks[skill]?.rank ?? 'untrained')}`))));
+}
+
+/**
+ * Lore skills, which are typed rather than chosen.
+ *
+ * No list to pick from: "Vault Lore" and "Sailing Lore" are made up at the
+ * table and always were. So this is the one slot that is a set of text boxes,
+ * and the only validation is that a Lore with no name is not a Lore.
+ *
+ * The ones a background granted are shown above, unchangeable, because they
+ * come from the background rather than from here -- editing one would mean
+ * editing the background, and removing it would mean the next render putting it
+ * straight back.
+ */
+function loresSlot(slot, { store, derived }) {
+  const own = Array.isArray(slot.filled) ? slot.filled : [];
+  const mine = new Set(own.map((lore) => String(lore?.name ?? '').trim().toLowerCase()));
+  const granted = (derived.sheet?.lores ?? [])
+    .filter((lore) => !mine.has(String(lore.name ?? '').trim().toLowerCase()));
+
+  const write = (mutate) => store.update((build) => {
+    build.skills ??= {};
+    const list = [...(build.skills.lores ?? [])];
+    mutate(list);
+    build.skills.lores = list;
+  });
+
+  const row = (lore, index) => el('div', { class: 'equip-row' },
+    el('input', {
+      class: 'input', type: 'text', maxlength: '60', placeholder: 'Vault Lore',
+      'aria-label': `Lore ${index + 1}`, value: lore?.name ?? '',
+      oninput: debounce((event) => {
+        const { value } = event.target;
+        write((list) => { list[index] = { ...list[index], name: value }; });
+      }, 400),
+    }),
+    el('select', {
+      class: 'input input--compact', 'aria-label': `Rank of Lore ${index + 1}`,
+      onchange: (event) => {
+        const { value } = event.target;
+        write((list) => { list[index] = { ...list[index], rank: value }; });
+      },
+    }, ...RANKS.map((rank) => el('option', {
+      value: rank, selected: (lore?.rank ?? 'trained') === rank,
+    }, titleCase(rank)))),
+    el('button', {
+      class: 'btn btn--icon btn--quiet', type: 'button',
+      html: `${icon('x')}<span class="sr-only">Remove ${lore?.name || 'this Lore'}</span>`,
+      onclick: () => write((list) => { list.splice(index, 1); }),
+    }));
+
+  return slotShell(slot,
+    el('div', { class: 'lores' },
+      ...granted.map((lore) => el('p', { class: 'faint lores__granted' },
+        `${lore.name} — ${titleCase(lore.rank ?? 'trained')}, from your background`)),
+      ...own.map(row),
+      el('button', {
+        class: 'btn btn--quiet', type: 'button',
+        html: `${icon('plus')}<span>Add a Lore</span>`,
+        onclick: () => write((list) => { list.push({ name: '', rank: 'trained' }); }),
+      })),
+    own.length || granted.length ? null : 'Anything your character knows about that is not one of the sixteen skills.');
 }
 
 /** Every slot looks the same from the outside: a label, a control, a hint. */

@@ -59,6 +59,15 @@ export const api = {
   deleteSession: (id, sessionId) =>
     request(`/campaigns/${id}/sessions/${sessionId}`, { method: 'DELETE' }),
 
+  homebrew: (id) => request(`/campaigns/${id}/homebrew`),
+  homebrewBases: (id) => request(`/campaigns/${id}/homebrew/bases`),
+  createHomebrew: (id, fields) =>
+    request(`/campaigns/${id}/homebrew`, { method: 'POST', body: fields }),
+  updateHomebrew: (id, rowId, fields) =>
+    request(`/campaigns/${id}/homebrew/${rowId}`, { method: 'PATCH', body: fields }),
+  deleteHomebrew: (id, rowId) =>
+    request(`/campaigns/${id}/homebrew/${rowId}`, { method: 'DELETE' }),
+
   tokens: (id) => request(`/campaigns/${id}/tokens`),
   mintCharacterToken: (id, characterId) =>
     request(`/campaigns/${id}/tokens/character/${characterId}`, { method: 'POST', body: {} }),

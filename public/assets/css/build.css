@@ -476,3 +476,8 @@
 
 /* What a narrowed list cannot see, said where the narrowing is. */
 .picker__note { margin: 0; }
+
+/* Lore skills: rows of a name, a rank and a way to remove it. The granted ones
+   sit above as plain text, because they belong to the background. */
+.lores { display: grid; gap: var(--sp-2); }
+.lores__granted { margin: 0; font-size: var(--step--1); }

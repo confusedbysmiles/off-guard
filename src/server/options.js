@@ -26,6 +26,7 @@ function unavailable(reason) {
   return {
     available: false,
     reason,
+    rows: [],
     search: () => ({ rows: [], total: 0, available: false }),
     get: () => null,
     getMany: () => [],
@@ -62,82 +63,7 @@ export function openOptions({ dataDir = DATA_DIR } = {}) {
     ? JSON.parse(readFileSync(progressionFile, 'utf8')).classes ?? {}
     : {};
 
-  /**
-   * Search.
-   *
-   * `maxLevel` rather than a range, because the question a builder asks is
-   * always "what may I take", never "what is exactly level 6". A level 2 feat
-   * is a perfectly good choice for a level 6 slot.
-   */
-  function search({
-    q = '', kind = null, category = null, categories = [], trait = null, traits = [],
-    maxLevel = null, minLevel = null, rarity = null, tradition = null,
-    ancestry = null, itemType = null, source = null, remasterOnly = false,
-    skill = null, limit = 50, offset = 0, sort = 'name',
-  } = {}) {
-    const needle = String(q ?? '').trim().toLowerCase();
-    /**
-     * Several categories at once, which `category` cannot express.
-     *
-     * The question a builder asks about a weapon is "which of these may I
-     * use", and the answer is a set: a wizard is trained in unarmed and simple
-     * attacks and nothing else. Kept separate from `category` rather than
-     * folded into it, because one of them is a fact about the item and the
-     * other is a fact about who is looking.
-     */
-    const anyOf = (categories ?? []).filter(Boolean).map((c) => String(c).toLowerCase());
-    const wanted = [trait, ...(traits ?? [])].filter(Boolean).map((t) => String(t).toLowerCase());
-
-    const matched = rows.filter((row) => {
-      if (kind && row.kind !== kind) return false;
-      if (category && row.category !== category) return false;
-      if (anyOf.length && !anyOf.includes(String(row.category))) return false;
-      if (itemType && row.itemType !== itemType) return false;
-      if (needle && !row.search.includes(needle)) return false;
-      if (maxLevel !== null && row.level > Number(maxLevel)) return false;
-      if (minLevel !== null && row.level < Number(minLevel)) return false;
-      if (rarity && row.rarity !== rarity) return false;
-      if (source && row.book !== source) return false;
-      if (remasterOnly && !row.remaster) return false;
-      if (tradition && !(row.traditions ?? []).includes(tradition)) return false;
-      if (skill && !(row.trainedSkills ?? []).includes(skill)) return false;
-
-      /**
-       * A heritage names the ancestry it belongs to; a versatile heritage names
-       * none and is offered to everyone. Filtering those out would hide half a
-       * dwarf's legitimate choices.
-       */
-      if (ancestry && row.kind === 'heritage' && row.ancestry !== null) {
-        if (row.ancestry !== stripKind(ancestry)) return false;
-      }
-
-      for (const t of wanted) if (!(row.traits ?? []).includes(t)) return false;
-      return true;
-    });
-
-    /**
-     * `rarity` is the default the builder wants and `name` is not: sorted
-     * alphabetically, a player opening the ancestry list meets Anadi, Android,
-     * Athamaru and Automaton before Dwarf, Elf or Human. Common first, then by
-     * name, puts the fifty options most characters use at the top without
-     * hiding the rest behind a filter.
-     */
-    const compare = {
-      name: (a, b) => a.name.localeCompare(b.name),
-      rarity: (a, b) => RARITY_ORDER.indexOf(a.rarity) - RARITY_ORDER.indexOf(b.rarity)
-        || a.name.localeCompare(b.name),
-      level: (a, b) => a.level - b.level || a.name.localeCompare(b.name),
-      'level-desc': (a, b) => b.level - a.level || a.name.localeCompare(b.name),
-    }[sort] ?? ((a, b) => a.name.localeCompare(b.name));
-
-    matched.sort(compare);
-
-    return {
-      available: true,
-      total: matched.length,
-      rows: matched.slice(Number(offset), Number(offset) + Number(limit)),
-    };
-  }
+  const search = (query) => searchRows(rows, query);
 
   function get(id) {
     const row = rowById.get(id);
@@ -160,6 +86,12 @@ export function openOptions({ dataDir = DATA_DIR } = {}) {
     available: true,
     reason: null,
     search,
+    /**
+     * The index itself, for the homebrew overlay to search alongside a
+     * campaign's own options. Read, never written: it is the catalogue, and
+     * the catalogue is the same for everybody.
+     */
+    rows,
     get,
     getMany,
     has: (id) => rowById.has(id),
@@ -178,6 +110,88 @@ export function openOptions({ dataDir = DATA_DIR } = {}) {
       }, {}),
       classes: Object.keys(progression).length,
     }),
+  };
+}
+
+/**
+ * Search, over whatever rows it is given.
+ *
+ * A free function rather than a closure over the catalogue, because a campaign
+ * with homebrew searches its own options and the catalogue as one list -- see
+ * src/server/homebrew.js. Two searches merged afterwards would get the sort and
+ * the pagination wrong in ways that only show up on the second page.
+ *
+ * `maxLevel` rather than a range, because the question a builder asks is
+ * always "what may I take", never "what is exactly level 6". A level 2 feat
+ * is a perfectly good choice for a level 6 slot.
+ */
+export function searchRows(rows, {
+  q = '', kind = null, category = null, categories = [], trait = null, traits = [],
+  maxLevel = null, minLevel = null, rarity = null, tradition = null,
+  ancestry = null, itemType = null, source = null, remasterOnly = false,
+  skill = null, limit = 50, offset = 0, sort = 'name',
+} = {}) {
+  const needle = String(q ?? '').trim().toLowerCase();
+  /**
+   * Several categories at once, which `category` cannot express.
+   *
+   * The question a builder asks about a weapon is "which of these may I
+   * use", and the answer is a set: a wizard is trained in unarmed and simple
+   * attacks and nothing else. Kept separate from `category` rather than
+   * folded into it, because one of them is a fact about the item and the
+   * other is a fact about who is looking.
+   */
+  const anyOf = (categories ?? []).filter(Boolean).map((c) => String(c).toLowerCase());
+  const wanted = [trait, ...(traits ?? [])].filter(Boolean).map((t) => String(t).toLowerCase());
+
+  const matched = rows.filter((row) => {
+    if (kind && row.kind !== kind) return false;
+    if (category && row.category !== category) return false;
+    if (anyOf.length && !anyOf.includes(String(row.category))) return false;
+    if (itemType && row.itemType !== itemType) return false;
+    if (needle && !row.search.includes(needle)) return false;
+    if (maxLevel !== null && row.level > Number(maxLevel)) return false;
+    if (minLevel !== null && row.level < Number(minLevel)) return false;
+    if (rarity && row.rarity !== rarity) return false;
+    if (source && row.book !== source) return false;
+    if (remasterOnly && !row.remaster) return false;
+    if (tradition && !(row.traditions ?? []).includes(tradition)) return false;
+    if (skill && !(row.trainedSkills ?? []).includes(skill)) return false;
+
+    /**
+     * A heritage names the ancestry it belongs to; a versatile heritage names
+     * none and is offered to everyone. Filtering those out would hide half a
+     * dwarf's legitimate choices.
+     */
+    if (ancestry && row.kind === 'heritage' && row.ancestry !== null) {
+      if (row.ancestry !== stripKind(ancestry)) return false;
+    }
+
+    for (const t of wanted) if (!(row.traits ?? []).includes(t)) return false;
+    return true;
+  });
+
+  /**
+   * `rarity` is the default the builder wants and `name` is not: sorted
+   * alphabetically, a player opening the ancestry list meets Anadi, Android,
+   * Athamaru and Automaton before Dwarf, Elf or Human. Common first, then by
+   * name, puts the fifty options most characters use at the top without
+   * hiding the rest behind a filter.
+   */
+  const compare = {
+    name: (a, b) => a.name.localeCompare(b.name),
+    rarity: (a, b) => RARITY_ORDER.indexOf(a.rarity) - RARITY_ORDER.indexOf(b.rarity)
+      || a.name.localeCompare(b.name),
+    level: (a, b) => a.level - b.level || a.name.localeCompare(b.name),
+    'level-desc': (a, b) => b.level - a.level || a.name.localeCompare(b.name),
+  }[sort] ?? ((a, b) => a.name.localeCompare(b.name));
+
+  matched.sort(compare);
+
+  return {
+    available: true,
+    total: matched.length,
+    rows: matched.slice(Number(offset), Number(offset) + Number(limit)),
   };
 }
 

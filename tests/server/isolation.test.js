@@ -169,3 +169,48 @@ describe('the GM token', () => {
       .toThrow(/Only the GM/);
   });
 });
+
+/**
+ * Options the GM wrote are the first content that is neither global nor a
+ * player's own, so the isolation rule has to hold through a route that exists
+ * to hand rules content to players.
+ */
+describe('a campaign’s own options', () => {
+  const write = (campaignId, fields) => app.inject({
+    method: 'POST', url: `/api/gm/${world.gmToken}/campaigns/${campaignId}/homebrew`, payload: fields,
+  });
+
+  it('reach that campaign’s builder and no other', async () => {
+    await write(world.tuesday.campaign.id, {
+      kind: 'background', name: 'Vault-born', skill: 'crafting',
+    });
+
+    const mine = await get(`/api/c/${world.tuesday.characterToken}/builder/options?kind=background&q=vault-born`);
+    const theirs = await get(`/api/c/${world.saturday.characterToken}/builder/options?kind=background&q=vault-born`);
+
+    expect(mine.json().rows.map((r) => r.name)).toEqual(['Vault-born']);
+    expect(theirs.json().rows).toEqual([]);
+  });
+
+  it('are not reachable by id from the wrong campaign', async () => {
+    const created = await write(world.saturday.campaign.id, {
+      kind: 'ancestry', name: 'Riverfolk',
+    });
+    const id = created.json().homebrew.id;
+
+    const wrong = await get(`/api/c/${world.tuesday.characterToken}/builder/options/${encodeURIComponent(id)}`);
+    const right = await get(`/api/c/${world.saturday.characterToken}/builder/options/${encodeURIComponent(id)}`);
+
+    expect(wrong.statusCode).toBe(404);
+    expect(right.statusCode).toBe(200);
+  });
+
+  it('cannot be written by a player token, even for their own campaign', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/gm/${world.tuesday.characterToken}/campaigns/${world.tuesday.campaign.id}/homebrew`,
+      payload: { kind: 'background', name: 'Mine now' },
+    });
+    expect(res.statusCode).toBe(404);
+  });
+});

@@ -36,6 +36,10 @@ const state = {
   recall: null,
   tokens: null,
   sessions: [],
+  // Options this table wrote, and the published ones a new option can be built
+  // on. Both belong to a campaign, so both are cleared when one is left.
+  homebrew: [],
+  homebrewBases: null,
 
   // The loop console. `loopRun` is what the server last returned -- null until
   // this campaign has saved one -- and `loopState` is what the GM is editing.

@@ -405,3 +405,8 @@ button, input, select, textarea {
   overflow-x: auto;
   margin-top: var(--sp-3);
 }
+
+/* An option this table wrote rather than one out of a book. `--accent-ink` is
+   the accent as text, which is what makes it legible on `--surface-2` in both
+   themes -- see the note on the token. */
+.pill--accent { color: var(--accent-ink); border-color: var(--accent); }

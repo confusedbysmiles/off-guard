@@ -116,6 +116,29 @@ function skillSlot(build, { klass, intMod }) {
 }
 
 /**
+ * Lore skills.
+ *
+ * Not a numbered choice like the others. A character may have any number of
+ * Lores, most have exactly the one their background granted, and none of it is
+ * a decision the timeline is waiting on -- so the slot carries `count: 0` and
+ * is therefore never outstanding.
+ *
+ * It exists because `lores` is a derived path. The sheet's own Lore fields
+ * lock the moment a character is built, and before this there was nowhere else
+ * to add one: a built character could read the Lore their background gave them
+ * and could not write down the Underworld Lore they picked up in play. That is
+ * the rule stated beside `subclass` in DERIVED_PATHS, which is deliberately
+ * not derived for exactly this reason, applied to the other side of the same
+ * problem.
+ */
+function loreSlot(build) {
+  return [{
+    id: 'lores', level: 1, kind: 'lores', label: 'Lore skills',
+    count: 0, filled: build.skills?.lores ?? [],
+  }];
+}
+
+/**
  * The whole timeline.
  *
  * @param {object} build
@@ -135,6 +158,7 @@ export function slotsFor(build = {}, {
   const slots = [
     ...identitySlots(build, { ancestry, background, klass }),
     ...skillSlot(build, { klass, intMod }),
+    ...loreSlot(build),
   ];
 
   // Attribute boosts, four at a time, at the five levels every class shares.
@@ -221,7 +245,7 @@ function isBlank(filled) {
 /** Within a level, the order a character is actually built in. */
 const ORDER = [
   'ancestry', 'heritage', 'background', 'class', 'keyAttribute',
-  'attributeBoosts', 'trainedSkills', 'classFeat', 'ancestryFeat',
+  'attributeBoosts', 'trainedSkills', 'lores', 'classFeat', 'ancestryFeat',
   'skillFeat', 'generalFeat', 'skillIncrease',
 ];
 

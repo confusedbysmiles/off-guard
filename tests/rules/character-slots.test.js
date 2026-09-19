@@ -131,3 +131,37 @@ describe('what is outstanding', () => {
     expect(outstanding(slots).length).toBeGreaterThan(outstanding(slots, 2).length);
   });
 });
+
+/**
+ * Lore skills.
+ *
+ * The slot exists because `lores` is a derived path: once a character is built
+ * the sheet's own Lore fields lock, and without this there is nowhere left to
+ * write down the Underworld Lore they picked up in play.
+ */
+describe('Lore skills', () => {
+  it('always has a slot, on a build with nothing in it', () => {
+    const { slots } = slotsFor({}, {});
+    expect(find(slots, 'lores')).toBeDefined();
+  });
+
+  it('is never outstanding, however empty it is', () => {
+    const { slots } = slotsFor(build, context);
+    expect(find(slots, 'lores').empty).toBe(false);
+    expect(outstanding(slots, 1).map((s) => s.id)).not.toContain('lores');
+  });
+
+  it('carries the ones the build holds', () => {
+    const { slots } = slotsFor({
+      ...build, skills: { lores: [{ name: 'Vault Lore', rank: 'expert' }] },
+    }, context);
+    expect(find(slots, 'lores').filled).toEqual([{ name: 'Vault Lore', rank: 'expert' }]);
+  });
+
+  it('sits with the skills rather than among the feats', () => {
+    const { byLevel } = slotsFor(build, context);
+    const order = byLevel[1].map((s) => s.kind);
+    expect(order.indexOf('lores')).toBeGreaterThan(order.indexOf('trainedSkills'));
+    expect(order.indexOf('lores')).toBeLessThan(order.indexOf('classFeat'));
+  });
+});

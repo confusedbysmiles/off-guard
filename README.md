@@ -7,11 +7,13 @@ phone and a TV at the same time.
 
 Multiple concurrent campaigns are first-class. A character belongs to exactly
 one campaign; an encounter belongs to one campaign but can be copied to another;
-creature data, reference tables and homebrew are global.
+creature data and reference tables are global. Build options the GM writes
+themselves are not: those belong to one campaign, because an ancestry is part of
+a setting rather than a tool.
 
 **Status: complete, and running.** It has been live since 29 August 2026 on a
 Mac under launchd, reached through a Cloudflare Tunnel, and has been played on
-from a laptop, a phone and an iPad. 904 unit tests and 79 end-to-end tests, run
+from a laptop, a phone and an iPad. 988 unit tests and 84 end-to-end tests, run
 at a host root and at a subdirectory, in Chromium and — for the parts where
 engines differ — in WebKit. See [deploy/GOING-LIVE.md](deploy/GOING-LIVE.md).
 
@@ -301,6 +303,14 @@ land on the sheet as named entries with their text and action cost, and the
 numbers they change stay manual adjustments -- which is how every field on the
 sheet already works.
 
+**Lore skills are typed, not chosen.** "Vault Lore" is in no list and never was,
+so this is the one slot that is a set of text boxes. The ones a background
+granted are shown above them and cannot be edited, because they come from the
+background. It exists because `lores` is a derived path: the sheet's own Lore
+fields lock the moment a character is built, and without a slot here a built
+character could read the Lore their background gave them and had nowhere to
+write down the one they picked up in play.
+
 ### Proficiency advancement
 
 The one thing the upstream packs do not contain. A class document states its
@@ -428,6 +438,44 @@ not a thing you are allowed to want.
 
 Like the creature catalogue, this is a build product and is not checked in. A
 clone that has not run `npm run build:data` gets a builder that says so.
+
+### Options the table wrote
+
+514 backgrounds and a table still needs one that is not in them. So the GM
+writes ancestries, heritages, backgrounds and classes of their own, under Setup,
+and they appear in every player's picker for that campaign -- badged **This
+table**, so a player can see at a glance which of their options came from a book
+and which from their GM. A build stores the id either way, and nothing
+downstream can tell the difference.
+
+**Campaign-scoped, unlike the creature catalogue.** Monster data is a tool the
+GM picks up and puts down; an ancestry is part of a setting. A Tuesday game's
+Ashen-Blooded heritage in a Thursday game's picker is a leak of one table's
+fiction into another's, and the player choosing it would have no way to know it
+was not a real option. The campaign id is never a parameter: it is read off the
+scope the token resolved to, so there is nothing to tamper with.
+
+**Only what the engine can read.** An ancestry is hit points, size, speed, the
+boosts it grants and the flaw it takes; a heritage is a name and the ancestry it
+belongs to; a background is two boosts, a skill and a Lore. Those are fields.
+What a heritage *does* is a feature, and this engine does not apply a published
+heritage's features either -- so that is prose, and the form says so rather than
+pretending a box will make it work.
+
+**A class copies its advancement rather than typing it.** A class is twenty
+levels of proficiency changes across perception, three saves, five attack
+categories, four armour categories, the class DC and spellcasting. Asking a GM
+to fill that in is asking them not to bother, and one wrong field is a Will save
+quietly a rank low for six levels. So the table is taken from a published class
+and the handful of things that differ -- hit points, key attribute, trained
+skills, the name -- are overridden. Copied at the moment it is saved, not linked:
+a data rebuild cannot rebalance a character mid-campaign.
+
+Everything typed is clamped to something the rules can mean before it reaches a
+number, the same way a described weapon is, and the description is escaped
+rather than parsed. Deleting an option a character has chosen is allowed and
+says how many will be affected first; their builds show it as a missing choice,
+which is what an upstream rename does too.
 
 ## The GM dashboard
 

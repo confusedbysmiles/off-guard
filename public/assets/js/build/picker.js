@@ -145,6 +145,9 @@ export function createPicker({ dialog, endpoint, onChoose }) {
           },
           el('span', { class: 'picker__name' }, row.name),
           el('span', { class: 'picker__meta' },
+            // Said before the level and the rarity, because "did this come from
+            // a book or from my GM" is the question a player has about it.
+            row.homebrew ? el('span', { class: 'pill pill--accent' }, 'This table') : null,
             row.level > 0 ? el('span', { class: 'pill' }, `Level ${row.level}`) : null,
             row.rarity && row.rarity !== 'common'
               ? el('span', { class: `pill pill--${RARITY_CLASS[row.rarity] ?? 'warn'}` }, titleCase(row.rarity))

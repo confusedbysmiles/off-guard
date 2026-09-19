@@ -25,6 +25,7 @@ import { initiativeView, persistentDamageForm, promptList } from './views/initia
 import { statBlock } from './views/statblock.js';
 import { linkReveal, linksPanel } from './views/links.js';
 import { campaignPanel, rosterPanel, sessionsPanel } from './views/campaign.js';
+import { homebrewForm, homebrewPanel, KIND_LABEL } from './views/homebrew.js';
 import { createDrawer, drawerShell } from './drawer.js';
 import { startPanel } from './views/start.js';
 import { loopView } from './views/loop.js';
@@ -82,6 +83,35 @@ function showLink(kind, token, subject, { final = false } = {}) {
     dialog.addEventListener('cancel', (event) => event.preventDefault());
   }
   dialog.querySelector('.link-reveal__url')?.focus();
+}
+
+/**
+ * Write or edit one of this table's own options.
+ *
+ * A dialog rather than a panel that expands, because the dashboard re-renders
+ * whole panels whenever anything changes -- a live roll, a player's hit points
+ * -- and a form rebuilt mid-sentence loses what was being typed into it.
+ */
+function showHomebrew(kind, entry) {
+  const bases = store.get().homebrewBases ?? { classes: [], ancestries: [] };
+  const form = homebrewForm(kind, entry, bases);
+
+  const dialog = showDialog('homebrew-dialog',
+    el('h2', {}, entry ? `Edit ${entry.name}` : `New ${(KIND_LABEL[kind] ?? kind).toLowerCase()}`),
+    form.node,
+    el('menu', { class: 'dialog__actions' },
+      el('button', { class: 'btn btn--quiet', type: 'button', onclick: () => dialog.close() }, 'Cancel'),
+      el('button', {
+        class: 'btn btn--primary', type: 'submit', form: 'homebrew-form',
+      }, entry ? 'Save' : 'Add it')));
+
+  form.node.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const saved = await actions.saveHomebrew(form.read(), entry);
+    if (saved) dialog.close();
+  });
+
+  form.focus();
 }
 
 function showPersistentDamage(combatant) {
@@ -254,6 +284,12 @@ function renderNow() {
           actions,
         })
         : null,
+      homebrewPanel({
+        homebrew: state.homebrew,
+        actions,
+        onWrite: (kind) => showHomebrew(kind, null),
+        onEdit: (entry) => showHomebrew(entry.kind, entry),
+      }),
       sessionsPanel({ sessions: state.sessions, actions })));
     return;
   }
@@ -317,6 +353,7 @@ async function selectCampaign(id) {
   store.set({
     campaignId: id, encounter: null, encounterId: null, budget: null, combat: null,
     rolls: [], recall: null, sessions: [], tokens: null,
+    homebrew: [], homebrewBases: null,
     // Same rule: a loop run belongs to the campaign being left. Tuesday's
     // seventh loop must not be on screen under Saturday's name.
     loopAdventure: null, loopRun: null, loopState: null,
@@ -325,6 +362,7 @@ async function selectCampaign(id) {
   await Promise.all([
     actions.loadParty(), actions.loadEncounters(), actions.loadCombat(),
     actions.loadRolls(), actions.loadTokens(), actions.loadSessions(),
+    actions.loadHomebrew(),
   ]);
   if (store.get().tab === 'loop') await actions.loadLoop(NINE_MINUTES);
   render();

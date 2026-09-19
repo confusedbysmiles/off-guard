@@ -30,6 +30,8 @@ import { registerTableRoutes } from './routes/table.js';
 import { registerPageRoutes } from './routes/pages.js';
 import { openCatalogue } from './catalogue.js';
 import { openOptions } from './options.js';
+import { withHomebrew } from './homebrew.js';
+import { homebrewFor } from './store/homebrew.js';
 import { loadReference } from './reference.js';
 import { createEventBus } from './events.js';
 
@@ -65,6 +67,22 @@ export async function buildApp({
   // The build options are the same kind of thing the other way round: read-only
   // rules content, global, and read by players rather than by the GM.
   app.decorate('builderOptions', builderOptions ?? openOptions());
+  /**
+   * The build options as one campaign sees them: the catalogue, plus whatever
+   * that table wrote for itself.
+   *
+   * Built per request rather than cached, because the GM editing an option
+   * should change what a player's picker shows on their next keystroke, not
+   * after a restart. The cost is one indexed read of a table with a handful of
+   * rows in it, and a campaign with no homebrew gets the global object back
+   * unchanged -- see `withHomebrew`.
+   *
+   * The campaign id is the caller's responsibility, and every caller passes
+   * `scope.campaignId`: a value the token resolved to, never one the client
+   * sent.
+   */
+  app.decorate('optionsFor', (campaignId) =>
+    withHomebrew(app.builderOptions, homebrewFor(db, campaignId)));
   // Same reasoning for the reference corpus: checked in, read-only, one copy.
   app.decorate('reference', reference ?? loadReference({ log: app.log }));
   app.decorate('bus', bus ?? createEventBus());

@@ -87,14 +87,19 @@ export async function registerCharacterRoutes(app) {
   /**
    * The builder's own catalogue search.
    *
-   * Scoped to the player's token like everything else here, but the content is
-   * global: rules options belong to nobody. The filters are the slot's, passed
-   * through -- see `slotsFor`, which is what decides that a level 6 class feat
-   * means `category=class&trait=fighter&maxLevel=6`.
+   * Scoped to the player's token like everything else here. Most of what comes
+   * back is global -- rules out of a book belong to nobody -- but a campaign's
+   * own options are laid over the catalogue for the campaign the token resolved
+   * to, so a player sees their table's homebrew and no other table's. The
+   * campaign id is never a parameter; see `optionsFor`.
+   *
+   * The filters are the slot's, passed through -- see `slotsFor`, which is what
+   * decides that a level 6 class feat means
+   * `category=class&trait=fighter&maxLevel=6`.
    */
   app.get('/builder/options', async (request) => {
     const query = request.query ?? {};
-    return app.builderOptions.search({
+    return app.optionsFor(request.scope.campaignId).search({
       q: query.q ?? '',
       kind: query.kind || null,
       category: query.category || null,
@@ -118,7 +123,7 @@ export async function registerCharacterRoutes(app) {
 
   /** One option in full, with its resolved text. */
   app.get('/builder/options/:id', async (request, reply) => {
-    const option = app.builderOptions.get(request.params.id);
+    const option = app.optionsFor(request.scope.campaignId).get(request.params.id);
     if (!option) {
       reply.status(404);
       return { error: 'No such option' };
@@ -133,9 +138,10 @@ export async function registerCharacterRoutes(app) {
   app.get('/builder', async (request) => {
     const character = getOwnCharacter(db, request.scope);
     const build = character.sheet?.build ?? blankBuild();
+    const options = app.optionsFor(request.scope.campaignId);
     return {
-      ...builderState(app.builderOptions, build),
-      catalogue: app.builderOptions.stats(),
+      ...builderState(options, build),
+      catalogue: options.stats(),
     };
   });
 
@@ -153,14 +159,15 @@ export async function registerCharacterRoutes(app) {
       reply.status(400);
       return { error: 'Send the whole build document.' };
     }
-    if (!app.builderOptions.available) {
+    const options = app.optionsFor(request.scope.campaignId);
+    if (!options.available) {
       reply.status(503);
-      return { error: app.builderOptions.reason };
+      return { error: options.reason };
     }
 
     const character = getOwnCharacter(db, request.scope);
     const build = request.body.build;
-    const state = builderState(app.builderOptions, build);
+    const state = builderState(options, build);
     const writes = buildWrites(build, state, character.sheet ?? {});
 
     const result = applyPatch(db, request.scope, request.scope.characterId, writes, { by: 'builder' });

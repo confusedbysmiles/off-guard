@@ -12,6 +12,7 @@ import { registerInitiativeRoutes } from './initiative.js';
 import { registerLinkRoutes } from './links.js';
 import { registerLoopRoutes } from './loop.js';
 import { registerCatalogueRoutes } from './catalogue.js';
+import { registerHomebrewRoutes } from './homebrew.js';
 import { registerPartyRoutes } from './party.js';
 import { registerReferenceRoutes } from './reference.js';
 import { registerRollRoutes } from './rolls.js';
@@ -25,6 +26,7 @@ export async function registerGmRoutes(app) {
   await registerLinkRoutes(app);
   await registerLoopRoutes(app);
   await registerCatalogueRoutes(app);
+  await registerHomebrewRoutes(app);
   await registerPartyRoutes(app);
   await registerReferenceRoutes(app);
   await registerRollRoutes(app);
