@@ -22,12 +22,37 @@ export function fetchEnabled(env = process.env) {
   return String(env.OFF_GUARD_PATHBUILDER_FETCH ?? 'on').toLowerCase() !== 'off';
 }
 
+/**
+ * A failure the player is meant to read.
+ *
+ * `expose` is the point. The error handler replaces the body of anything 500
+ * or over with "Something went wrong", which is right for a stack trace and
+ * exactly wrong here: every message this class carries is a remedy -- what a
+ * build id looks like, or to use the export file instead -- and swallowing
+ * them left the dialog saying "Something went wrong" over a typo. The status
+ * still says whose fault it was; `expose` says the wording is safe to show.
+ */
 export class PathbuilderFetchError extends Error {
-  constructor(message) {
+  constructor(message, statusCode = 502) {
     super(message);
     this.name = 'PathbuilderFetchError';
-    this.statusCode = 502;
+    this.statusCode = statusCode;
+    this.expose = true;
   }
+}
+
+/**
+ * The id out of whatever was pasted.
+ *
+ * A bare number is the documented thing to type, and the whole link is what
+ * people actually have in hand. Refusing the link on the grounds that it is
+ * not a number is technically correct and useless.
+ */
+export function buildIdFrom(value) {
+  const text = String(value ?? '').trim();
+  if (/^\d{1,12}$/.test(text)) return text;
+  const fromUrl = text.match(/[?&]id=(\d{1,12})\b/);
+  return fromUrl ? fromUrl[1] : null;
 }
 
 export async function fetchBuild(buildId, { fetchImpl = globalThis.fetch, env = process.env } = {}) {
@@ -37,9 +62,13 @@ export async function fetchBuild(buildId, { fetchImpl = globalThis.fetch, env = 
     );
   }
 
-  const id = String(buildId ?? '').trim();
-  if (!/^\d{1,12}$/.test(id)) {
-    throw new PathbuilderFetchError('A Pathbuilder build id is a number, from the export screen.');
+  const id = buildIdFrom(buildId);
+  if (!id) {
+    // 400, not 502: a typo is not Pathbuilder failing.
+    throw new PathbuilderFetchError(
+      'A Pathbuilder build id is the number from its export screen — or paste the whole link.',
+      400,
+    );
   }
 
   const signal = AbortSignal.timeout(TIMEOUT_MS);

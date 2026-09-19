@@ -238,6 +238,25 @@ describe('the Pathbuilder import endpoints', () => {
     expect(res.statusCode).toBe(400);
   });
 
+  it('treats an empty build id box as nothing given, not as a bad id', async () => {
+    const res = await post(world.tuesday.characterToken, '/import/preview', { buildId: '  ' });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toMatch(/build id or upload/);
+  });
+
+  /**
+   * The failure the live journal caught: a build id that was not a number threw
+   * a 502, and the error handler replaces the body of anything 500 or over with
+   * "Something went wrong". The dialog prints `error`, so a typo said nothing
+   * at all about what to do next.
+   */
+  it('tells the player what is wrong with the build id they typed', async () => {
+    const res = await post(world.tuesday.characterToken, '/import/preview', { buildId: 'my character' });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toMatch(/number from its export screen/);
+    expect(res.json().error).not.toBe('Something went wrong');
+  });
+
   it('says what the import can actually do on this server', async () => {
     const res = await app.inject({
       method: 'GET', url: `/api/c/${world.tuesday.characterToken}/import/capabilities`,

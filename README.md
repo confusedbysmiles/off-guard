@@ -13,7 +13,7 @@ a setting rather than a tool.
 
 **Status: complete, and running.** It has been live since 29 August 2026 on a
 Mac under launchd, reached through a Cloudflare Tunnel, and has been played on
-from a laptop, a phone and an iPad. 996 unit tests and 88 end-to-end tests, run
+from a laptop, a phone and an iPad. 1,004 unit tests and 88 end-to-end tests, run
 at a host root and at a subdirectory, in Chromium and — for the parts where
 engines differ — in WebKit. See [deploy/GOING-LIVE.md](deploy/GOING-LIVE.md).
 

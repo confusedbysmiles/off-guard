@@ -146,6 +146,15 @@ export async function buildApp({
     const status = error.statusCode ?? 500;
     if (status >= 500) {
       request.log.error({ err: error, route: request.routeOptions?.url }, 'request failed');
+      /**
+       * `expose` is an author's decision, per error class, that the wording was
+       * written for whoever is reading the screen rather than leaked from the
+       * inside. Without it every upstream failure reads "Something went wrong"
+       * -- which is the right answer for a stack trace and the wrong one for
+       * "Pathbuilder is unreachable; use its export file", where the message is
+       * the entire remedy.
+       */
+      if (error.expose) return reply.status(status).send({ error: error.message });
       return reply.status(500).send({ error: 'Something went wrong' });
     }
     return reply.status(status).send({ error: error.message });

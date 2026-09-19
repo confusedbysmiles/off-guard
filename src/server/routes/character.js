@@ -60,7 +60,9 @@ export async function registerCharacterRoutes(app) {
    */
   app.post('/import/preview', async (request, reply) => {
     const { buildId = null, json = null } = request.body ?? {};
-    const exported = json ?? (buildId === null ? null : await fetchBuild(buildId));
+    // An empty box is "nothing given", not a malformed id.
+    const wanted = String(buildId ?? '').trim();
+    const exported = json ?? (wanted ? await fetchBuild(wanted) : null);
     if (!exported) {
       reply.status(400);
       return { error: 'Give a Pathbuilder build id or upload its JSON export.' };

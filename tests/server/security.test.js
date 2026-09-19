@@ -209,3 +209,52 @@ describe('errors say what this application says, and nothing more', () => {
     }
   });
 });
+
+/**
+ * What a failure is allowed to say.
+ *
+ * Anything 500 or over is replaced with four words, because the inside of a
+ * failure is where paths, queries and stack frames live. The one exception is
+ * an error whose class sets `expose`, which is an author saying "this wording
+ * was written for whoever is reading the screen" -- added because every
+ * Pathbuilder message is a remedy and they were all being swallowed.
+ *
+ * The exception is the thing worth guarding: it is an opt-in, and an error
+ * that does not opt in must still say nothing.
+ */
+describe('an error that goes wrong on the inside', () => {
+  const failing = async (error) => {
+    const local = await buildApp({ db, catalogue: stubCatalogue(), logger: false });
+    local.get('/boom', async () => { throw error; });
+    await local.ready();
+    const res = await local.inject({ method: 'GET', url: '/boom' });
+    await local.close();
+    return res;
+  };
+
+  it('says nothing about itself', async () => {
+    const secret = new Error('ENOENT: /var/lib/off-guard/off-guard.sqlite');
+    const res = await failing(secret);
+    expect(res.statusCode).toBe(500);
+    expect(res.json()).toEqual({ error: 'Something went wrong' });
+    expect(res.body).not.toContain('off-guard.sqlite');
+  });
+
+  it('still says nothing when it names a status of its own', async () => {
+    const upstream = Object.assign(new Error('upstream said 504 for https://internal/thing'), {
+      statusCode: 503,
+    });
+    const res = await failing(upstream);
+    expect(res.json()).toEqual({ error: 'Something went wrong' });
+    expect(res.body).not.toContain('internal');
+  });
+
+  it('speaks only when the error itself says it is safe to', async () => {
+    const readable = Object.assign(new Error('Could not reach Pathbuilder. Use its export file.'), {
+      statusCode: 502, expose: true,
+    });
+    const res = await failing(readable);
+    expect(res.statusCode).toBe(502);
+    expect(res.json().error).toMatch(/Use its export file/);
+  });
+});
