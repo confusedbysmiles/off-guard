@@ -1,11 +1,14 @@
 /**
  * The deployment manifests, against the repository they describe.
  *
- * Two of these files have never been run: no Docker on this machine, and no
- * systemd either. The honest thing to do about that is not to claim they work,
- * but to make every claim they make checkable — a `COPY` of a directory that
- * has been renamed, a port that agrees with three files and not the fourth, an
- * `OFF_GUARD_` name with a typo in it. None of that needs a container to catch.
+ * These were written before there was a machine to run them on, and the honest
+ * thing to do about that was not to claim they worked but to make every claim
+ * they make checkable — a port that agrees with three files and not the fourth,
+ * an `OFF_GUARD_` name with a typo in it. None of that needs the machine.
+ *
+ * The systemd pair has since been run, on a Debian 13 box, and the checks here
+ * earned it: the one thing they did not check was the version of Node, which
+ * is the one thing that was wrong.
  *
  * The plist test is the one with a scar behind it. The template ships with
  * `/Users/YOU` placeholders; a copy that skipped the installer loaded an agent
@@ -25,6 +28,8 @@ const MANIFESTS = [
   'deploy/macos/install.sh',
   'deploy/linux/install.sh',
   'deploy/cloudflared/setup.sh',
+  'deploy/cloudflared/linux.sh',
+  'deploy/cloudflared/off-guard-tunnel.service',
 ];
 
 const PORT = 8787;
@@ -191,6 +196,52 @@ describe('the Node every installer insists on', () => {
       expect(script).not.toMatch(/-e\s*'require\("better-sqlite3"\)'/);
     },
   );
+});
+
+/**
+ * The tunnel, on the machine where a generic installer nearly cost a weekend.
+ *
+ * `cloudflared service install` is what the macOS side used to recommend. It
+ * produced a root daemon with no config file and no tunnel named anywhere, the
+ * service manager called it healthy for days, and the site served error 1033
+ * throughout. Both installers write every argument down instead.
+ */
+describe('the tunnel unit and its installer', () => {
+  const unit = read('deploy/cloudflared/off-guard-tunnel.service');
+  const install = read('deploy/cloudflared/linux.sh');
+
+  it('names the config and the tunnel on the command line', () => {
+    expect(unit).toMatch(/^ExecStart=.*--config /m);
+    expect(install).toContain('--config ${CONF_DIR}/config.yml');
+    expect(install).toContain('tunnel run ${TUNNEL}');
+  });
+
+  it('does not reach for `cloudflared service install`', () => {
+    for (const [file, text] of [['unit', unit], ['installer', install]]) {
+      expect(text.replace(/^#.*$/gm, ''), `${file} calls it`).not.toMatch(/cloudflared service install/);
+    }
+  });
+
+  it('turns off the updater that would replace the binary underneath it', () => {
+    expect(unit).toContain('--no-autoupdate');
+    expect(install).toContain('--no-autoupdate');
+  });
+
+  it('waits on the hostname rather than on this machine', () => {
+    // The application answering on 127.0.0.1 proves nothing about the tunnel.
+    expect(install).toContain('https://${HOSTNAME_ARG}/healthz');
+    expect(install).not.toMatch(/curl[^\n]*127\.0\.0\.1[^\n]*healthz/);
+  });
+
+  it('sends the same port everything else agrees on', () => {
+    expect(install).toContain(`http://127.0.0.1:${PORT}`);
+  });
+
+  it('leaves the credentials behind when it uninstalls', () => {
+    expect(install).toContain('--uninstall');
+    expect(install).toMatch(/is untouched: it holds the tunnel's credentials/);
+    expect(install).not.toMatch(/rm -rf .*CONF_DIR/);
+  });
 });
 
 describe('the shell scripts', () => {

@@ -1,0 +1,60 @@
+# The Cloudflare Tunnel that puts Off-Guard on the internet.
+#
+# Installed by deploy/cloudflared/linux.sh, which fills in the paths below.
+# Not by `cloudflared service install`: that writes a unit with no config file
+# and no tunnel named on the command line, and then reads /etc/cloudflared --
+# which is exactly how the macOS side of this once ran a connector that
+# launchctl called healthy for days while the site served error 1033. Every
+# argument this needs is written down here where it can be read.
+
+[Unit]
+Description=Cloudflare Tunnel for Off-Guard
+Documentation=https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/
+After=network-online.target off-guard.service
+Wants=network-online.target
+# Not Requires=: the tunnel coming up before the application is fine, it
+# answers 502 for a few seconds. A tunnel that refuses to start because the
+# application is briefly down is a site that stays down after a restart.
+After=off-guard.service
+
+[Service]
+Type=simple
+User=cloudflared
+Group=cloudflared
+ExecStart=/usr/bin/cloudflared --config /etc/cloudflared/config.yml --no-autoupdate tunnel run
+Restart=on-failure
+RestartSec=5s
+
+# --- Hardening -------------------------------------------------------------
+#
+# It holds one secret -- the tunnel credentials -- and it talks to the network.
+# It needs nothing else.
+
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectProc=invisible
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+RemoveIPC=true
+UMask=0077
+
+RestrictAddressFamilies=AF_INET AF_INET6
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+[Install]
+WantedBy=multi-user.target
