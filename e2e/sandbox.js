@@ -44,6 +44,24 @@ export function sandbox(gmToken, label) {
       return made;
     },
 
+    /**
+     * Another character in the same sandbox, with its own link.
+     *
+     * For a spec whose tests must not see each other's writes -- an import
+     * applied by one test is exactly the state the next one was written to
+     * assume was absent.
+     */
+    async addCharacter(request, name = 'Someone else') {
+      const character = await (await request.post(
+        api(`/campaigns/${made.campaignId}/characters`),
+        { data: { name, playerName: 'Nobody' } },
+      )).json();
+      const minted = await (await request.post(
+        api(`/campaigns/${made.campaignId}/tokens/character/${character.character.id}`), { data: {} },
+      )).json();
+      return { characterId: character.character.id, token: minted.token.token };
+    },
+
     async archive(request) {
       if (!made.campaignId) return;
       await request.post(api(`/campaigns/${made.campaignId}/archive`), {

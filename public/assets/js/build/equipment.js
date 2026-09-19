@@ -550,7 +550,15 @@ function coinRow(coins, { store }) {
 
   return row('Coins',
     el('div', { class: 'custom__fields' }, ...COINS.map(([key, label]) => numberField(
-      `coins-${key}`, `${label} (${key})`, coins?.[key] ?? 0, { min: 0 },
+      /**
+       * Empty when there is none, rather than a literal zero.
+       *
+       * A zero in the box is not a smaller version of the right answer, it is
+       * a character already in the field: clicking in and typing 25 leaves
+       * "025", and nothing ever corrects it, because a coin change does not
+       * re-render this section. An empty purse is an empty box.
+       */
+      `coins-${key}`, `${label} (${key})`, coins?.[key] || null, { min: 0, placeholder: '0' },
       (raw) => write(key, Math.max(0, Math.trunc(Number(raw) || 0))),
     ))),
     value ? `Worth ${round(value)} gp altogether.` : null);
