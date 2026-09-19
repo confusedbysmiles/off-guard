@@ -42,6 +42,7 @@ function openStream(url) {
   const events = [];
   const waiters = [];
   let comments = 0;
+  let ended = false;
 
   const ready = fetch(url, {
     headers: { accept: 'text/event-stream' },
@@ -56,7 +57,7 @@ function openStream(url) {
       try {
         for (;;) {
           const { done, value } = await reader.read();
-          if (done) break;
+          if (done) { ended = true; break; }
           buffer += decoder.decode(value, { stream: true });
           let split;
           while ((split = buffer.indexOf('\n\n')) !== -1) {
@@ -99,6 +100,15 @@ function openStream(url) {
         });
       }
       return events;
+    },
+    /** Whether the server ended the response, rather than the client aborting. */
+    async finished(timeout = 3000) {
+      const deadline = Date.now() + timeout;
+      while (!ended) {
+        if (Date.now() > deadline) return false;
+        await new Promise((resolve) => { setTimeout(resolve, 50); });
+      }
+      return true;
     },
     close: () => controller.abort(),
   };
@@ -292,5 +302,47 @@ describe('the connection itself', () => {
     // The close handler runs on the server's next tick.
     await new Promise((resolve) => { setTimeout(resolve, 250); });
     expect(Object.values(app.bus.counts()).reduce((a, b) => a + b, 0)).toBe(0);
+  });
+});
+
+/**
+ * Shutting down while a screen is watching.
+ *
+ * This is the one that was found in production rather than here. A Server-Sent
+ * Events response is an in-flight request that never finishes, so `app.close()`
+ * waited on it forever: systemd gave the service ninety seconds, then SIGKILLed
+ * it over an open SQLite database. Every deploy, ninety seconds of 502.
+ */
+describe('shutting down', () => {
+  it('does not wait for a stream that by design never ends', async () => {
+    const stream = openStream(`${origin}/api/table/${world.tuesday.tableToken}/stream`);
+    await stream.ready;
+    await stream.waitFor(1);
+    expect(Object.values(app.bus.counts()).reduce((a, b) => a + b, 0)).toBe(1);
+
+    const started = Date.now();
+    await Promise.race([
+      app.close(),
+      new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('app.close() is hanging on the open stream')), 4000);
+      }),
+    ]);
+    // Generous on purpose: the assertion is "promptly", not a stopwatch.
+    expect(Date.now() - started).toBeLessThan(4000);
+
+    stream.close();
+  });
+
+  it('ends the stream from its end, so the client knows to reconnect', async () => {
+    const stream = openStream(`${origin}/api/table/${world.tuesday.tableToken}/stream`);
+    await stream.ready;
+    await stream.waitFor(1);
+
+    await app.close();
+
+    // The reader the harness holds runs to completion rather than staying open:
+    // an EventSource sees that as a dropped connection and comes back after
+    // `retry`, which is the right thing for a screen cast to a television.
+    await expect(stream.finished(3000)).resolves.toBe(true);
   });
 });

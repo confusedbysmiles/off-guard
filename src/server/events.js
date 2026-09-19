@@ -47,7 +47,7 @@ export function createEventBus({ heartbeatMs = 25_000 } = {}) {
   return {
     /**
      * @param {string} channel
-     * @param {{send: (event: object) => void, ping: () => void}} subscriber
+     * @param {{send: (event: object) => void, ping: () => void, end?: () => void}} subscriber
      * @returns {() => void} unsubscribe
      */
     subscribe(channel, subscriber) {
@@ -81,9 +81,28 @@ export function createEventBus({ heartbeatMs = 25_000 } = {}) {
       return Object.fromEntries([...channels].map(([name, set]) => [name, set.size]));
     },
 
+    /**
+     * Shut the bus down, and with it every stream attached to it.
+     *
+     * Ending the responses is the part that matters. Clearing the channel map
+     * stops events being published, but an SSE response is an open socket, and
+     * an open socket is an in-flight request that `app.close()` waits for --
+     * so a bus that forgot this half turned every restart into systemd's
+     * ninety-second stop timeout and a SIGKILL over an open database. The
+     * clients reconnect on their own; that is what `retry:` is for.
+     */
     close() {
       if (heartbeat) clearInterval(heartbeat);
       heartbeat = null;
+      for (const subscribers of channels.values()) {
+        for (const subscriber of subscribers) {
+          try {
+            subscriber.end?.();
+          } catch {
+            // Already gone. Shutting down is no time to care.
+          }
+        }
+      }
       channels.clear();
     },
   };
@@ -119,6 +138,14 @@ export function streamTo(reply, request, { bus, channel, snapshot }) {
     },
     ping() {
       write(': keep-alive\n\n');
+    },
+    /**
+     * Close the stream from this end, which only happens at shutdown. The
+     * browser sees a dropped connection and reconnects after `retry`, which is
+     * exactly what should happen to a shared screen while the server restarts.
+     */
+    end() {
+      if (!reply.raw.writableEnded) reply.raw.end();
     },
   };
 

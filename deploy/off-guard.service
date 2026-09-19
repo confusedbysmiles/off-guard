@@ -33,6 +33,12 @@ Environment=OFF_GUARD_LOG_LEVEL=info
 Restart=on-failure
 RestartSec=5s
 
+# The process stops itself well inside this; see the shutdown note in
+# src/server/index.js. This is the backstop to the backstop, and it is here
+# because the default is 90 seconds -- which is what a stop that hangs costs,
+# in 502s, on every deploy.
+TimeoutStopSec=30s
+
 # --- Hardening -------------------------------------------------------------
 #
 # The threat this is shaped against is not a determined attacker with a shell.

@@ -86,7 +86,16 @@ export async function buildApp({
   // Same reasoning for the reference corpus: checked in, read-only, one copy.
   app.decorate('reference', reference ?? loadReference({ log: app.log }));
   app.decorate('bus', bus ?? createEventBus());
-  app.addHook('onClose', async () => { app.bus.close(); });
+  /**
+   * `preClose`, not `onClose`.
+   *
+   * Fastify runs `onClose` after the HTTP server has finished closing, and
+   * closing waits for in-flight requests -- which a Server-Sent Events stream
+   * never stops being. Hooked there, the bus tidied up long after the thing it
+   * had to tidy up had already deadlocked the shutdown. `preClose` runs first,
+   * which is the whole point of its existing.
+   */
+  app.addHook('preClose', async () => { app.bus.close(); });
 
   /**
    * Two different limits, because they defend against two different things.
