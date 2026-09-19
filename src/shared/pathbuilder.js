@@ -109,6 +109,8 @@ export function mapPathbuilder(exported) {
     spellcasting: mapSpellcasting(build, warnings),
     focus: { pool: Number(build.focusPoints ?? 0) },
     resistances: build.resistances ?? [],
+    coins: mapMoney(build),
+    gear: mapGear(build),
     // Deliberately absent, and therefore preserved on a re-import: feats,
     // features, reactions, items, notes.
   };
@@ -147,6 +149,23 @@ export function mapPathbuilder(exported) {
   }
   if ((build.pets ?? []).length || (build.familiars ?? []).length) {
     warnings.push('Pets and familiars are not imported. Add them to the notes section.');
+  }
+
+  /**
+   * Bulk, which Pathbuilder does not export.
+   *
+   * Every item comes across as a name and a count and nothing else, so the
+   * carried total will read low until the items are matched to the catalogue by
+   * hand. Said out loud, because a Bulk figure that is quietly wrong is worse
+   * than one that is obviously missing -- it is the number that decides whether
+   * a character is clumsy 1.
+   */
+  if (sheet.gear.length) {
+    warnings.push(
+      `${sheet.gear.length} item${sheet.gear.length === 1 ? '' : 's'} came across by name and `
+      + 'quantity. Pathbuilder does not export Bulk, so each counts as 0 until you pick '
+      + 'it from the catalogue in the builder.',
+    );
   }
 
   return { sheet, warnings };
@@ -303,6 +322,52 @@ function mapSpellcasting(build, warnings) {
  * state. The result is what the confirmation screen renders; nothing is written
  * until the player accepts it.
  */
+/**
+ * The purse.
+ *
+ * Four denominations, the same shape the builder writes, so an imported
+ * character and a built one have money in the same place. Missing is zero
+ * rather than absent: a character with no platinum has none, and leaving the
+ * key out would make the diff offer to "add" a zero.
+ */
+function mapMoney(build) {
+  const money = build.money ?? {};
+  const count = (value) => Math.max(0, Math.trunc(Number(value) || 0));
+  return {
+    pp: count(money.pp), gp: count(money.gp), sp: count(money.sp), cp: count(money.cp),
+  };
+}
+
+/**
+ * The bag.
+ *
+ * Pathbuilder writes each line as an array -- `["Backpack", 1]` -- and in some
+ * exports as an object, so both are read. What comes back is the row shape the
+ * sheet already uses, with `id: null`: nothing here has been matched to the
+ * catalogue, which is exactly what `missing: false` and a null id mean
+ * elsewhere -- an item somebody wrote down rather than chose. Bulk is 0 because
+ * the export does not carry it; the warning says so.
+ */
+function mapGear(build) {
+  return (build.equipment ?? []).map((entry) => {
+    const [rawName, rawQuantity] = Array.isArray(entry)
+      ? entry
+      : [entry?.name, entry?.qty ?? entry?.quantity];
+    const name = String(rawName ?? '').trim();
+    if (!name) return null;
+    return {
+      id: null,
+      name,
+      baseName: null,
+      quantity: Math.max(1, Math.trunc(Number(rawQuantity) || 1)),
+      bulk: 0,
+      level: null,
+      price: null,
+      missing: false,
+    };
+  }).filter(Boolean);
+}
+
 export function diffImport(currentSheet, importedSheet) {
   const changes = [];
   for (const path of leafPaths(importedSheet)) {

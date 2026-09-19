@@ -256,3 +256,58 @@ describe('the Dexterity cap, derived rather than assumed', () => {
     expect(sheet.ac.dexCap).toBe(0);
   });
 });
+
+/**
+ * Money and the bag.
+ *
+ * Both were simply missed. The mapper lists what it leaves out on purpose --
+ * feats, features, reactions, items, notes -- and these were not on that list;
+ * they were added to the sheet when the builder grew a purse and a bag, and
+ * nothing came back here. A real export carries 187 gold and a dozen items,
+ * and an import dropped every bit of it without a word.
+ */
+describe('money and equipment', () => {
+  const real = JSON.parse(
+    readFileSync(new URL('../fixtures/pathbuilder/rogue-6.json', import.meta.url), 'utf8'),
+  );
+
+  it('brings the purse across from a real export', () => {
+    const { sheet } = mapPathbuilder(real);
+    expect(sheet.coins).toEqual({ pp: 0, gp: 187, sp: 1, cp: 2 });
+  });
+
+  it('is four zeroes rather than nothing when there is no money', () => {
+    // Absent keys would make the diff offer to "add" a zero to every field.
+    const { sheet } = mapPathbuilder({ build: { name: 'Skint' } });
+    expect(sheet.coins).toEqual({ pp: 0, gp: 0, sp: 0, cp: 0 });
+  });
+
+  it('reads the bag, which a real export writes as arrays', () => {
+    const { sheet } = mapPathbuilder(real);
+    const potion = sheet.gear.find((row) => row.name.startsWith('Healing Potion (Minor)'));
+    expect(potion).toMatchObject({ name: 'Healing Potion (Minor)', quantity: 3, id: null });
+    expect(sheet.gear.length).toBeGreaterThan(5);
+  });
+
+  it('reads the object form too, and drops a line with no name', () => {
+    const { sheet } = mapPathbuilder({ build: {
+      equipment: [{ name: 'Thieves Tools', qty: 2 }, ['', 5], ['Rope']],
+    } });
+    expect(sheet.gear.map((row) => [row.name, row.quantity]))
+      .toEqual([['Thieves Tools', 2], ['Rope', 1]]);
+  });
+
+  it('says that Bulk did not come with it', () => {
+    const { warnings } = mapPathbuilder(real);
+    expect(warnings.some((w) => w.includes('does not export Bulk'))).toBe(true);
+    expect(mapPathbuilder({ build: { name: 'Empty-handed' } }).warnings
+      .some((w) => w.includes('Bulk'))).toBe(false);
+  });
+
+  it('offers them in the diff, which is where the player sees them', () => {
+    const { sheet } = mapPathbuilder(real);
+    const changes = diffImport({ name: 'Old', coins: { pp: 0, gp: 0, sp: 0, cp: 0 } }, sheet);
+    expect(changes.map((c) => c.path)).toContain('coins.gp');
+    expect(changes.find((c) => c.path === 'coins.gp').to).toBe(187);
+  });
+});
