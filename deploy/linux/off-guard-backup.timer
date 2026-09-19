@@ -1,0 +1,17 @@
+# Weekly, and again on boot if the machine was off when it was due.
+#
+# `Persistent=true` is the whole point on a box that is sometimes unplugged:
+# without it a missed Sunday is simply a week with no backup, and nobody finds
+# out until they need one.
+
+[Unit]
+Description=Weekly Off-Guard backup
+Documentation=https://github.com/confusedbysmiles/off-guard/blob/main/deploy/MIGRATING.md
+
+[Timer]
+OnCalendar=Sun 04:30
+Persistent=true
+RandomizedDelaySec=15m
+
+[Install]
+WantedBy=timers.target

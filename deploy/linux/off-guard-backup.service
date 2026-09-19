@@ -1,0 +1,41 @@
+# One backup, taken by the timer beside this file.
+#
+# `tools/backup.js` uses SQLite's own online backup API, so it is consistent
+# against a database the service is writing to and does not need the service
+# stopped. Installed by deploy/linux/install.sh --backups.
+
+[Unit]
+Description=Back up the Off-Guard database
+Documentation=https://github.com/confusedbysmiles/off-guard/blob/main/deploy/MIGRATING.md
+After=off-guard.service
+
+[Service]
+Type=oneshot
+User=off-guard
+Group=off-guard
+WorkingDirectory=/srv/off-guard
+Environment=OFF_GUARD_DB=/var/lib/off-guard/off-guard.sqlite
+ExecStart=/usr/bin/node tools/backup.js /var/backups/off-guard --skip-existing
+
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+UMask=0077
+
+# It reads the live database and writes one file next to the others.
+ReadWritePaths=/var/lib/off-guard /var/backups/off-guard
+
+RestrictAddressFamilies=
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+CapabilityBoundingSet=
+AmbientCapabilities=

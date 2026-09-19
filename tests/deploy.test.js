@@ -30,6 +30,8 @@ const MANIFESTS = [
   'deploy/cloudflared/setup.sh',
   'deploy/cloudflared/linux.sh',
   'deploy/cloudflared/off-guard-tunnel.service',
+  'deploy/linux/off-guard-backup.service',
+  'deploy/linux/off-guard-backup.timer',
 ];
 
 const PORT = 8787;
@@ -206,6 +208,53 @@ describe('the Node every installer insists on', () => {
  * service manager called it healthy for days, and the site served error 1033
  * throughout. Both installers write every argument down instead.
  */
+/**
+ * The weekly backup, on both service managers.
+ *
+ * The macOS installer takes one immediately rather than scheduling it and
+ * hoping, because a backup nobody has seen work is a belief. The systemd side
+ * does the same, and adds the thing launchd's `StartCalendarInterval` gives
+ * for free and a bare timer does not: catching up a run the machine slept
+ * through.
+ */
+describe('the weekly backup', () => {
+  const timer = read('deploy/linux/off-guard-backup.timer');
+  const service = read('deploy/linux/off-guard-backup.service');
+  const linux = read('deploy/linux/install.sh');
+  const macos = read('deploy/macos/install.sh');
+
+  it('catches up a run the machine was switched off for', () => {
+    // Without this, a missed Sunday is a silent week with no backup.
+    expect(timer).toContain('Persistent=true');
+    expect(timer).toMatch(/OnCalendar=/);
+  });
+
+  it('can write to the backups and nowhere else new', () => {
+    expect(service).toMatch(/^ReadWritePaths=.*\/var\/backups\/off-guard/m);
+    expect(service).toContain('ProtectSystem=strict');
+  });
+
+  it('runs the same backup tool a person would', () => {
+    expect(service).toContain('tools/backup.js');
+    expect(existsSync('tools/backup.js')).toBe(true);
+  });
+
+  it.each([['linux', linux], ['macos', macos]])(
+    'the %s installer proves it works instead of scheduling it and hoping',
+    (_name, script) => {
+      expect(script).toMatch(/Taking one backup now/);
+    },
+  );
+
+  it('is removed by an uninstall, and takes no backups with it', () => {
+    // The script spells these with ${NAME}, so match the shape rather than
+    // the literal -- the point is that the uninstall knows about the timer.
+    expect(linux).toMatch(/systemctl disable --now "\$\{NAME\}-backup\.timer"/);
+    expect(linux).toMatch(/backups in \/var\/backups/);
+    expect(linux).not.toMatch(/rm -rf .*backups/);
+  });
+});
+
 describe('the tunnel unit and its installer', () => {
   const unit = read('deploy/cloudflared/off-guard-tunnel.service');
   const install = read('deploy/cloudflared/linux.sh');

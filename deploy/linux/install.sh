@@ -41,9 +41,11 @@ fi
 
 if [[ "${1:-}" == "--uninstall" ]]; then
   systemctl disable --now "${NAME}" 2>/dev/null || true
-  rm -f "$TARGET"
+  systemctl disable --now "${NAME}-backup.timer" 2>/dev/null || true
+  rm -f "$TARGET" "/etc/systemd/system/${NAME}-backup.service" \
+        "/etc/systemd/system/${NAME}-backup.timer"
   systemctl daemon-reload
-  echo "Removed. The database at ${DB_DIR} and the ${USER_NAME} user are untouched."
+  echo "Removed. The database at ${DB_DIR} and the ${USER_NAME} user are untouched, and so are the backups in /var/backups/${NAME}."
   exit 0
 fi
 
@@ -156,9 +158,28 @@ fi
 
 # --- start it -----------------------------------------------------------------
 
+# --- the weekly backup --------------------------------------------------------
+#
+# Installed here rather than left as a thing to remember, for the reason the
+# macOS installer takes one immediately: a backup you have not seen work is a
+# belief, not a backup. `Persistent=true` on the timer matters on a box that
+# is sometimes unplugged -- a missed Sunday would otherwise be a silent week.
+
+BACKUP_DIR="/var/backups/${NAME}"
+install -d -o "$USER_NAME" -g "$USER_NAME" -m 0700 "$BACKUP_DIR"
+
+for file in "${NAME}-backup.service" "${NAME}-backup.timer"; do
+  sed -e "s|^WorkingDirectory=.*|WorkingDirectory=${ROOT}|" \
+      -e "s|^ExecStart=.*|ExecStart=${NODE} tools/backup.js ${BACKUP_DIR} --skip-existing|" \
+      -e "s|^Environment=OFF_GUARD_DB=.*|Environment=OFF_GUARD_DB=${DB_DIR}/off-guard.sqlite|" \
+      -e "s|^ReadWritePaths=.*|ReadWritePaths=${DB_DIR} ${BACKUP_DIR}|" \
+      "$HERE/$file" > "/etc/systemd/system/$file"
+done
+
 systemctl daemon-reload
 systemctl enable --now "$NAME"
 systemctl restart "$NAME"
+systemctl enable --now "${NAME}-backup.timer"
 
 PORT="$(awk -F'=' '/^Environment=OFF_GUARD_PORT=/ { print $3 }' "$TARGET")"
 PORT="${PORT:-8787}"
@@ -172,6 +193,16 @@ for _ in $(seq 1 20); do
     echo "  from:      $ROOT"
     echo "  database:  ${DB_DIR}/off-guard.sqlite"
     echo "  logs:      journalctl -u ${NAME} -f"
+    echo
+    echo "Taking one backup now, to prove the weekly timer will work:"
+    systemctl start "${NAME}-backup.service"
+    sleep 1
+    if ls "$BACKUP_DIR"/*.sqlite > /dev/null 2>&1; then
+      ls -lh "$BACKUP_DIR"/*.sqlite | sed 's/^/  /'
+      echo "  Next: $(systemctl show "${NAME}-backup.timer" -p NextElapseUSecRealtime --value)"
+    else
+      echo "  It did not write one. journalctl -u ${NAME}-backup" >&2
+    fi
     echo
     echo "It binds loopback. Put TLS in front of it -- deploy/nginx.conf, or a"
     echo "Cloudflare Tunnel: deploy/cloudflared/setup.sh."
