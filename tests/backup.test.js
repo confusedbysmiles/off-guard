@@ -186,6 +186,57 @@ describe('the name it picks', () => {
   });
 });
 
+/**
+ * A directory named as the destination.
+ *
+ * The systemd timer passes one, and before this the path was taken as the
+ * filename: `/var/backups/off-guard` already existed -- because it is the
+ * directory -- so `--skip-existing` printed "already there. Nothing to do."
+ * and exited 0. The service went green every week and wrote nothing, which is
+ * the failure mode a backup has that is worse than not having one.
+ */
+describe('a directory as the destination', () => {
+  const stamp = () => new Date().toLocaleDateString('en-CA');
+
+  it('puts today’s backup inside it rather than treating it as a filename', () => {
+    const { file, db } = liveDatabase();
+    const dir = mkdtempSync(join(tmpdir(), 'off-guard-into-'));
+    execFileSync('node', [TOOL, dir], {
+      cwd: ROOT, encoding: 'utf8', env: { ...process.env, OFF_GUARD_DB: file },
+    });
+    expect(readdirSync(dir)).toEqual([`${stamp()}.sqlite`]);
+    db.close();
+  });
+
+  it('still skips a day it has already taken, rather than the directory', () => {
+    const { file, db } = liveDatabase();
+    const dir = mkdtempSync(join(tmpdir(), 'off-guard-into-'));
+    const run = () => execFileSync('node', [TOOL, dir, '--skip-existing'], {
+      cwd: ROOT, encoding: 'utf8', env: { ...process.env, OFF_GUARD_DB: file },
+    });
+
+    // The first run has to write something. That is the whole bug: it did not.
+    expect(run()).not.toMatch(/Nothing to do/);
+    expect(readdirSync(dir)).toEqual([`${stamp()}.sqlite`]);
+
+    // The second is the skip the weekly timer relies on.
+    expect(run()).toMatch(/Nothing to do/);
+    expect(readdirSync(dir)).toHaveLength(1);
+    db.close();
+  });
+
+  it('takes a plain path as the file to write, as it always did', () => {
+    const { file, db } = liveDatabase();
+    const dir = mkdtempSync(join(tmpdir(), 'off-guard-named-'));
+    const named = join(dir, 'tuesday.sqlite');
+    execFileSync('node', [TOOL, named], {
+      cwd: ROOT, encoding: 'utf8', env: { ...process.env, OFF_GUARD_DB: file },
+    });
+    expect(readdirSync(dir)).toEqual(['tuesday.sqlite']);
+    db.close();
+  });
+});
+
 describe('refusals', () => {
   it('will not overwrite a file that is already there', () => {
     const { dir, file, db } = liveDatabase();

@@ -100,7 +100,22 @@ const summarise = (rows) => Object.entries(rows)
  * `en-CA` is the ISO ordering, and `toLocaleDateString` is the local day.
  */
 const stamp = new Date().toLocaleDateString('en-CA');
-const destination = resolve(target ?? `${homedir()}/off-guard-backups/${stamp}.sqlite`);
+
+/**
+ * Where it goes.
+ *
+ * A named directory means "put today's backup in here", which is what anybody
+ * typing a folder name means and what a scheduled job wants. Before this, a
+ * directory was taken as the filename: the systemd timer pointed at
+ * `/var/backups/off-guard`, the path already existed because it is the
+ * directory, and `--skip-existing` reported "already there. Nothing to do."
+ * and exited 0. A weekly backup that succeeded every week and wrote nothing.
+ */
+const named = target ? resolve(target) : null;
+const intoDirectory = named && existsSync(named) && statSync(named).isDirectory();
+const destination = intoDirectory
+  ? resolve(named, `${stamp}.sqlite`)
+  : (named ?? resolve(`${homedir()}/off-guard-backups/${stamp}.sqlite`));
 
 if (verifyOnly) {
   if (!existsSync(destination)) {
