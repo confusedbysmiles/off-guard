@@ -8,7 +8,7 @@
 import { applyPatch, getOwnCharacter, versionsFor } from '../store/characters.js';
 import { getCampaign } from '../store/campaigns.js';
 import { diffImport, mapPathbuilder } from '../../shared/pathbuilder.js';
-import { blankBuild, builderState, buildWrites, validBuild } from '../builder.js';
+import { builderState, buildWrites, startingBuild, validBuild } from '../builder.js';
 import { fetchBuild, fetchEnabled } from '../pathbuilder-fetch.js';
 import { characterChannel, streamTo } from '../events.js';
 
@@ -139,7 +139,7 @@ export async function registerCharacterRoutes(app) {
    */
   app.get('/builder', async (request) => {
     const character = getOwnCharacter(db, request.scope);
-    const build = character.sheet?.build ?? blankBuild();
+    const build = character.sheet?.build ?? startingBuild(character.sheet);
     const options = app.optionsFor(request.scope.campaignId);
     return {
       ...builderState(options, build),

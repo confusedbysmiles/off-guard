@@ -2,6 +2,8 @@
  * The API's own behaviour: versioned sheet writes, encounter copying, and what
  * the shared screen is allowed to say.
  */
+import { readFileSync } from 'node:fs';
+
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { freshApp } from './helpers.js';
@@ -269,5 +271,78 @@ describe('the Pathbuilder import endpoints', () => {
   it('is not reachable from a table token', async () => {
     const res = await post(world.tuesday.tableToken, '/import/preview', { json: build });
     expect(res.statusCode).toBe(404);
+  });
+});
+
+/**
+ * An imported character, meeting the builder.
+ *
+ * The two halves of the application disagreed about who owned a sheet. The
+ * import writes fields and no build; the builder derived a blank build and
+ * wrote its zeroes over them. Opening the builder and clicking once cost a
+ * Pathbuilder import its class, its hit points, its money and its entire bag,
+ * with no warning and nothing to undo it with.
+ */
+describe('an import, and then the builder', () => {
+  const real = JSON.parse(readFileSync(
+    new URL('../fixtures/pathbuilder/rogue-6.json', import.meta.url), 'utf8',
+  ));
+
+  const post = (tok, path, payload) => app.inject({
+    method: 'POST', url: `/api/c/${tok}${path}`, payload,
+  });
+
+  const token = () => world.tuesday.characterToken;
+  const sheetNow = async () => (await app.inject({
+    method: 'GET', url: `/api/c/${token()}`,
+  })).json().character.sheet;
+
+  const importAll = async () => {
+    const preview = (await post(token(), '/import/preview', { json: real })).json();
+    await post(token(), '/import/apply', { changes: preview.changes });
+  };
+
+  const builder = async () => (await app.inject({
+    method: 'GET', url: `/api/c/${token()}/builder`,
+  })).json();
+
+  const saveBuild = (build) => app.inject({
+    method: 'PATCH', url: `/api/c/${token()}/builder`, payload: { build },
+  });
+
+  it('survives opening the builder and choosing one thing', async () => {
+    await importAll();
+    const before = await sheetNow();
+    expect(before.coins.gp).toBe(187);
+    expect(before.gear.length).toBeGreaterThan(20);
+
+    const state = await builder();
+    await saveBuild({ ...state.build, ancestry: 'ancestry:goblin' });
+
+    const after = await sheetNow();
+    expect(after.class).toBe(before.class);
+    expect(after.level).toBe(before.level);
+    expect(after.hp.max).toBe(before.hp.max);
+    expect(after.coins.gp).toBe(187);
+    expect(after.gear.length).toBe(before.gear.length);
+  });
+
+  it('opens the builder at the character’s own level, not at 1', async () => {
+    await importAll();
+    const state = await builder();
+    expect(state.build.level).toBe((await sheetNow()).level);
+    expect(state.build.level).toBeGreaterThan(1);
+  });
+
+  it('hands a field over once the build actually determines it', async () => {
+    await importAll();
+    const state = await builder();
+    // A class is chosen, so the class's numbers become the builder's to set.
+    await saveBuild({ ...state.build, class: 'class:fighter' });
+
+    const after = await sheetNow();
+    expect(after.class).toBe('Fighter');
+    // And the things no part of the build speaks to are still the player's.
+    expect(after.coins.gp).toBe(187);
   });
 });

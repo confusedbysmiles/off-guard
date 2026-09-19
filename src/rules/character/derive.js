@@ -444,10 +444,88 @@ export function isDerivedPath(path, build = null) {
   if (target === 'shield.raised') return false;
   if (target.startsWith('shield.')) return hasShield(build);
 
-  return DERIVED_PATHS.some((owned) => target === owned || target.startsWith(`${owned}.`));
+  const owned = DERIVED_PATHS.find((path) => target === path || target.startsWith(`${path}.`));
+  if (!owned) return false;
+
+  /**
+   * And only once the build actually says something about it.
+   *
+   * This is the rule the shield already followed, applied to everything else.
+   * Without it a build owns a path whether or not it determines one -- so a
+   * character imported from Pathbuilder, who has a full sheet and no build,
+   * lost their class, their hit points, their money and their whole bag the
+   * first time anyone opened the builder and clicked once. The derivation of
+   * an empty build is not a set of facts about the character; it is a row of
+   * zeroes, and writing zeroes over somebody's character is the worst thing
+   * this application could do quietly.
+   *
+   * Stated as "which part of the build has to exist first", because that is
+   * the question in every case and the answer is always a field the player
+   * can see.
+   */
+  const needed = REQUIRED_FOR[owned];
+  return needed ? Boolean(needed(build ?? {})) : true;
 }
 
 const hasShield = (build) => Boolean(build?.equipment?.shield?.id || build?.equipment?.shield?.custom);
+
+const some = (list) => Array.isArray(list) && list.length > 0;
+
+/**
+ * Whether anybody has started building this character.
+ *
+ * Four questions, and until one of them has an answer there is no build --
+ * only the empty document every character carries. `level` hangs off this
+ * rather than being always-owned: a blank build's level is 1, and writing 1
+ * over an imported level 6 is the same silent loss as writing 0 over their
+ * gold.
+ */
+const started = (b) => Boolean(b.ancestry || b.heritage || b.background || b.class);
+
+/**
+ * What the build must name before it owns each path.
+ *
+ * A path absent from here is owned as soon as there is a build at all --
+ * `level` and `bulk`, which a build always determines.
+ *
+ * Two of these are deliberately asymmetric, and the asymmetry is the point.
+ * `coins` is the build's once the build has any money in it, and `gear` once
+ * it has anything in the bag: a purse emptied to zero in the builder therefore
+ * does not clear a purse that came from an import. That costs a player who
+ * genuinely spends down to nothing one manual edit on the sheet. The other way
+ * round costs them 187 gold without asking, which is not a trade.
+ */
+const REQUIRED_FOR = {
+  name: (b) => b.name,
+  level: started,
+  bulk: started,
+  ancestry: (b) => b.ancestry,
+  size: (b) => b.ancestry,
+  speed: (b) => b.ancestry,
+  languages: (b) => b.ancestry,
+  heritage: (b) => b.heritage,
+  background: (b) => b.background,
+  class: (b) => b.class,
+  keyAttribute: (b) => b.class,
+  'hp.max': (b) => b.class,
+  'classDc.rank': (b) => b.class,
+  'perception.rank': (b) => b.class,
+  'saves.fortitude.rank': (b) => b.class,
+  'saves.reflex.rank': (b) => b.class,
+  'saves.will.rank': (b) => b.class,
+  'focus.pool': (b) => b.class,
+  ...Object.fromEntries(SKILLS.map((skill) => [`skills.${skill}.rank`, (b) => b.class])),
+  // Every boost comes from one of these three; with none of them the modifiers
+  // are six zeroes.
+  abilities: started,
+  'ac.rank': (b) => b.class || b.equipment?.armor,
+  'ac.dexCap': (b) => b.class || b.equipment?.armor,
+  'ac.itemBonus': (b) => b.class || b.equipment?.armor,
+  strikes: (b) => some(b.equipment?.weapons),
+  gear: (b) => some(b.equipment?.gear),
+  coins: (b) => Object.values(b.coins ?? {}).some((n) => Number(n) > 0),
+  lores: (b) => some(b.skills?.lores) || b.background,
+};
 
 /** The paths `deriveCharacter` owns. Anything else on the sheet is the player's. */
 export const DERIVED_PATHS = [

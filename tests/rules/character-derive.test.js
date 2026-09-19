@@ -252,18 +252,57 @@ describe('deriveCharacter', () => {
  * never sets, too narrow and the builder silently reverts what they typed.
  */
 describe('field ownership', () => {
-  it('owns what it derives', () => {
+  /** A build with the four identity choices answered. */
+  const chosen = {
+    name: 'Durgan', ancestry: 'ancestry:dwarf', heritage: 'heritage:strong-blooded-dwarf',
+    background: 'background:acolyte', class: 'class:fighter',
+    skills: { lores: [{ name: 'Vault Lore', rank: 'trained' }] },
+  };
+
+  it('owns what it derives, once the build says so', () => {
     for (const path of ['level', 'ancestry', 'class', 'size', 'speed', 'hp.max', 'ac.rank']) {
-      expect(isDerivedPath(path), path).toBe(true);
+      expect(isDerivedPath(path, chosen), path).toBe(true);
     }
   });
 
   it('owns a path beneath one it derives, not just the root', () => {
     // The sheet binds `lores.0.rank`; the derivation owns `lores` whole.
-    expect(isDerivedPath('lores')).toBe(true);
-    expect(isDerivedPath('lores.0.rank')).toBe(true);
-    expect(isDerivedPath('abilities.str')).toBe(true);
-    expect(isDerivedPath('skills.athletics.rank')).toBe(true);
+    expect(isDerivedPath('lores', chosen)).toBe(true);
+    expect(isDerivedPath('lores.0.rank', chosen)).toBe(true);
+    expect(isDerivedPath('abilities.str', chosen)).toBe(true);
+    expect(isDerivedPath('skills.athletics.rank', chosen)).toBe(true);
+  });
+
+  /**
+   * The rule that was missing, and what it cost.
+   *
+   * An empty build derives a row of zeroes, and those zeroes used to be
+   * written over the sheet the moment anybody opened the builder -- so a
+   * character imported from Pathbuilder lost their class, their hit points,
+   * their money and their whole bag on the first click.
+   */
+  it('owns nothing at all until the build names something', () => {
+    for (const path of ['level', 'ancestry', 'class', 'hp.max', 'coins.gp', 'gear',
+      'abilities.str', 'skills.athletics.rank', 'speed', 'bulk']) {
+      expect(isDerivedPath(path, {}), path).toBe(false);
+    }
+  });
+
+  it('takes each part only when the build has that part', () => {
+    expect(isDerivedPath('class', { ancestry: 'ancestry:dwarf' })).toBe(false);
+    expect(isDerivedPath('hp.max', { ancestry: 'ancestry:dwarf' })).toBe(false);
+    expect(isDerivedPath('size', { ancestry: 'ancestry:dwarf' })).toBe(true);
+    expect(isDerivedPath('ancestry', { class: 'class:fighter' })).toBe(false);
+    expect(isDerivedPath('hp.max', { class: 'class:fighter' })).toBe(true);
+  });
+
+  it('will not empty a purse or a bag that the build never filled', () => {
+    const empty = { ancestry: 'ancestry:dwarf', coins: { pp: 0, gp: 0, sp: 0, cp: 0 }, equipment: { gear: [] } };
+    expect(isDerivedPath('coins.gp', empty)).toBe(false);
+    expect(isDerivedPath('gear', empty)).toBe(false);
+    const spent = { ...empty, coins: { pp: 0, gp: 2, sp: 0, cp: 0 }, equipment: { gear: [{ id: 'equipment:rope' }] } };
+    expect(isDerivedPath('coins.gp', spent)).toBe(true);
+    expect(isDerivedPath('gear', spent)).toBe(true);
   });
 
   it('leaves the player everything it does not set', () => {
@@ -368,9 +407,13 @@ describe('what the character carries, on the sheet', () => {
   });
 
   it('leaves the free-text item box alone, which is where imports still write', () => {
-    expect(isDerivedPath('items', { name: 'Durgan' })).toBe(false);
-    expect(isDerivedPath('gear', { name: 'Durgan' })).toBe(true);
-    expect(isDerivedPath('coins.gp', { name: 'Durgan' })).toBe(true);
+    const carrying_ = {
+      name: 'Durgan', class: 'class:fighter',
+      coins: { gp: 3 }, equipment: { gear: [{ id: 'equipment:rope' }] },
+    };
+    expect(isDerivedPath('items', carrying_)).toBe(false);
+    expect(isDerivedPath('gear', carrying_)).toBe(true);
+    expect(isDerivedPath('coins.gp', carrying_)).toBe(true);
   });
 
   it('says an item is missing rather than quietly weighing nothing', () => {

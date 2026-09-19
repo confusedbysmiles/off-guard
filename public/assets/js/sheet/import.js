@@ -36,10 +36,32 @@ export async function openImportDialog({ store, endpoint }) {
     try {
       const res = await fetch(`${endpoint}/import/preview`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { accept: 'application/json', 'content-type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      const result = await res.json();
+
+      /**
+       * Not every answer is ours.
+       *
+       * The server always replies in JSON, including when it refuses -- but a
+       * tunnel or a proxy in front of it answers with an HTML error page when
+       * the service is restarting, and `res.json()` then throws a parser error
+       * that the catch below reported verbatim: "JSON.parse: unexpected
+       * character at line 1 column 1". That is a true sentence and it tells a
+       * player nothing. What they need to know is that the server was not
+       * there, and that trying again shortly is the answer.
+       */
+      const body = await res.text();
+      let result = null;
+      try { result = JSON.parse(body); } catch { /* not ours; handled next */ }
+
+      if (!result) {
+        message.textContent = res.ok
+          ? 'The server sent something this page could not read. Try again in a moment.'
+          : `The server is not answering just now (${res.status}). Try again in a moment.`;
+        return;
+      }
+
       if (!res.ok) {
         message.textContent = result.error ?? 'That did not work.';
         return;
@@ -88,11 +110,17 @@ export async function openImportDialog({ store, endpoint }) {
       const accepted = [...diff.querySelectorAll('input[type=checkbox]')]
         .filter((box) => box.checked)
         .map((box) => changes[Number(box.dataset.index)]);
-      await fetch(`${endpoint}/import/apply`, {
+      const applied = await fetch(`${endpoint}/import/apply`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { accept: 'application/json', 'content-type': 'application/json' },
         body: JSON.stringify({ changes: accepted }),
       });
+      // It used to close the dialog whatever came back, so a refused write
+      // looked exactly like a successful one.
+      if (!applied.ok) {
+        message.textContent = `Those changes were not saved (${applied.status}). Nothing has changed.`;
+        return;
+      }
       dialog.close();
       // The server is now ahead of the local copy, so reload rather than guess.
       await store.load();

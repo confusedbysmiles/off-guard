@@ -16,7 +16,7 @@
  * one person ever makes -- a character has exactly one player -- at the cost of
  * a hundred paths per character in `character_field`.
  */
-import { deriveCharacter } from '../rules/character/derive.js';
+import { deriveCharacter, isDerivedPath } from '../rules/character/derive.js';
 import { isCustomBackground, resolveBackground } from '../rules/character/background.js';
 import { slotsFor, outstanding } from '../rules/character/slots.js';
 import { readPath } from './store/characters.js';
@@ -35,6 +35,27 @@ export const blankBuild = () => ({
   equipment: { armor: null, shield: null, weapons: [], gear: [] },
   coins: { pp: 0, gp: 0, sp: 0, cp: 0 },
 });
+
+/**
+ * The build a character starts with when they have none.
+ *
+ * Seeded from the sheet rather than blank, because a character can already
+ * exist before anyone opens the builder -- imported from Pathbuilder, or typed
+ * in by hand across a whole campaign. A builder that opens at level 1 is about
+ * to tell a level 6 rogue that is what they are, and the first click makes it
+ * true on their sheet.
+ *
+ * Only the level, because the level is the one thing a blank build asserts
+ * that a real character can contradict. Everything else a blank build derives
+ * it no longer owns at all -- see `isDerivedPath`.
+ */
+export function startingBuild(sheet = {}) {
+  const level = Math.trunc(Number(sheet?.level));
+  return {
+    ...blankBuild(),
+    level: Number.isFinite(level) && level >= 1 ? Math.min(20, level) : 1,
+  };
+}
 
 /**
  * The records a build refers to.
@@ -164,6 +185,15 @@ export function buildWrites(build, derived, currentSheet = {}) {
   const writes = [{ path: 'build', value: build }];
 
   for (const [path, value] of flatten(derived.sheet)) {
+    /**
+     * Only paths this build actually determines.
+     *
+     * `isDerivedPath` answers that, and it is the same answer the sheet uses
+     * to decide which fields to lock -- so a field the player can still type
+     * into is a field the builder will not overwrite, which was not true
+     * before and cost an imported character everything it had.
+     */
+    if (!isDerivedPath(path, build)) continue;
     const current = readPath(currentSheet, path);
     if (JSON.stringify(current) === JSON.stringify(value)) continue;
     writes.push({ path, value });
