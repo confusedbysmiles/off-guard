@@ -65,11 +65,16 @@ looks like from inside a test runner.
 
 `npm run build:data` needs the network and about 7 minutes. If the old machine
 has a built `data/` already, copying it is faster and guarantees both machines
-hold the same catalogue:
+hold the same catalogue. `tar` over `ssh` rather than `rsync`, because a
+minimal Debian has the first and not the second:
 
 ```bash
-rsync -a --info=progress2 data/ new-machine:~/off-guard/data/   # ~102 MB
+tar czf - data | ssh new-machine 'cd ~/off-guard && tar xzf -'   # ~102 MB
 ```
+
+From a Mac that prints a screen of `Ignoring unknown extended header keyword
+LIBARCHIVE.xattr.com.apple.provenance`. That is GNU tar declining to care about
+macOS extended attributes, and it is not a problem.
 
 Get that far *before* you stop the old server. Everything above is safe to do
 while the table is still being served from the old machine, and it is where the
