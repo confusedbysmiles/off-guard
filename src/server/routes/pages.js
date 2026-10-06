@@ -13,8 +13,9 @@ import { resolve } from 'node:path';
 import { resolveScope } from '../scope.js';
 import { isWellFormed, normalizeToken, tokenFingerprint } from '../tokens.js';
 import { failureCount, recordFailure } from '../store/tokens.js';
+import { gate } from '../device-gate.js';
 
-export async function registerPageRoutes(app, { publicDir }) {
+export async function registerPageRoutes(app, { publicDir, mount = '' }) {
   const shells = new Map();
   const shell = (name) => {
     if (!shells.has(name)) shells.set(name, readFileSync(resolve(publicDir, name), 'utf8'));
@@ -41,6 +42,20 @@ export async function registerPageRoutes(app, { publicDir }) {
       request.log.warn({ ip: request.ip, kind, token: tokenFingerprint(token) }, 'access denied');
       reply.status(404).type('text/html');
       return shell('not-found.html');
+    }
+
+    /**
+     * The device, after the token.
+     *
+     * A locked link gets its own page rather than the 404 a wrong link gets.
+     * The 404 exists so a wrong token cannot be distinguished from a wrong
+     * URL; this token is right, and whoever holds it already knows that, so
+     * the only thing a 404 would hide here is the one sentence that tells a
+     * player what to do next.
+     */
+    if (!gate(app.db, { request, reply, scope, mount }).allowed) {
+      reply.status(403).type('text/html');
+      return shell('locked.html');
     }
 
     reply.type('text/html');

@@ -282,6 +282,7 @@ function renderNow() {
           tokens: state.tokens,
           characters: state.party?.characters ?? [],
           actions,
+          me: state.me,
         })
         : null,
       homebrewPanel({
@@ -362,7 +363,7 @@ async function selectCampaign(id) {
   await Promise.all([
     actions.loadParty(), actions.loadEncounters(), actions.loadCombat(),
     actions.loadRolls(), actions.loadTokens(), actions.loadSessions(),
-    actions.loadHomebrew(),
+    actions.loadHomebrew(), actions.loadMe(),
   ]);
   if (store.get().tab === 'loop') await actions.loadLoop(NINE_MINUTES);
   render();

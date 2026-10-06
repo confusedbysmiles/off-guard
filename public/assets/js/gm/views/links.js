@@ -32,13 +32,73 @@ const relative = (iso) => {
   return `last used ${days} days ago`;
 };
 
-function row({ title, subtitle, meta, actions }) {
+function row({ title, subtitle, meta, actions, below = null }) {
   return el('div', { class: 'link-row' },
     el('div', { class: 'link-row__what' },
       el('strong', {}, title),
       subtitle ? el('span', { class: 'faint' }, subtitle) : null,
       meta ? el('span', { class: 'faint' }, meta) : null),
-    el('div', { class: 'link-row__tools' }, ...actions.filter(Boolean)));
+    el('div', { class: 'link-row__tools' }, ...actions.filter(Boolean)),
+    below);
+}
+
+const seen = (iso) => {
+  if (!iso) return '';
+  const days = Math.floor((Date.now() - new Date(`${iso}Z`).getTime()) / 86400000);
+  if (Number.isNaN(days)) return '';
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  return `${days} days ago`;
+};
+
+/**
+ * Which devices have opened this link.
+ *
+ * The question worth asking of a link is "has anybody else opened this", and
+ * until now nothing in the application could answer it. A player's link should
+ * show one device; two is either a phone and a laptop, which the GM knows
+ * about, or it is not, which they would want to.
+ *
+ * Locking is the second half and is off by default on every link. It is
+ * offered here rather than somewhere safer because the decision only makes
+ * sense beside the list it acts on.
+ */
+function devices(token, { actions, subject }) {
+  if (!token) return null;
+  const list = token.devices ?? [];
+  const locked = Boolean(token.lockedAt);
+
+  return el('div', { class: `link-devices${locked ? ' link-devices--locked' : ''}` },
+    el('div', { class: 'link-devices__head' },
+      el('span', { class: 'faint' },
+        list.length
+          ? `${list.length} device${list.length === 1 ? '' : 's'}${locked ? ', locked to them' : ''}`
+          : 'not opened yet'),
+      list.length
+        ? el('button', {
+          class: 'btn btn--quiet', type: 'button',
+          html: `${icon(locked ? 'eye' : 'shield')}<span>${locked ? 'Unlock' : 'Lock to these'}</span>`,
+          title: locked
+            ? 'Accept any device again, and keep recording them'
+            : 'Refuse every device except the ones below',
+          onclick: () => actions.setLinkLocked(token.id, !locked, subject),
+        })
+        : null),
+
+    list.length
+      ? el('ul', { class: 'link-devices__list' }, ...list.map((device) => el('li', {},
+        el('span', {}, device.label || 'Unknown device'),
+        el('span', { class: 'faint' },
+          [seen(device.firstSeenAt) && `first ${seen(device.firstSeenAt)}`,
+            seen(device.lastSeenAt) && `last ${seen(device.lastSeenAt)}`]
+            .filter(Boolean).join(' · ')),
+        el('button', {
+          class: 'btn btn--icon btn--quiet', type: 'button',
+          title: locked ? 'Refuse this device from now on' : 'Forget this device',
+          html: `${icon('x')}<span class="sr-only">Forget ${device.label || 'this device'}</span>`,
+          onclick: () => actions.forgetDevice(token.id, device.id, device.label),
+        }))))
+      : null);
 }
 
 const rotateButton = (label, onClick) => el('button', {
@@ -52,7 +112,7 @@ const rotateButton = (label, onClick) => el('button', {
  * @param {object[]} options.tokens    from the API: what exists, never the value
  * @param {object[]} options.characters the party, so a player with no link shows one
  */
-export function linksPanel({ tokens, characters, actions }) {
+export function linksPanel({ tokens, characters, actions, me = null }) {
   const byKind = (kind) => tokens.filter((t) => t.kind === kind);
   const table = byKind('table')[0] ?? null;
   const characterTokens = new Map(byKind('character').map((t) => [t.characterId, t]));
@@ -71,6 +131,7 @@ export function linksPanel({ tokens, characters, actions }) {
         title: 'Shared screen',
         subtitle: table ? relative(table.lastUsedAt) : 'no link yet',
         meta: 'Read-only. Safe to cast to a television.',
+        below: devices(table, { actions, subject: 'the shared screen' }),
         actions: [
           table
             ? rotateButton('Rotate', () => actions.rotateLink(table.id, 'the shared screen'))
@@ -88,6 +149,7 @@ export function linksPanel({ tokens, characters, actions }) {
           title: displayName(character),
           subtitle: character.playerName || 'no player named',
           meta: existing ? relative(existing.lastUsedAt) : 'no link yet',
+          below: devices(existing, { actions, subject: displayName(character) }),
           actions: [
             existing
               ? rotateButton('Rotate', () => actions.rotateLink(existing.id, displayName(character)))
@@ -108,7 +170,13 @@ export function linksPanel({ tokens, characters, actions }) {
         'One GM link reaches every campaign. Rotating it signs you out of this '
         + 'tab immediately — the new link is shown first, and you will need it '
         + 'to get back in.'),
-      rotateButton('Rotate my GM link', () => actions.rotateGmLink())));
+      rotateButton('Rotate my GM link', () => actions.rotateGmLink()),
+      devices(me, { actions, subject: 'your GM link' }),
+      me?.lockedAt
+        ? el('p', { class: 'faint' },
+          'Locked. If you are ever shut out of this dashboard, '
+          + 'npm run unlock on the server is the way back in.')
+        : null));
 }
 
 /**

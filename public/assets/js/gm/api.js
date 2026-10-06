@@ -75,6 +75,10 @@ export const api = {
     request(`/campaigns/${id}/tokens/character/${characterId}`, { method: 'POST', body: {} }),
   mintTableToken: (id) => request(`/campaigns/${id}/tokens/table`, { method: 'POST', body: {} }),
   rotateToken: (tokenId) => request(`/tokens/${tokenId}/rotate`, { method: 'POST', body: {} }),
+  lockToken: (tokenId, locked) =>
+    request(`/tokens/${tokenId}/lock`, { method: 'POST', body: { locked } }),
+  forgetDevice: (tokenId, deviceId) =>
+    request(`/tokens/${tokenId}/devices/${deviceId}`, { method: 'DELETE' }),
 
   reference: () => request('/reference'),
 

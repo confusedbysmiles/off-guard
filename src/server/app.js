@@ -21,6 +21,7 @@ import rateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
 
 import { resolveScope, ScopeError, NotFoundError } from './scope.js';
+import { gate } from './device-gate.js';
 import { isWellFormed, normalizeToken, tokenFingerprint } from './tokens.js';
 import { failureCount, recordFailure, touchToken } from './store/tokens.js';
 import { ROBOTS_TXT, securityHeaders } from './security.js';
@@ -243,11 +244,11 @@ export async function buildApp({
 
     site.get('/healthz', async () => ({ ok: true }));
 
-    await registerPageRoutes(site, { publicDir: PUBLIC_DIR });
+    await registerPageRoutes(site, { publicDir: PUBLIC_DIR, mount });
 
-    await site.register(scopedRoutes('gm', registerGmRoutes), { prefix: '/api/gm/:token' });
-    await site.register(scopedRoutes('character', registerCharacterRoutes), { prefix: '/api/c/:token' });
-    await site.register(scopedRoutes('table', registerTableRoutes), { prefix: '/api/table/:token' });
+    await site.register(scopedRoutes('gm', registerGmRoutes, { mount }), { prefix: '/api/gm/:token' });
+    await site.register(scopedRoutes('character', registerCharacterRoutes, { mount }), { prefix: '/api/c/:token' });
+    await site.register(scopedRoutes('table', registerTableRoutes, { mount }), { prefix: '/api/table/:token' });
   }, mount ? { prefix: mount } : {});
 
   return app;
@@ -274,7 +275,7 @@ export function normalizeBasePath(value) {
 const FAILURE_LIMIT = 15;
 const FAILURE_WINDOW_MINUTES = 5;
 
-function scopedRoutes(kind, register) {
+function scopedRoutes(kind, register, { mount = '' } = {}) {
   return async function plugin(app) {
     app.addHook('onRequest', app.rateLimit());
 
@@ -313,6 +314,22 @@ function scopedRoutes(kind, register) {
       // is the wrong link entirely -- and saying so would confirm the token is
       // real, so it gets the same 404.
       if (scope.kind !== kind) return deny();
+
+      /**
+       * The device, after the token and never instead of it.
+       *
+       * A refusal here is a 403 rather than the 404 everything else gets. The
+       * 404 exists so that a wrong token cannot be told apart from a wrong
+       * URL; this is a *right* token, held by somebody who already knows it is
+       * right, so hiding that would protect nothing and would leave a player
+       * on a new phone staring at a page that says their link does not exist.
+       */
+      if (!gate(app.db, { request, reply, scope, mount }).allowed) {
+        return reply.status(403).send({
+          error: 'This link is locked to the devices that have used it. '
+            + 'Ask your GM to allow this one.',
+        });
+      }
 
       request.scope = scope;
       touchToken(app.db, scope.tokenId);

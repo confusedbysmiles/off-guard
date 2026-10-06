@@ -13,7 +13,7 @@ a setting rather than a tool.
 
 **Status: complete, and running.** It has been live since 29 August 2026 on a
 Mac under launchd, reached through a Cloudflare Tunnel, and has been played on
-from a laptop, a phone and an iPad. 1,040 unit tests and 94 end-to-end tests, run
+from a laptop, a phone and an iPad. 1,058 unit tests and 94 end-to-end tests, run
 at a host root and at a subdirectory, in Chromium and — for the parts where
 engines differ — in WebKit. See [deploy/GOING-LIVE.md](deploy/GOING-LIVE.md).
 
@@ -127,6 +127,56 @@ packs only) and writes `data/creatures/`, `data/hazards/`, `data/index.json` and
 lives in `tools/build-data/upstream.lock.json` and is bumped deliberately, never
 automatically. Tests run against committed fixtures of raw upstream JSON, so
 `npm test` does not require a data build.
+
+### Which devices a link has been opened from
+
+The weakness of "the URL is the credential" is honest and specific: a link in a
+screenshot, a browser history sync or a shared screen is a working link for
+whoever sees it, forever, and nothing in the application would ever notice.
+
+So a link now remembers the devices that have used it. The Links panel shows
+each one — "iPhone · Safari, first today, last today" — which answers the
+question that matters about a link and that nothing here could answer before:
+*has anybody else opened this?* A player's link showing two devices is either a
+phone and a laptop, which you know about, or it is not.
+
+**Recorded first, enforced second.** Every link records; no link refuses until
+you press **Lock to these**. A link that bound itself to the first device that
+opened it would be the stronger design and would strand a player whose phone
+cleared its cookies mid-session, with the remedy sitting behind a dashboard
+they cannot reach. Visibility costs nobody anything. Enforcement is a switch,
+thrown where it is worth it. Locking a link nothing has opened is refused,
+because that would lock out everybody including the person it was made for.
+
+**The cookie is a second factor and must never become the first.** The secret
+path is also what makes this application immune to cross-site request forgery:
+a page that cannot address a request cannot forge one, whereas a cookie is sent
+by the browser to anybody who asks. Replace the token with a cookie and the
+application gets weaker while looking stronger. So both are required, and a
+device can only ever narrow what a token already allows — never widen it.
+
+**A refused request records nothing.** Without that, locking would be theatre:
+knock once to be recorded, knock again to be let in. It is the load-bearing
+test in `tests/server/devices.test.js`.
+
+**The stored value is salted with the link's own id**, so one browser that opens
+two links in a campaign produces two unrelatable rows. The table cannot answer
+"which links has this person opened" — a question the feature never needs and
+the GM was never offered an answer to. The label is derived from the user agent
+and the agent string itself is thrown away: "iPhone · Safari" is enough to tell
+two rows apart, which is the whole job.
+
+**A locked link gets its own page**, not the 404 a wrong link gets. The 404
+exists so a wrong token cannot be told apart from a wrong URL; a locked link is
+a *right* token held by somebody who already knows it is right, so a 404 would
+hide nothing and would leave a player on a new phone staring at a page saying
+their link does not exist.
+
+Locking applies to the GM's own link too, which is the one that can strand you:
+granting a device is a dashboard action, and the dashboard is behind the link
+you just locked. `npm run unlock` lists every link with its state and device
+count, and unlocks one or all of them from a shell. The remedy exists before
+the mistake does.
 
 ## Stack, and why
 

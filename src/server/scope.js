@@ -49,7 +49,7 @@ export function resolveScope(db, token) {
   // The database holds the hash, never the link. A copied database file is
   // therefore a list of what exists, not a set of working keys.
   const row = db.prepare(`
-    SELECT id, kind, campaign_id, character_id
+    SELECT id, kind, campaign_id, character_id, locked_at
     FROM token
     WHERE token_hash = ? AND revoked_at IS NULL
   `).get(hashToken(token));
@@ -70,6 +70,9 @@ export function resolveScope(db, token) {
     kind: row.kind,
     campaignId: row.campaign_id,
     characterId: row.character_id,
+    // When this link stopped accepting devices it has not seen. Null is the
+    // ordinary state: devices are recorded and none are refused.
+    lockedAt: row.locked_at ?? null,
   });
 }
 

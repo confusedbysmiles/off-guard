@@ -20,7 +20,8 @@ import { campaignFor, isGm, NotFoundError, ScopeError } from '../scope.js';
 // mint requests, so it never leaves this module.
 const COLUMNS = `
   id, kind, campaign_id AS campaignId, character_id AS characterId, note,
-  created_at AS createdAt, last_used_at AS lastUsedAt, revoked_at AS revokedAt
+  created_at AS createdAt, last_used_at AS lastUsedAt, revoked_at AS revokedAt,
+  locked_at AS lockedAt
 `;
 
 /**

@@ -35,6 +35,8 @@ const state = {
   rolls: [],
   recall: null,
   tokens: null,
+  // The GM's own link: it belongs to no campaign, so it is not in the campaign listing.
+  me: null,
   sessions: [],
   // Options this table wrote, and the published ones a new option can be built
   // on. Both belong to a campaign, so both are cleared when one is left.

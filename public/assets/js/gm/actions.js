@@ -905,6 +905,46 @@ export function createActions({
       }
     },
 
+    /**
+     * Lock a link to the devices that have used it, or let it go again.
+     *
+     * The whole list is refetched rather than patched in place: locking is the
+     * kind of change somebody wants to see confirmed by the thing itself
+     * rather than by an optimistic redraw.
+     */
+    async setLinkLocked(tokenId, locked, subject = 'that link') {
+      try {
+        await api.lockToken(tokenId, locked);
+        await Promise.all([actions.loadTokens(), actions.loadMe()]);
+        refresh();
+        notices.info(locked
+          ? `${subject} now accepts only the devices it already knows.`
+          : `${subject} accepts any device again.`);
+      } catch (error) {
+        notices.error(`Could not change that link: ${error.message}`);
+      }
+    },
+
+    async forgetDevice(tokenId, deviceId, label = 'that device') {
+      try {
+        await api.forgetDevice(tokenId, deviceId);
+        await Promise.all([actions.loadTokens(), actions.loadMe()]);
+        refresh();
+        notices.warn(`Forgot ${label}. If the link is locked, it is now refused.`);
+      } catch (error) {
+        notices.error(`Could not forget that device: ${error.message}`);
+      }
+    },
+
+    /** The GM's own link, which no campaign listing contains. */
+    async loadMe() {
+      try {
+        store.set({ me: await api.me() });
+      } catch {
+        // Not fatal: the panel simply shows nothing about the GM's own link.
+      }
+    },
+
     async loadSessions() {
       if (!campaign()) return;
       try {
