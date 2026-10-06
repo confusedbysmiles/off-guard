@@ -178,6 +178,16 @@ you just locked. `npm run unlock` lists every link with its state and device
 count, and unlocks one or all of them from a shell. The remedy exists before
 the mistake does.
 
+On a deployed server the database belongs to the `off-guard` user and the
+account you log in as cannot read it, so the remedy needs running as them —
+which the tool now says, with the arguments you typed, instead of a
+`SQLITE_CANTOPEN` stack trace:
+
+```
+sudo -u off-guard env OFF_GUARD_DB=/var/lib/off-guard/off-guard.sqlite \
+  node tools/unlock-link.js --all
+```
+
 ## Stack, and why
 
 - **Node 20+, no build step, no bundler, no CDN.** Front end is vanilla HTML,

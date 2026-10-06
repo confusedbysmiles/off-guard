@@ -24,7 +24,34 @@ const forget = args.includes('--forget');
 const named = args.find((a) => !a.startsWith('--'));
 
 const settings = config();
-const db = openDatabase(settings.database, { migrationsDir: settings.migrations });
+
+/**
+ * Opened here rather than at the top, because the interesting failure is this
+ * one.
+ *
+ * On a deployed server the database belongs to the `off-guard` user and is not
+ * readable by the account a person logs in as -- the unit keeps it that way on
+ * purpose. So the obvious invocation fails, and better-sqlite3's answer to that
+ * is a stack trace with SQLITE_CANTOPEN in it, which is a true thing to say and
+ * no help at all to somebody who is locked out of their own dashboard with five
+ * people waiting. The remedy for the remedy belongs here.
+ */
+let db;
+try {
+  db = openDatabase(settings.database, { migrationsDir: settings.migrations });
+} catch (error) {
+  // Printed whatever the cause: a permission failure says SQLITE_CANTOPEN and a
+  // directory the account cannot even see says nothing at all, and both are the
+  // same mistake made by the same person in the same situation.
+  process.stderr.write(
+    `\nCannot open ${settings.database}\n  ${error.message}\n\n`
+    + 'On a deployed server the database belongs to the off-guard user and the\n'
+    + 'account you log in as cannot read it. Run this as them:\n\n'
+    + `  sudo -u off-guard env OFF_GUARD_DB=${settings.database} \\\n`
+    + `    node tools/unlock-link.js ${process.argv.slice(2).join(' ')}\n\n`,
+  );
+  process.exit(1);
+}
 
 process.stdout.write(`\nDatabase: ${settings.database}\n\n`);
 
