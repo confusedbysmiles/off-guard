@@ -46,6 +46,8 @@ export const api = {
   party: (id) => request(`/campaigns/${id}/party`),
 
   characters: (id) => request(`/campaigns/${id}/characters`),
+  exportCharacter: (id, characterId) =>
+    request(`/campaigns/${id}/characters/${characterId}/export`),
   createCharacter: (id, fields) =>
     request(`/campaigns/${id}/characters`, { method: 'POST', body: fields }),
   deleteCharacter: (id, characterId) =>

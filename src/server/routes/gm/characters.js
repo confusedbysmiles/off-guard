@@ -6,6 +6,7 @@ import {
   applyPatch, createCharacter, deleteCharacter, getCharacter, listCharacters,
 } from '../../store/characters.js';
 import { publishCharacter, publishTable } from '../../publish.js';
+import { exportCharacter } from '../../../shared/portable.js';
 
 export async function registerCharacterAdminRoutes(app) {
   const { db } = app;
@@ -23,6 +24,19 @@ export async function registerCharacterAdminRoutes(app) {
   app.get('/campaigns/:campaignId/characters/:characterId', async (request) => ({
     character: getCharacter(db, request.scope, request.params.characterId, request.params.campaignId),
   }));
+
+  /**
+   * One character as a file.
+   *
+   * The same envelope the player's own export produces, so the two are
+   * interchangeable -- a GM can hand somebody their character back without
+   * handing them a link, and a character can move between campaigns on this
+   * server or off it entirely. Campaign-scoped like everything else here: the
+   * id in the path is checked against the one the token resolved to.
+   */
+  app.get('/campaigns/:campaignId/characters/:characterId/export', async (request) => exportCharacter(
+    getCharacter(db, request.scope, request.params.characterId, request.params.campaignId),
+  ));
 
   app.delete('/campaigns/:campaignId/characters/:characterId', async (request) => {
     const result = deleteCharacter(

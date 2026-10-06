@@ -13,7 +13,7 @@ a setting rather than a tool.
 
 **Status: complete, and running.** It has been live since 29 August 2026 on a
 Mac under launchd, reached through a Cloudflare Tunnel, and has been played on
-from a laptop, a phone and an iPad. 1,028 unit tests and 91 end-to-end tests, run
+from a laptop, a phone and an iPad. 1,040 unit tests and 94 end-to-end tests, run
 at a host root and at a subdirectory, in Chromium and — for the parts where
 engines differ — in WebKit. See [deploy/GOING-LIVE.md](deploy/GOING-LIVE.md).
 
@@ -220,6 +220,43 @@ is worse than a spreadsheet.
 The browser loads `src/rules/` directly, served at `/engine/`. Copying it into
 `public/` would be a build step, and two copies of the arithmetic is exactly what
 the engine exists to prevent.
+
+### A character as a file
+
+Off-Guard could read somebody else's export and could not write one of its own,
+which meant a character existed in exactly one place: this server's SQLite file.
+That is a fine place for a character to live and a poor place for it to live
+*only*. **Save a copy of this character** on the sheet writes a JSON file; the
+GM can save any character from the roster; and the import dialog takes one back.
+
+A character is about five kilobytes, so there is no format cleverness here — the
+sheet, whole, inside an envelope that names itself. The envelope earns its place
+by removing a guess: an Off-Guard file and a Pathbuilder file are both "some JSON
+somebody chose", and without a marker the import has to infer which from its
+shape, which works until it doesn't and then maps the wrong fields in silence.
+
+**It carries no token.** A link is a credential, and this is a file players are
+encouraged to keep a copy of; a credential inside it would be the one mistake
+this feature could make that would matter. It carries no character or campaign
+id either — those name a row in one particular database, and a file that
+carries them invites a restore into the wrong character on the grounds that the
+numbers matched.
+
+**A restore puts back play state, which a Pathbuilder import never touches.**
+Opposite rules for opposite reasons: a level-up re-import should not heal you,
+and a restore from a snapshot should put back the character in the snapshot
+rather than a healed version of them.
+
+**A restore is additive.** It proposes every value the file holds and deletes
+nothing the file lacks, so a note written after the export survives one. That is
+a limit rather than an oversight: the dialog's model is a row per change that
+the player can untick, and "remove a field you cannot see" is not a row anybody
+can judge.
+
+A file from a newer Off-Guard is refused rather than read hopefully, because a
+later version may mean something different by a field this one recognises, and
+"restored successfully" over a character who is now subtly wrong is worse than
+being told the file is too new.
 
 ### Pathbuilder import
 

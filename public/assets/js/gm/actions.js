@@ -9,6 +9,7 @@
  * the notice region and a `refresh` callback. Nothing here touches the DOM.
  */
 import { displayName } from '../../../engine/shared/character-name.js';
+import { fileNameFor } from '../../../engine/shared/portable.js';
 import { debounce } from '../lib/dom.js';
 import { blankState, resetLoop, setInfluence } from '../../../engine/shared/loop.js';
 import { assignDisplayNames } from './views/builder.js';
@@ -1007,6 +1008,35 @@ export function createActions({
         );
       } catch (error) {
         notices.error(`Could not add that character: ${error.message}`);
+      }
+    },
+
+    /**
+     * Hand a character back as a file.
+     *
+     * The same envelope a player's own save produces, so the two are
+     * interchangeable -- and the GM can give somebody a copy of their
+     * character without giving them a link to it, which are different things
+     * and were previously the same thing.
+     */
+    async exportCharacter(character) {
+      const id = campaign();
+      if (!id) return;
+      try {
+        const file = await api.exportCharacter(id, character.id);
+        const url = URL.createObjectURL(
+          new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' }),
+        );
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileNameFor(file.character);
+        document.body.append(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 10_000);
+        notices.info(`Saved ${file.character.name || 'that character'} to a file.`);
+      } catch (error) {
+        notices.error(`Could not save that character: ${error.message}`);
       }
     },
 

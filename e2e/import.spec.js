@@ -28,7 +28,7 @@ test.afterAll(async ({ request }) => { await table.archive(request); });
 async function openImport(page, token = playerToken) {
   await page.goto(`/c/${token}`);
   await page.locator('.sheet-tabs').getByRole('button', { name: 'Character', exact: true }).click();
-  await page.getByRole('button', { name: 'Import from Pathbuilder' }).click();
+  await page.getByRole('button', { name: /Import or restore/ }).click();
   await expect(page.locator('#import-dialog')).toBeVisible();
 }
 

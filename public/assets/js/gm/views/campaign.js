@@ -181,6 +181,12 @@ export function rosterPanel({ characters, actions }) {
               `Level ${character.level}`,
             ].filter(Boolean).join(' · '))),
         el('button', {
+          class: 'btn btn--icon btn--quiet', type: 'button',
+          title: 'Save to a file',
+          html: `${icon('download')}<span class="sr-only">Save ${displayName(character)} to a file</span>`,
+          onclick: () => actions.exportCharacter(character),
+        }),
+        el('button', {
           class: 'btn btn--icon btn--quiet roster__remove', type: 'button',
           title: 'Remove',
           html: `${icon('x')}<span class="sr-only">Remove ${displayName(character)}</span>`,

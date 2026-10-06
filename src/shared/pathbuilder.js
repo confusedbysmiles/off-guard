@@ -368,10 +368,21 @@ function mapGear(build) {
   }).filter(Boolean);
 }
 
-export function diffImport(currentSheet, importedSheet) {
+/**
+ * @param {object} currentSheet
+ * @param {object} importedSheet
+ * @param {object} options
+ * @param {boolean} options.includePlayState  current hit points, conditions,
+ *   hero points and spent slots. Left out of a Pathbuilder import, because
+ *   levelling up should not heal the character -- and put back for a restore
+ *   from an Off-Guard file, because that file is a snapshot of the character
+ *   as they were, and restoring one to full health would be restoring somebody
+ *   else.
+ */
+export function diffImport(currentSheet, importedSheet, { includePlayState = false } = {}) {
   const changes = [];
   for (const path of leafPaths(importedSheet)) {
-    if (PLAY_STATE_PATHS.has(path)) continue;
+    if (!includePlayState && PLAY_STATE_PATHS.has(path)) continue;
     const to = readPath(importedSheet, path);
     const from = readPath(currentSheet, path);
     if (JSON.stringify(from) === JSON.stringify(to)) continue;

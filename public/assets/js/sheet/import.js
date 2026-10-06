@@ -101,12 +101,16 @@ export async function openImportDialog({ store, endpoint }) {
       return el('div', { class: 'notice' },
         el('div', { class: 'notice__body' },
           el('label', { class: 'import-builder__keep', for: 'import-build' },
-            keep, el('strong', {}, 'Also fill in the character builder')),
+            keep, el('strong', {}, result.builder?.exact
+              ? 'Restore the character builder too'
+              : 'Also fill in the character builder')),
           el('p', { class: 'muted' },
             named ? `Level ${summary.level} — ${named}.` : `Level ${summary.level}.`,
-            summary.outstanding
-              ? ` ${summary.outstanding} choices the file does not record, mostly feats, will be waiting for you there.`
-              : ''),
+            // A restored build was not worked out from anything, so there is
+            // nothing left over to explain.
+            result.builder?.exact || !summary.outstanding
+              ? ''
+              : ` ${summary.outstanding} choices the file does not record, mostly feats, will be waiting for you there.`),
           ...notes.map((note) => el('p', { class: 'faint' }, note)),
           differences.length
             ? el('p', { class: 'muted' },
@@ -201,7 +205,7 @@ export async function openImportDialog({ store, endpoint }) {
   body.replaceChildren(
     el('div', { class: 'field' },
       el('label', { class: 'field__label', for: 'pb-file' },
-        'Pathbuilder JSON export (works offline)'),
+        'A Pathbuilder export, or a character file saved from here'),
       file),
     el('div', { class: 'field stack-lg' },
       el('label', { class: 'field__label', for: 'pb-id' }, 'or a build id'),

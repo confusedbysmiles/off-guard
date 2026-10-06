@@ -13,6 +13,7 @@ import { apiPath, token } from '../lib/mount.js';
 import { createStore, STATUS } from './store.js';
 import { mount } from './render.js';
 import { openImportDialog } from './import.js';
+import { fileNameFor } from '../../../engine/shared/portable.js';
 
 /**
  * The token is read from the path and never written anywhere else -- not into
@@ -228,16 +229,60 @@ function connectStream() {
   }, { once: true });
 }
 
+/**
+ * Save the character as a file.
+ *
+ * Fetched from the server rather than assembled here, so there is one place
+ * that decides what a character file contains -- and so the copy a player
+ * keeps is the copy the server would hand to anybody else.
+ *
+ * A blob and an anchor, because that is the whole of what a download is. No
+ * dependency, no build step, and nothing that needs the network twice.
+ */
+async function saveCharacterFile(button) {
+  const label = button.querySelector('span');
+  const was = label.textContent;
+  label.textContent = 'Saving…';
+  try {
+    const res = await fetch(`${endpoint}/export`, { headers: { accept: 'application/json' } });
+    if (!res.ok) throw new Error(`the server said ${res.status}`);
+    const file = await res.json();
+
+    const url = URL.createObjectURL(
+      new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' }),
+    );
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileNameFor(file.character);
+    document.body.append(link);
+    link.click();
+    link.remove();
+    // Revoked on the next turn of the loop: too soon and the download has not
+    // started, never and the blob is held for the life of the page.
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    label.textContent = 'Saved';
+  } catch (error) {
+    label.textContent = `Could not save (${error.message})`;
+  }
+  setTimeout(() => { label.textContent = was; }, 4000);
+}
+
 function addImportButton() {
   const button = document.createElement('button');
   button.className = 'btn';
   button.type = 'button';
-  button.innerHTML = `${icon('upload')}<span>Import from Pathbuilder</span>`;
+  button.innerHTML = `${icon('upload')}<span>Import or restore from a file</span>`;
   button.addEventListener('click', () => openImportDialog({ store, endpoint }));
+
+  const save = document.createElement('button');
+  save.className = 'btn';
+  save.type = 'button';
+  save.innerHTML = `${icon('download')}<span>Save a copy of this character</span>`;
+  save.addEventListener('click', () => saveCharacterFile(save));
 
   const section = document.createElement('section');
   section.className = 'card section--wide';
-  section.append(button);
+  section.append(save, button);
   // With the sheet in panels, a card appended to the page itself hangs below
   // whichever one is showing. Importing replaces who the character is, so it
   // belongs with the rest of that: on Character, beside the identity card.

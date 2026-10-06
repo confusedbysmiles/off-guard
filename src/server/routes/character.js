@@ -8,6 +8,7 @@
 import { applyPatch, getOwnCharacter, versionsFor } from '../store/characters.js';
 import { getCampaign } from '../store/campaigns.js';
 import { diffImport, mapPathbuilder, readPath } from '../../shared/pathbuilder.js';
+import { exportCharacter, isPortable, readPortable } from '../../shared/portable.js';
 import { builderState, buildWrites, startingBuild, validBuild } from '../builder.js';
 import { buildFromImport, checkAgainst } from '../../rules/character/from-import.js';
 import { isDerivedPath } from '../../rules/character/derive.js';
@@ -62,6 +63,16 @@ export async function registerCharacterRoutes(app) {
   });
 
   /**
+   * The character as a file they can keep.
+   *
+   * A copy of their own, independent of this server's backups and of whether
+   * this server is still running. It carries no token -- see `exportCharacter`
+   * -- so it is a thing a player can email themselves without emailing their
+   * link to themselves at the same time.
+   */
+  app.get('/export', async (request) => exportCharacter(getOwnCharacter(db, request.scope)));
+
+  /**
    * The live stream, so a condition the GM pushes appears on the player's phone
    * without them refreshing.
    */
@@ -95,9 +106,60 @@ export async function registerCharacterRoutes(app) {
       return { error: 'Give a Pathbuilder build id or upload its JSON export.' };
     }
 
-    const { sheet, warnings } = mapPathbuilder(exported);
     const current = getOwnCharacter(db, request.scope).sheet;
     const options = app.optionsFor(request.scope.campaignId);
+
+    /**
+     * One of ours, restored rather than imported.
+     *
+     * Nothing to map and nothing to work out: the file holds a sheet this
+     * application wrote, and the build inside it is the character's actual
+     * build rather than a reconstruction of one. So it goes through the same
+     * dialog -- a diff, row by row, nothing silent -- and skips every step
+     * that exists to cope with somebody else's format.
+     */
+    if (isPortable(exported)) {
+      const restored = readPortable(exported);
+      if (restored.error) {
+        reply.status(400);
+        return { error: restored.error };
+      }
+
+      const { build = null, ...values } = restored.sheet;
+      // Play state included: this file is the character as they were, and
+      // restoring one to full health would be restoring somebody else.
+      const changes = diffImport(current, values, { includePlayState: true });
+
+      return {
+        sheet: values,
+        warnings: [],
+        changes,
+        withoutBuild: changes,
+        restore: { name: restored.name, exportedAt: restored.exportedAt },
+        builder: build
+          ? {
+            build,
+            notes: [],
+            differences: [],
+            // Nothing was inferred, so there is nothing that could disagree.
+            exact: true,
+            summary: (() => {
+              const state = builderState(options, build);
+              return {
+                level: state.level,
+                ancestry: state.sheet.ancestry,
+                heritage: state.sheet.heritage,
+                background: state.sheet.background,
+                class: state.sheet.class,
+                outstanding: state.outstanding,
+              };
+            })(),
+          }
+          : null,
+      };
+    }
+
+    const { sheet, warnings } = mapPathbuilder(exported);
 
     /**
      * The same file, read a second way: as the choices that would have
