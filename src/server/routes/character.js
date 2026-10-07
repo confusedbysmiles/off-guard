@@ -12,6 +12,8 @@ import { exportCharacter, isPortable, readPortable } from '../../shared/portable
 import { builderState, buildWrites, startingBuild, validBuild } from '../builder.js';
 import { buildFromImport, checkAgainst } from '../../rules/character/from-import.js';
 import { isDerivedPath } from '../../rules/character/derive.js';
+import { checkChoice, fillSlot } from '../../rules/character/choose.js';
+import { searchRows } from '../options.js';
 import { fetchBuild, fetchEnabled } from '../pathbuilder-fetch.js';
 import { characterChannel, streamTo } from '../events.js';
 
@@ -338,6 +340,72 @@ export async function registerCharacterRoutes(app) {
 
     const result = applyPatch(db, request.scope, request.scope.characterId, writes, { by: 'builder' });
     return { ...result, builder: state };
+  });
+
+  /**
+   * Fill one slot, checked.
+   *
+   * `PATCH /builder` takes a whole build document and trusts it, which is
+   * right for the builder page: its picker only ever offers legal choices, so
+   * there is nothing left to check by the time anything is sent. A caller that
+   * is not a picker has plenty -- a model choosing from a list it was given a
+   * minute ago will pick a feat this character cannot take, confidently, and
+   * the slot filters are advisory until something enforces them.
+   *
+   * So this is the narrow door: one slot, one value, refused with a reason
+   * that says what would have been allowed. The reason matters more than the
+   * refusal, because the caller it exists for can read it and try again.
+   */
+  app.post('/builder/choose', async (request, reply) => {
+    const { slotId, value = null } = request.body ?? {};
+    const options = app.optionsFor(request.scope.campaignId);
+    if (!options.available) {
+      reply.status(503);
+      return { error: options.reason };
+    }
+
+    const character = getOwnCharacter(db, request.scope);
+    const build = character.sheet?.build ?? startingBuild(character.sheet);
+    const before = builderState(options, build);
+    const slot = before.slots.find((s) => s.id === slotId);
+
+    if (!slot) {
+      reply.status(400);
+      return {
+        error: `There is no slot called "${slotId}" on this character.`,
+        // The list, because the caller that gets this wrong is the one that
+        // can use it: it asked for a slot and should be told which exist.
+        slots: before.slots.map((s) => ({ id: s.id, label: s.label, level: s.level })),
+      };
+    }
+
+    /**
+     * Whether the catalogue would have offered this id here.
+     *
+     * Answered by running the slot's own filter over the one row, so it is
+     * the same predicate the picker searches with rather than a second
+     * reading of it. A filter that changes changes both at once.
+     */
+    const offers = (which, id) => {
+      const row = (options.rows ?? []).find((r) => r.id === id);
+      if (!row) return `There is no option with the id "${id}".`;
+      if (!which.filter) return true;
+      if (searchRows([row], { ...which.filter, limit: 1 }).total) return true;
+      return `${row.name} is not something ${which.label} offers.`;
+    };
+
+    const wrong = checkChoice(slot, value, { offers });
+    if (wrong) {
+      reply.status(400);
+      return { error: wrong, slot: { id: slot.id, label: slot.label, kind: slot.kind } };
+    }
+
+    const next = fillSlot(build, slot, value);
+    const state = builderState(options, next);
+    const writes = buildWrites(next, state, character.sheet ?? {});
+    applyPatch(db, request.scope, request.scope.characterId, writes, { by: 'builder' });
+
+    return { chose: { slot: slot.id, value }, builder: state };
   });
 
   app.get('/import/capabilities', async () => ({

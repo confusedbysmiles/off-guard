@@ -136,8 +136,11 @@ export function createBuildStore({ endpoint, storageKey = '', fetchImpl = global
    * nothing. Only the name field wants waiting for.
    */
   function update(mutate, { immediate = true } = {}) {
-    const next = structuredClone(build ?? {});
-    mutate(next);
+    const draft = structuredClone(build ?? {});
+    // A mutator may edit the draft or hand back a replacement. The second form
+    // is what lets the page share `fillSlot` with the server rather than
+    // keeping a second copy of what filling a slot means.
+    const next = mutate(draft) ?? draft;
     if (JSON.stringify(next) === JSON.stringify(build)) return;
     build = next;
     dirty = true;

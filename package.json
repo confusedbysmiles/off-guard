@@ -19,7 +19,8 @@
     "start": "node src/server/index.js",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "unlock": "node tools/unlock-link.js"
+    "unlock": "node tools/unlock-link.js",
+    "mcp": "node tools/mcp-server.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",

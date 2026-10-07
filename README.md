@@ -13,7 +13,7 @@ a setting rather than a tool.
 
 **Status: complete, and running.** It has been live since 29 August 2026 on a
 Mac under launchd, reached through a Cloudflare Tunnel, and has been played on
-from a laptop, a phone and an iPad. 1,058 unit tests and 94 end-to-end tests, run
+from a laptop, a phone and an iPad. 1,082 unit tests and 94 end-to-end tests, run
 at a host root and at a subdirectory, in Chromium and — for the parts where
 engines differ — in WebKit. See [deploy/GOING-LIVE.md](deploy/GOING-LIVE.md).
 
@@ -596,6 +596,76 @@ number, the same way a described weapon is, and the description is escaped
 rather than parsed. Deleting an option a character has chosen is allowed and
 says how many will be affected first; their builds show it as a missing choice,
 which is what an upstream rename does too.
+
+## Building a character by talking about it
+
+`tools/mcp-server.js` is an MCP server: it runs on a player's own machine and
+speaks to their Off-Guard over HTTPS, making the same requests their browser
+makes with the same link. Nothing new listens on the server, and the server
+makes no outbound call it did not make before.
+
+```json
+{
+  "mcpServers": {
+    "off-guard": {
+      "command": "node",
+      "args": ["/path/to/off-guard/tools/mcp-server.js"],
+      "env": {
+        "OFF_GUARD_URL": "https://offguard.example.com",
+        "OFF_GUARD_TOKEN": "the token from a character link"
+      }
+    }
+  }
+}
+```
+
+Seven tools: `whoami`, `get_build`, `get_character`, `list_choices`,
+`read_option`, `choose` and `set_level`. `get_build` is the one to start from —
+it returns every choice the character has with the slot id to name each by, and
+those ids are what the other tools take.
+
+**Every choice goes through a door that checks it.** `PATCH /builder` takes a
+whole build document and trusts it, which is right for the builder page: its
+picker only ever offers legal choices, so there is nothing left to check by the
+time anything is sent. A model is not a picker. Asked for a class feat it will
+pick a plausible one this character cannot take, confidently, and the slot
+filters were advisory until something enforced them. So `POST /builder/choose`
+takes one slot and one value, checks the value against that slot's own filter —
+the same predicate the picker searches with, run over the one row, so a filter
+that changes changes both at once — and refuses with a reason:
+
+```
+Fighter is not something Ancestry offers.
+```
+
+The reason matters more than the refusal, because the caller this exists for
+can read it and try again. It comes back as an MCP `isError` result rather than
+a protocol failure, which is the difference between a model correcting itself
+and a conversation stopping.
+
+The narrowing helps as much as the checking: `list_choices` searches *within*
+the slot, so a level 6 class feat offers the few dozen this character can take
+rather than six thousand.
+
+**No dependency.** MCP over stdio is newline-delimited JSON-RPC 2.0, and four
+methods of it are enough. The official SDK is a fine library; this is a hundred
+lines, and four dependencies is a thing worth keeping.
+
+**It is a device, and says so.** The client keeps its device cookie between
+runs in `~/.off-guard/mcp-device.json`, written `0600`, so a restart is not a
+new device — and it identifies itself honestly, so it appears in the Links
+panel as **MCP client** rather than "Unknown device". A GM should be able to
+see at a glance that something which is not a browser has opened a player's
+link.
+
+**The token lives in a client configuration**, which is a new place for it to
+live: plaintext, read at startup, possibly synced. Connect it once, then lock
+the link to its devices — after that a copy of the configuration is not a way
+in. That is what the locking is for.
+
+What it deliberately does not do: play. There is no tool here that spends a
+hero point, rolls a save or changes hit points. Building a character is a thing
+worth talking through; what happens at the table is not.
 
 ## The GM dashboard
 

@@ -22,6 +22,7 @@ import { renderTimeline } from './timeline.js';
 import { renderSummary } from './summary.js';
 import { renderEquipment } from './equipment.js';
 import { createPicker } from './picker.js';
+import { fillSlot } from '../../../engine/rules/character/choose.js';
 
 const endpoint = apiPath(`/api/c/${token}`);
 const store = createBuildStore({ endpoint, storageKey: token.slice(0, 8) });
@@ -48,48 +49,20 @@ const picker = createPicker({
  * slot keyed by the slot's own id, which is what makes planning work -- a level
  * 12 class feat and a level 2 one are two keys, not two states of one.
  */
+/**
+ * A choice from the picker.
+ *
+ * What filling a slot means lives in the engine, beside the rules it has to
+ * agree with, because this page is no longer the only caller -- see
+ * `POST /builder/choose`. Two copies is how the two drift, and the drift that
+ * matters would be a choice this page makes that the other door would refuse.
+ *
+ * Nothing is checked here. The picker only ever offers what the slot's own
+ * filter returned, so by the time anything reaches this there is nothing left
+ * to check; the other door, whose callers are not pickers, checks plenty.
+ */
 function applyChoice(slot, id) {
-  store.update((build) => {
-    // Equipment keeps its runes and its name when the base item changes: a
-    // player swapping a longsword for a greatsword has not thrown away the
-    // striking rune they paid for.
-    if (slot.kind === 'armor' || slot.kind === 'shield') {
-      build.equipment ??= {};
-      build.equipment[slot.kind] = id ? { ...(build.equipment[slot.kind] ?? {}), id } : null;
-      return;
-    }
-    if (slot.kind === 'gear') {
-      build.equipment ??= {};
-      const gear = [...(build.equipment.gear ?? [])];
-      const current = gear[slot.index] ?? {};
-      gear[slot.index] = { ...current, id, quantity: current.quantity ?? 1 };
-      build.equipment.gear = gear;
-      return;
-    }
-    if (slot.kind === 'weapon') {
-      build.equipment ??= {};
-      const weapons = [...(build.equipment.weapons ?? [])];
-      weapons[slot.index] = { ...(weapons[slot.index] ?? {}), id };
-      build.equipment.weapons = weapons;
-      return;
-    }
-    if (['ancestry', 'heritage', 'background', 'class'].includes(slot.kind)) {
-      build[slot.kind] = id;
-      // A new ancestry invalidates a heritage that belonged to the old one, and
-      // leaving it would silently keep a dwarf heritage on an elf.
-      if (slot.kind === 'ancestry') {
-        build.heritage = null;
-        build.attributes = { ...(build.attributes ?? {}), ancestry: [] };
-      }
-      if (slot.kind === 'background') {
-        build.attributes = { ...(build.attributes ?? {}), background: [] };
-      }
-      return;
-    }
-    build.feats ??= {};
-    if (id) build.feats[slot.id] = id;
-    else delete build.feats[slot.id];
-  });
+  store.update((build) => fillSlot(build, slot, id));
 }
 
 // --- the page's own controls ---------------------------------------------

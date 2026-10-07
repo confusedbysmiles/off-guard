@@ -105,6 +105,16 @@ const BROWSERS = [
  */
 export function labelFor(userAgent) {
   const agent = String(userAgent ?? '');
+
+  /**
+   * Things that are not browsers, named as what they are.
+   *
+   * The MCP server identifies itself honestly, and the GM should be able to
+   * see at a glance that something which is not a browser has opened a
+   * player's link. "Unknown device" would be true and would hide the one fact
+   * worth noticing.
+   */
+  if (/Off-Guard MCP/i.test(agent)) return 'MCP client';
   const platform = PLATFORMS.find(([pattern]) => pattern.test(agent))?.[1];
   const browser = BROWSERS.find(([pattern]) => pattern.test(agent))?.[1];
   return [platform, browser].filter(Boolean).join(' · ') || 'Unknown device';
