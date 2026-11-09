@@ -62,13 +62,31 @@ export function preservingFocus(render, root = document) {
   render();
 
   if (!selector) return;
-  let restored = null;
+
+  // Only repair what the render broke.
+  //
+  // If anything still holds focus afterwards, the user has moved on and this
+  // must not drag them back. That is not hypothetical: an initiative field
+  // commits on `change`, which fires *as* you click into the next field, so
+  // the save-and-rerender it triggers lands while the new field is taking
+  // focus. Restoring unconditionally put the GM back in the box they had just
+  // left, every time, and made the tracker impossible to fill in by hand.
+  const holder = document.activeElement;
+  if (holder && holder !== document.body && holder !== document.documentElement) return;
+
+  let matches;
   try {
-    restored = root.querySelector(selector);
+    matches = root.querySelectorAll(selector);
   } catch {
     return;                         // a descriptor that will not parse
   }
-  if (!restored || restored === document.activeElement) return;
+  // Exactly one, or none. A descriptor built from an aria-label or a
+  // placeholder is only as unique as that text, and two rows that share one
+  // would send focus to whichever came first -- which is the same wrong
+  // behaviour by a different route.
+  if (matches.length !== 1) return;
+  const restored = matches[0];
+  if (restored === document.activeElement) return;
 
   // `preventScroll`, because the point is that nothing appears to have
   // happened, and scrolling the panel back into view would undo that.

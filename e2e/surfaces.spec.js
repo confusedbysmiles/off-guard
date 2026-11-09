@@ -711,6 +711,51 @@ test.describe('typing on the dashboard', () => {
     await expect(page.locator('.result').first()).toContainText('Goblin Warrior');
   });
 
+  test('does not steal focus back from wherever the user has moved to', async ({ page }) => {
+    // The mechanism directly. A field that commits on `change` fires it *as*
+    // you click into the next one, so a re-render can land while the new field
+    // is taking focus. Restoration must repair what the render broke and
+    // nothing else.
+    await page.goto(`/gm/${world.gmToken}`);
+
+    const result = await page.evaluate(async () => {
+      const { preservingFocus } = await import('/assets/js/lib/focus.js');
+      const host = document.createElement('div');
+      host.innerHTML = `<input id="a" aria-label="A"><input id="b" aria-label="B">`;
+      document.body.append(host);
+
+      // The user is in A, then moves to B, and only then does the render run.
+      document.getElementById('a').focus();
+      const captured = document.activeElement.id;
+      document.getElementById('b').focus();
+      preservingFocus(() => {
+        host.innerHTML = `<input id="a" aria-label="A"><input id="b" aria-label="B">`;
+        document.getElementById('b').focus();      // the render re-seats B
+      });
+      const afterMove = document.activeElement.id;
+
+      // Two rows sharing a label, which is what unnamed combatants produce.
+      host.innerHTML = `<input aria-label="Initiative"><input aria-label="Initiative">`;
+      const [one, two] = host.querySelectorAll('input');
+      two.focus();
+      preservingFocus(() => {
+        host.innerHTML = `<input aria-label="Initiative"><input aria-label="Initiative">`;
+      });
+      const afterAmbiguous = document.activeElement === document.body
+        ? 'body'
+        : [...host.querySelectorAll('input')].indexOf(document.activeElement);
+
+      host.remove();
+      return { captured, afterMove, afterAmbiguous };
+    });
+
+    // Focus stays where the user put it, not where it started.
+    expect(result.captured).toBe('a');
+    expect(result.afterMove).toBe('b');
+    // An ambiguous label must restore nothing rather than guess the first row.
+    expect(result.afterAmbiguous).toBe('body');
+  });
+
   test('keeps the caret where it was, rather than at the end', async ({ page }) => {
     await page.goto(`/gm/${world.gmToken}`);
     await page.locator('body').press('e');
