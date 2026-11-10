@@ -76,6 +76,13 @@ describe('previewing it', () => {
     expect(ids.join(' ')).not.toMatch(/defensive-automaton/);
   });
 
+  it('does not import Pathbuilder\u2019s placeholder as a language', async () => {
+    // The export says ["None selected"] when nobody picked any, and that went
+    // onto the sheet verbatim -- a character who spoke "None selected".
+    const { sheet } = (await post('/import/preview', { json: EXPORT })).json();
+    expect(sheet.languages).toEqual([]);
+  });
+
   it('hands back a builder block the dialog can render', async () => {
     // The dialog reads `summary.outstanding` without guarding it, so a builder
     // block without a summary is a TypeError in the browser and an import that

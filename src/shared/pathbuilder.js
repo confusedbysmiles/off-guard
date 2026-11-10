@@ -101,7 +101,12 @@ export function mapPathbuilder(exported) {
       name: String(name ?? ''),
       rank: rankFromBonus(bonus),
     })),
-    languages: build.languages ?? [],
+    // Pathbuilder writes a placeholder rather than an empty list when nobody
+    // has chosen any, and importing it verbatim put "None selected" on the
+    // sheet as though it were a language the character speaks.
+    languages: (build.languages ?? [])
+      .map((language) => String(language ?? '').trim())
+      .filter((language) => language && !/^none selected$/i.test(language)),
     speed: Number(attributes.speed ?? 25) + Number(attributes.speedBonus ?? 0),
     hp: { max: hpMax },
     ac: mapArmorClass(build, mods),
