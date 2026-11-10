@@ -41,7 +41,10 @@ export const RANKS = ['untrained', 'trained', 'expert', 'master', 'legendary'];
 
 /** Free-text sections. The import never touches these, by design. */
 export const NOTES_SECTIONS = [
-  ['feats', 'Feats'],
+  // No 'feats' here any more. Feats are choices the builder makes against the
+  // catalogue, so the sheet renders them from the build rather than asking a
+  // player to retype what the import already knows. See `featsCard` in
+  // `render.js`.
   ['features', 'Class features'],
   ['reactions', 'Reactions and free actions'],
   ['items', 'Items'],

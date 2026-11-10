@@ -151,6 +151,23 @@ async function start() {
   $('#undo').addEventListener('click', () => store.undo());
   $('#print').addEventListener('click', () => window.print());
 
+  /**
+   * The feats, from the builder.
+   *
+   * One request, after the sheet is already on screen. The sheet is the thing
+   * somebody opened and it must not wait on this; a table with no signal still
+   * gets every number it had, and the feats card says so rather than hanging.
+   */
+  const loadFeats = async () => {
+    try {
+      const res = await fetch(`${endpoint}/builder`, { headers: { accept: 'application/json' } });
+      if (!res.ok) return;
+      const body = await res.json();
+      update.showFeats(body.builder?.slots ?? body.slots ?? []);
+    } catch { /* offline: the card keeps whatever it last showed */ }
+  };
+  loadFeats();
+
   store.subscribe((state) => {
     const indicator = $('#save-state');
     indicator.textContent = SAVE_LABEL[state.status] ?? state.status;

@@ -800,8 +800,52 @@ export function mount(root, store, { onImport = () => {} } = {}) {
     return el('div', {}, chips, el('div', { class: 'stack-md' }, select));
   }
 
+  /**
+   * The feats this character actually has.
+   *
+   * Rendered from the build rather than typed, because a feat is a choice from
+   * a catalogue of 6,297 of them and the import already knows which ones. The
+   * slots arrive resolved -- `filledName` and `filledLevel` per slot -- so this
+   * needs no catalogue of its own.
+   *
+   * Empty until the builder has been loaded once; `setBuilderState` fills it.
+   * A character with no build at all gets the invitation rather than a blank.
+   */
+  const featsList = el('div', { class: 'feats' });
+  const featsCard = el('section', { class: 'card section--wide' },
+    el('h2', { class: 'section__title' }, 'Feats'),
+    featsList);
+
+  const KIND_LABEL = {
+    classFeat: 'Class', ancestryFeat: 'Ancestry',
+    skillFeat: 'Skill', generalFeat: 'General',
+  };
+
+  function renderFeats(slots) {
+    const feats = (slots ?? []).filter((slot) => KIND_LABEL[slot.kind]);
+    if (!feats.length) {
+      featsList.replaceChildren(el('p', { class: 'empty' },
+        'No feats yet. Open the builder to choose them, or import a Pathbuilder '
+        + 'export and they come across with everything else.'));
+      return;
+    }
+    featsList.replaceChildren(el('ul', { class: 'feats__list' },
+      ...feats
+        .slice()
+        .sort((a, b) => a.level - b.level || a.kind.localeCompare(b.kind))
+        .map((slot) => el('li', {
+          class: `feats__row${slot.filled ? '' : ' feats__row--empty'}`,
+        },
+        el('span', { class: 'feats__name' },
+          slot.filledName ?? 'Not chosen'),
+        el('span', { class: 'faint feats__meta' },
+          `${KIND_LABEL[slot.kind]} · level ${slot.level}`)))));
+  }
+
+  renderFeats(null);
+
   const notes = el('section', { class: 'card section--wide' },
-    el('h2', { class: 'section__title' }, 'Feats, features and notes'),
+    el('h2', { class: 'section__title' }, 'Features and notes'),
     el('div', { class: 'grid grid--2' },
       ...NOTES_SECTIONS.map(([key, label]) => labelled(label, area(key)))));
 
@@ -876,7 +920,7 @@ export function mount(root, store, { onImport = () => {} } = {}) {
   const PANELS = [
     ['combat', 'Combat', [vitals, strikes, conditions, proficiencies, armour]],
     ['skills', 'Skills', [skills]],
-    ['feats', 'Feats', [notes, spellcasting]],
+    ['feats', 'Feats', [featsCard, notes, spellcasting]],
     ['gear', 'Gear', [carried]],
     ['character', 'Character', [attributes, movement, identity]],
   ];
@@ -915,7 +959,17 @@ export function mount(root, store, { onImport = () => {} } = {}) {
   showPanel(panels.has(wanted) ? wanted : 'combat');
 
   let updating = false;
-  return function update(state) {
+
+  /**
+   * Hand the feats card the builder's slots.
+   *
+   * Separate from `update` because it comes from a different request on a
+   * different schedule: the sheet loads first and is usable without it, and
+   * this arrives when the builder state does.
+   */
+  update.showFeats = renderFeats;
+
+  function update(state) {
     // `repeatingSection` re-runs the updaters after a rebuild; without this
     // guard that recursion would run the whole list twice per change.
     if (updating) return;
@@ -925,5 +979,7 @@ export function mount(root, store, { onImport = () => {} } = {}) {
     } finally {
       updating = false;
     }
-  };
+  }
+
+  return update;
 }

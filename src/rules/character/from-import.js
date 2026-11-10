@@ -269,6 +269,51 @@ const DAMAGE_LETTER = {
  * @param {function} options.find    `(kind, name) => record | null`
  * @param {object}   options.sheet   what `mapPathbuilder` made of the same file
  */
+/**
+ * The feats a Pathbuilder export chose, placed in the slots they belong to.
+ *
+ * Pathbuilder names the slot itself, which is the whole reason this is a
+ * translation rather than a guess: a feat row is
+ *
+ *   ["Sudden Charge", null, "Class Feat", 1, "Barbarian Feat 1", ...]
+ *
+ * where the third field is the kind and the fourth the level -- and the
+ * builder keys its choices by `<kind>-<level>`. So "Class Feat" at 1 is
+ * `classFeat-1`, and the two agree without anything having to be inferred.
+ *
+ * Rows with four fields are awarded feats: granted by a background, ancestry
+ * or class rather than chosen. They fill no slot, because filling one would
+ * spend a choice the character never made. A heritage row is the same -- the
+ * heritage is already a field of its own.
+ */
+const FEAT_KIND_BY_TYPE = new Map([
+  ['class feat', 'classFeat'],
+  ['ancestry feat', 'ancestryFeat'],
+  ['skill feat', 'skillFeat'],
+  ['general feat', 'generalFeat'],
+]);
+
+function featsFrom(pb, look) {
+  const feats = {};
+  for (const row of pb.feats ?? []) {
+    if (!Array.isArray(row)) continue;
+    const [name, , type, level] = row;
+    // Four fields and no slot name: awarded, not chosen.
+    if (row.length < 5) continue;
+
+    const kind = FEAT_KIND_BY_TYPE.get(String(type ?? '').trim().toLowerCase());
+    if (!kind) continue;                 // Heritage, and anything new Pathbuilder adds.
+
+    const featLevel = whole(level, 1, 20, 0);
+    if (!featLevel) continue;
+
+    const found = look('feat', name);
+    if (!found) continue;                // `look` has already said so.
+    feats[`${kind}-${featLevel}`] = found.id;
+  }
+  return feats;
+}
+
 export function buildFromImport(exported, { find = () => null, sheet = {} } = {}) {
   const pb = exported?.build ?? exported;
   const notes = [];
@@ -326,7 +371,7 @@ export function buildFromImport(exported, { find = () => null, sheet = {} } = {}
         increases: skills.increases,
         lores: loresFrom(pb.lores, background),
       },
-      feats: {},
+      feats: featsFrom(pb, look),
       equipment: {
         armor: armorFrom(pb, sheet, find),
         shield: null,

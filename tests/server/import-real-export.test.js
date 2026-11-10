@@ -47,18 +47,33 @@ describe('previewing it', () => {
     expect(warnings.join(' ')).toMatch(/Bulk/);
   });
 
-  it('leaves the feats behind, and does not currently say so', async () => {
-    // Twelve feats and ten specials are in the file. None reach the sheet: the
-    // free-text boxes are the player's, and a re-import at level-up would
-    // overwrite them, so the mapper never proposes a path it does not own.
-    //
-    // The gap is that nothing says this happened. An empty Feats box after an
-    // import looks exactly like a file that had no feats in it, which is what
-    // it was mistaken for. Recorded here as the behaviour it is, so that
-    // changing it is a deliberate act with a test to update.
-    const { sheet, warnings } = (await post('/import/preview', { json: EXPORT })).json();
-    expect(JSON.stringify(sheet)).not.toMatch(/Sudden Charge/);
-    expect(warnings.join(' ')).not.toMatch(/feat/i);
+  it('puts the chosen feats in the slots they belong to', async () => {
+    // Pathbuilder names the slot itself -- "Barbarian Feat 1", "Skill Feat 2" --
+    // and the builder keys its choices by `<kind>-<level>`, so this is a
+    // translation rather than a guess.
+    const { builder } = (await post('/import/preview', { json: EXPORT })).json();
+    expect(builder.build.feats).toMatchObject({
+      'classFeat-1': 'feat:sudden-charge',
+      'classFeat-2': 'feat:raging-intimidation',
+      'classFeat-4': 'feat:intimidating-strike',
+      'skillFeat-2': 'feat:titan-wrestler',
+      'skillFeat-4': 'feat:group-coercion',
+      'generalFeat-3': 'feat:fleet',
+      'ancestryFeat-1': 'feat:reinforced-chassis',
+      'ancestryFeat-5': 'feat:powerful-tail',
+    });
+  });
+
+  it('does not spend a choice on a feat nobody chose', async () => {
+    // Quick Repair, Toughness and Intimidating Glare are awarded by the
+    // background and ancestry -- four fields and no slot name. Filling a slot
+    // with one would cost the character a choice they still have.
+    const { builder } = (await post('/import/preview', { json: EXPORT })).json();
+    const ids = Object.values(builder.build.feats);
+    expect(ids).not.toContain('feat:toughness');
+    expect(ids).not.toContain('feat:quick-repair');
+    // And the heritage is a field of its own, not a feat slot.
+    expect(ids.join(' ')).not.toMatch(/defensive-automaton/);
   });
 
   it('hands back a builder block the dialog can render', async () => {

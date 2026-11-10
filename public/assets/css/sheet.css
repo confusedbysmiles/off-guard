@@ -532,3 +532,28 @@ details.card[open] > .fold__summary--card { margin-bottom: var(--sp-3); }
   gap: var(--sp-2);
   cursor: pointer;
 }
+
+/* --- Feats ------------------------------------------------------------------
+ *
+ * Read-only on the sheet: a feat is a choice made against the catalogue, and
+ * the builder is where choices are made. This is the list of what was chosen.
+ */
+
+.feats__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+
+.feats__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+}
+
+.feats__name { font-weight: 600; }
+.feats__meta { font-size: var(--step--2); white-space: nowrap; }
+
+/* A slot nobody has filled yet is stated rather than hidden: an empty level 6
+ * class feat is a thing to go and choose, not a thing to not know about. */
+.feats__row--empty .feats__name { font-weight: 400; color: var(--ink-faint); }

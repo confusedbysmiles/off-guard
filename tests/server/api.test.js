@@ -366,7 +366,15 @@ describe('reconstructing a build from a real export', () => {
   it('derives the same character it was given', async () => {
     const preview = (await post('/import/preview', { json: real })).json();
     expect(preview.builder.differences).toEqual([]);
-    expect(preview.builder.notes).toEqual([]);
+    // One note, and it is the right one. Pathbuilder exports this feat as
+    // "Cognitive Crossover"; the catalogue prints it as "Kreighton's Cognitive
+    // Crossover". `byName` matches exactly on purpose -- 405 feats carry a
+    // possessive prefix and stripping it would land on a *different* real feat
+    // eleven times -- so this is reported rather than guessed at, and the
+    // player picks it in the builder where search finds it.
+    expect(preview.builder.notes).toEqual([
+      'No feat called “Cognitive Crossover” is in the catalogue, so that choice is left for you to make.',
+    ]);
   });
 
   it('resolves every name in the file to a catalogue option', async () => {
