@@ -38,17 +38,70 @@ const asNumber = (value) => (value === undefined || value === '' ? null : Number
  * Homebrew comes through this too, because `options` is the campaign's view --
  * so a table that wrote its own ancestry can import a character who has it.
  */
-function byName(options, kind, name) {
+/**
+ * `equipment` means armour here, for historical reasons: it was added for the
+ * one lookup that existed. A shield is filed under its own item type, so a
+ * shield searched as `equipment` could never match -- which is why an imported
+ * Steel Shield arrived as a custom entry worth +0 AC rather than the catalogue
+ * one worth +2.
+ */
+const ITEM_TYPE = { equipment: 'armor', shield: 'shield' };
+
+/** "Sorcerer" -> "sorcerer", which is how the catalogue spells a class trait. */
+const slugOfClass = (name) => String(name ?? '').trim().toLowerCase().replace(/\s+/g, '-') || null;
+
+function byName(options, kind, name, { trait = null } = {}) {
   const needle = String(name ?? '').trim().toLowerCase();
   if (!needle) return null;
+  const itemType = ITEM_TYPE[kind] ?? null;
   const { rows } = options.search({
-    kind: kind === 'equipment' ? null : kind,
-    itemType: kind === 'equipment' ? 'armor' : null,
+    kind: itemType ? null : kind,
+    itemType,
     q: needle,
     limit: 50,
   });
+
+  // Exact first, always. Everything below runs only when there is no exact
+  // match, which is what keeps the thirty feats whose bare name is itself a
+  // real feat resolving to themselves.
   const match = rows.find((row) => row.name.toLowerCase() === needle);
-  return match ? options.get(match.id) : null;
+  if (match) return options.get(match.id);
+
+  /**
+   * A qualifier the two sides disagree about, in both directions.
+   *
+   * Pathbuilder exports "Counterspell" where the catalogue prints
+   * "Counterspell (Spontaneous)" and "Counterspell (Prepared)", and exports
+   * "Scholar (Arcana)" where the catalogue prints "Scholar". Both are the same
+   * name with an annotation added or removed, which is not the "near match"
+   * that exactness exists to refuse -- a near match makes somebody a different
+   * ancestry, and this makes them the one they already had.
+   *
+   * Still only when the answer is unique. Of 64 qualified names in the feat
+   * catalogue, 33 resolve to one candidate or are told apart by their class
+   * trait; 1 is genuinely ambiguous and is left alone to be reported.
+   */
+  const qualified = rows.filter((row) => {
+    const other = row.name.toLowerCase();
+    return other.startsWith(`${needle} (`) && other.endsWith(')');
+  });
+  if (qualified.length === 1) return options.get(qualified[0].id);
+  if (qualified.length > 1 && trait) {
+    const wanted = String(trait).toLowerCase();
+    const byTrait = qualified.filter((row) => (row.traits ?? [])
+      .map((t) => String(t).toLowerCase()).includes(wanted));
+    if (byTrait.length === 1) return options.get(byTrait[0].id);
+  }
+
+  // The other direction: drop what Pathbuilder added and ask again, exactly.
+  const bare = needle.replace(/\s*\([^()]*\)\s*$/, '').trim();
+  if (bare && bare !== needle) {
+    const plain = options.search({ kind: itemType ? null : kind, itemType, q: bare, limit: 50 })
+      .rows.filter((row) => row.name.toLowerCase() === bare);
+    if (plain.length === 1) return options.get(plain[0].id);
+  }
+
+  return null;
 }
 
 export async function registerCharacterRoutes(app) {
@@ -194,7 +247,11 @@ export async function registerCharacterRoutes(app) {
      */
     const { build, notes } = buildFromImport(exported, {
       sheet,
-      find: (kind, name) => byName(options, kind, name),
+      // The class, as a trait, so a feat the catalogue splits by caster kind
+      // resolves to the one this character could actually take.
+      find: (kind, name) => byName(options, kind, name, {
+        trait: slugOfClass(exported?.build?.class ?? exported?.class),
+      }),
     });
     const state = builderState(options, build);
 

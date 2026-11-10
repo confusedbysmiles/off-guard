@@ -230,8 +230,13 @@ describe('a real export, from a real game', () => {
     expect(sheet.ac.dexCap).toBeNull();
   });
 
-  it('says out loud that the shield is not a field', () => {
-    expect(warnings.join(' ')).toMatch(/shield/i);
+  it('no longer warns that the shield is not a field, because it is', () => {
+    // It said so for as long as that was true. The builder gave the sheet
+    // shield fields, the import now fills them from the catalogue, and the
+    // warning outlived the limitation it described -- which is worse than no
+    // warning, because it tells a player to write down something the sheet
+    // already has.
+    expect(warnings.join(' ')).not.toMatch(/no shield field/i);
   });
 
   it('does not propose play state', () => {

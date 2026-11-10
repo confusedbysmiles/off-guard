@@ -202,6 +202,23 @@ const loresFrom = (lores, background) => (lores ?? [])
  * base one, and describing it from the AC the file states reproduces the AC
  * the file states, which is the whole requirement.
  */
+/**
+ * The shield, which Pathbuilder files under `armor` with a shield proficiency.
+ *
+ * Skipped entirely until now, and the import warned that the sheet had no
+ * shield field -- which stopped being true when the builder gained one. So a
+ * character arrived with their shield dropped and a note explaining a
+ * limitation that no longer existed.
+ */
+function shieldEntryFrom(pb, find) {
+  const carried = (pb.armor ?? []).find((piece) => piece?.prof === 'shield');
+  if (!carried) return null;
+  const name = String(carried.name ?? '').trim();
+  if (!name) return null;
+  const record = find('shield', name);
+  return record ? { id: record.id } : { custom: { name } };
+}
+
 function armorFrom(pb, sheet, find) {
   const worn = (pb.armor ?? []).find((piece) => piece?.worn && piece?.prof !== 'shield');
   if (!worn?.name) return null;
@@ -374,7 +391,7 @@ export function buildFromImport(exported, { find = () => null, sheet = {} } = {}
       feats: featsFrom(pb, look),
       equipment: {
         armor: armorFrom(pb, sheet, find),
-        shield: null,
+        shield: shieldEntryFrom(pb, find),
         weapons: weaponsFrom(pb, sheet),
         gear: (sheet?.gear ?? []).map((row) => ({
           custom: { name: row.name },
@@ -383,6 +400,10 @@ export function buildFromImport(exported, { find = () => null, sheet = {} } = {}
         })),
       },
       coins,
+      // Carried on the build because `focus.pool` is a path the build owns:
+      // without it the derivation writes 0 over whatever the file said, and a
+      // sorcerer arrives with their focus pool emptied.
+      focusPool: Math.max(0, Math.trunc(Number(pb.focusPoints ?? 0)) || 0),
     },
     notes,
   };

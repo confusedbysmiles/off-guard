@@ -120,11 +120,18 @@ export function mapPathbuilder(exported) {
     // features, reactions, items, notes.
   };
 
-  const shieldBonus = Number(build.acTotal?.shieldBonus ?? 0);
-  if (shieldBonus) {
+  /**
+   * Alchemical formulas, which the sheet has nowhere to put.
+   *
+   * Said rather than dropped. An alchemist whose eight known formulas vanish
+   * without a word has no way to tell whether the file had them -- which is
+   * exactly how twelve feats went missing before anyone noticed.
+   */
+  const formulas = (build.formula ?? []).flatMap((entry) => entry?.known ?? []);
+  if (formulas.length) {
     warnings.push(
-      `A shield worth +${shieldBonus} AC is equipped. The sheet has no shield field, `
-      + 'so raising it is a note rather than a number.',
+      `${formulas.length} known formulas are in the file and are not imported; `
+      + `the sheet has no formula book. They are: ${formulas.join(', ')}.`,
     );
   }
 
