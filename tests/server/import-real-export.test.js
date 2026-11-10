@@ -47,6 +47,20 @@ describe('previewing it', () => {
     expect(warnings.join(' ')).toMatch(/Bulk/);
   });
 
+  it('leaves the feats behind, and does not currently say so', async () => {
+    // Twelve feats and ten specials are in the file. None reach the sheet: the
+    // free-text boxes are the player's, and a re-import at level-up would
+    // overwrite them, so the mapper never proposes a path it does not own.
+    //
+    // The gap is that nothing says this happened. An empty Feats box after an
+    // import looks exactly like a file that had no feats in it, which is what
+    // it was mistaken for. Recorded here as the behaviour it is, so that
+    // changing it is a deliberate act with a test to update.
+    const { sheet, warnings } = (await post('/import/preview', { json: EXPORT })).json();
+    expect(JSON.stringify(sheet)).not.toMatch(/Sudden Charge/);
+    expect(warnings.join(' ')).not.toMatch(/feat/i);
+  });
+
   it('hands back a builder block the dialog can render', async () => {
     // The dialog reads `summary.outstanding` without guarding it, so a builder
     // block without a summary is a TypeError in the browser and an import that
