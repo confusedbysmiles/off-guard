@@ -24,7 +24,9 @@ import { builderView } from './views/builder.js';
 import { initiativeView, persistentDamageForm, promptList } from './views/initiative.js';
 import { statBlock } from './views/statblock.js';
 import { linkReveal, linksPanel } from './views/links.js';
-import { campaignPanel, rosterPanel, sessionsPanel } from './views/campaign.js';
+import {
+  campaignPanel, handoutsPanel, rosterPanel, sessionsPanel,
+} from './views/campaign.js';
 import { homebrewForm, homebrewPanel, KIND_LABEL } from './views/homebrew.js';
 import { createDrawer, drawerShell } from './drawer.js';
 import { startPanel } from './views/start.js';
@@ -291,6 +293,12 @@ function renderNow() {
         onWrite: (kind) => showHomebrew(kind, null),
         onEdit: (entry) => showHomebrew(entry.kind, entry),
       }),
+      handoutsPanel({
+        handouts: state.handouts ?? [],
+        campaignId: state.campaignId,
+        actions,
+        api,
+      }),
       sessionsPanel({ sessions: state.sessions, actions })));
     return;
   }
@@ -353,7 +361,7 @@ async function selectCampaign(id) {
   // nothing from Tuesday's game may still be on screen once Saturday's is.
   store.set({
     campaignId: id, encounter: null, encounterId: null, budget: null, combat: null,
-    rolls: [], recall: null, sessions: [], tokens: null,
+    rolls: [], recall: null, sessions: [], tokens: null, handouts: [],
     homebrew: [], homebrewBases: null,
     // Same rule: a loop run belongs to the campaign being left. Tuesday's
     // seventh loop must not be on screen under Saturday's name.
@@ -363,6 +371,7 @@ async function selectCampaign(id) {
   await Promise.all([
     actions.loadParty(), actions.loadEncounters(), actions.loadCombat(),
     actions.loadRolls(), actions.loadTokens(), actions.loadSessions(),
+    actions.loadHandouts(),
     actions.loadHomebrew(), actions.loadMe(),
   ]);
   if (store.get().tab === 'loop') await actions.loadLoop(NINE_MINUTES);

@@ -50,6 +50,42 @@ export const api = {
     request(`/campaigns/${id}/characters/${characterId}/export`),
   createCharacter: (id, fields) =>
     request(`/campaigns/${id}/characters`, { method: 'POST', body: fields }),
+  handouts: (id) => request(`/campaigns/${id}/handouts`),
+
+  /**
+   * The file itself as the body, with its own content type.
+   *
+   * `request` would stringify this and label it JSON, so the upload goes
+   * straight to `fetch`. One raw body is the whole reason the server needs no
+   * multipart dependency.
+   */
+  uploadHandout: async (id, file, title) => {
+    const url = `${base}/campaigns/${id}/handouts`
+      + `?title=${encodeURIComponent(title || file.name)}`
+      + `&filename=${encodeURIComponent(file.name)}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { accept: 'application/json', 'content-type': file.type || 'application/octet-stream' },
+      body: file,
+    });
+    const text = await res.text();
+    const body = text ? JSON.parse(text) : null;
+    if (!res.ok) {
+      const error = new Error(body?.error ?? `Server said ${res.status}`);
+      error.status = res.status;
+      throw error;
+    }
+    return body;
+  },
+
+  releaseHandout: (id, handoutId, released) =>
+    request(`/campaigns/${id}/handouts/${handoutId}`, { method: 'PATCH', body: { released } }),
+  renameHandout: (id, handoutId, title) =>
+    request(`/campaigns/${id}/handouts/${handoutId}`, { method: 'PATCH', body: { title } }),
+  deleteHandout: (id, handoutId) =>
+    request(`/campaigns/${id}/handouts/${handoutId}`, { method: 'DELETE' }),
+  handoutHref: (id, handoutId) => `${base}/campaigns/${id}/handouts/${handoutId}/file`,
+
   deleteCharacter: (id, characterId) =>
     request(`/campaigns/${id}/characters/${characterId}`, { method: 'DELETE' }),
 

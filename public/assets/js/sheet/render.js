@@ -844,6 +844,33 @@ export function mount(root, store, { onImport = () => {} } = {}) {
 
   renderFeats(null);
 
+  /**
+   * Handouts the GM has released.
+   *
+   * Behind the same link the sheet is: no Google account, no sharing
+   * settings, nothing public. Filled by `showHandouts` once they have been
+   * fetched, and hidden when there are none -- an empty card on every sheet
+   * of every table that uses no handouts is furniture.
+   */
+  const handoutsList = el('div', { class: 'handouts-card__list' });
+  const handoutsCard = el('section', { class: 'card section--wide', hidden: true },
+    el('h2', { class: 'section__title' }, 'Handouts'),
+    handoutsList);
+
+  function renderHandouts(handouts, href) {
+    const rows = handouts ?? [];
+    handoutsCard.hidden = rows.length === 0;
+    // The tab appears with the first handout and goes away with the last.
+    const tab = tabs.get('handouts');
+    if (tab) tab.hidden = rows.length === 0;
+    handoutsList.replaceChildren(...rows.map((handout) => el('a', {
+      class: 'handout-link', href: href(handout.id), target: '_blank', rel: 'noopener',
+    },
+    el('span', { class: 'handout-link__title' }, handout.title),
+    el('span', { class: 'faint handout-link__meta' },
+      handout.contentType === 'application/pdf' ? 'PDF' : handout.filename))));
+  }
+
   const notes = el('section', { class: 'card section--wide' },
     el('h2', { class: 'section__title' }, 'Features and notes'),
     el('div', { class: 'grid grid--2' },
@@ -923,6 +950,10 @@ export function mount(root, store, { onImport = () => {} } = {}) {
     ['feats', 'Feats', [featsCard, notes, spellcasting]],
     ['gear', 'Gear', [carried]],
     ['character', 'Character', [attributes, movement, identity]],
+    // Hidden, tab and all, until the GM releases something. A player told
+    // "check the handouts" should find a tab called Handouts; a table that
+    // uses none should not have an empty one.
+    ['handouts', 'Handouts', [handoutsCard]],
   ];
 
   const panels = new Map(PANELS.map(([id, , cards]) => [
@@ -933,6 +964,8 @@ export function mount(root, store, { onImport = () => {} } = {}) {
     id,
     el('button', {
       class: 'sheet-tab', type: 'button',
+      // Handouts start hidden and appear when the GM releases one.
+      hidden: id === 'handouts',
       onclick: () => showPanel(id),
     }, label),
   ]));
@@ -968,6 +1001,7 @@ export function mount(root, store, { onImport = () => {} } = {}) {
    * this arrives when the builder state does.
    */
   update.showFeats = renderFeats;
+  update.showHandouts = renderHandouts;
 
   function update(state) {
     // `repeatingSection` re-runs the updaters after a rebuild; without this

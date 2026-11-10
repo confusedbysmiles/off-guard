@@ -17,6 +17,7 @@ import { registerPartyRoutes } from './party.js';
 import { registerReferenceRoutes } from './reference.js';
 import { registerRollRoutes } from './rolls.js';
 import { registerSessionRoutes } from './sessions.js';
+import { registerHandoutRoutes } from './handouts.js';
 
 export async function registerGmRoutes(app) {
   await registerCampaignRoutes(app);
@@ -31,4 +32,5 @@ export async function registerGmRoutes(app) {
   await registerReferenceRoutes(app);
   await registerRollRoutes(app);
   await registerSessionRoutes(app);
+  await registerHandoutRoutes(app);
 }

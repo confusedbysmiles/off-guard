@@ -60,7 +60,7 @@ const bytes = (n) => `${(n / 1024 / 1024).toFixed(1)} MB`;
  * confident zero. `tests/backup.test.js` keeps this list in step with the
  * migrations, so a rename breaks a test rather than a backup.
  */
-const COUNTED = ['campaign', 'character', 'encounter', 'token'];
+const COUNTED = ['campaign', 'character', 'encounter', 'token', 'handout'];
 
 /**
  * Read the copy back and make sure it is a database rather than a file.

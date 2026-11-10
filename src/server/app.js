@@ -25,6 +25,7 @@ import { gate } from './device-gate.js';
 import { isWellFormed, normalizeToken, tokenFingerprint } from './tokens.js';
 import { failureCount, recordFailure, touchToken } from './store/tokens.js';
 import { ROBOTS_TXT, securityHeaders } from './security.js';
+import { ALLOWED_TYPES, MAX_BYTES } from './store/handouts.js';
 import { registerGmRoutes } from './routes/gm/index.js';
 import { registerCharacterRoutes } from './routes/character.js';
 import { registerTableRoutes } from './routes/table.js';
@@ -127,6 +128,20 @@ export async function buildApp({
      */
     ...(limits ?? {}),
   });
+
+  /**
+   * Handout uploads arrive as a raw body.
+   *
+   * One parser for the handful of types a handout may be, rather than a
+   * multipart dependency carried forever for a single upload box. The route
+   * raises its own `bodyLimit`; everything else keeps Fastify's 1 MB, so a
+   * large body is only ever accepted where one is expected.
+   */
+  app.addContentTypeParser(
+    [...ALLOWED_TYPES.keys()],
+    { parseAs: 'buffer', bodyLimit: MAX_BYTES + 1024 },
+    (request, body, done) => done(null, body),
+  );
 
   app.addHook('onSend', async (request, reply, payload) => {
     securityHeaders(reply);

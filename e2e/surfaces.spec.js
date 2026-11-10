@@ -1116,3 +1116,61 @@ test.describe('a built character’s sheet', () => {
     await expect(row.getByLabel('Proficiency')).toBeEnabled();
   });
 });
+
+test.describe('handouts', () => {
+  test('are the GM’s until released, then they are on the player’s sheet', async ({ page }) => {
+    await page.goto(`/gm/${world.gmToken}`);
+    await page.locator('body').press('s');
+
+    // A tiny PDF, uploaded the way a GM would: pick a file, press Add.
+    await page.locator('#handout-file').setInputFiles({
+      name: 'the-letter.pdf',
+      mimeType: 'application/pdf',
+      buffer: Buffer.from('%PDF-1.4\n the letter \n%%EOF'),
+    });
+    await page.locator('#handout-title').fill('The letter');
+    await page.locator('.handouts__add').getByRole('button', { name: 'Add' }).click();
+
+    const row = page.locator('.handout', { hasText: 'The letter' });
+    await expect(row).toBeVisible();
+    await expect(row).toContainText('not released');
+
+    // The player cannot see it yet.
+    const player = await page.context().newPage();
+    await player.goto(`/c/${world.characterToken}`);
+    await player.waitForTimeout(800);
+    await expect(player.locator('.handout-link')).toHaveCount(0);
+
+    await row.getByRole('button', { name: 'Release' }).click();
+    await expect(row).toContainText('with the party');
+
+    await player.reload();
+    // A tab of its own, which only exists because there is now a handout.
+    const tab = player.getByRole('button', { name: 'Handouts' });
+    await expect(tab).toBeVisible();
+    await tab.click();
+    await expect(player.locator('.handout-link', { hasText: 'The letter' })).toBeVisible();
+
+    // And the file itself comes back, as a PDF, behind the player's own link.
+    const href = await player.locator('.handout-link').first().getAttribute('href');
+    const got = await player.request.get(href);
+    expect(got.status()).toBe(200);
+    expect(got.headers()['content-type']).toBe('application/pdf');
+    expect(got.headers()['x-content-type-options']).toBe('nosniff');
+    await player.close();
+  });
+
+  test('taking one back removes it from the sheet again', async ({ page }) => {
+    await page.goto(`/gm/${world.gmToken}`);
+    await page.locator('body').press('s');
+    const row = page.locator('.handout', { hasText: 'The letter' });
+    await row.getByRole('button', { name: 'Take back' }).click();
+    await expect(row).toContainText('not released');
+
+    const player = await page.context().newPage();
+    await player.goto(`/c/${world.characterToken}`);
+    await player.waitForTimeout(800);
+    await expect(player.getByRole('button', { name: 'Handouts' })).toBeHidden();
+    await player.close();
+  });
+});

@@ -270,3 +270,89 @@ export function sessionsPanel({ sessions, actions }) {
           : null)))
       : el('p', { class: 'faint stack-md' }, 'Nothing written down yet.'));
 }
+
+/**
+ * Handouts.
+ *
+ * The letters and maps a table passes round, held here rather than on
+ * somebody else's drive: a player already holds exactly one link and it is
+ * already the whole credential, and a Drive folder is either public to the
+ * internet or a second account per player.
+ *
+ * Unreleased is the resting state. Prep on Thursday should not put the map
+ * from Act 3 on a sheet before the party has walked into Act 3, so uploading
+ * and handing over are two separate acts.
+ */
+export function handoutsPanel({ handouts, campaignId, actions, api }) {
+  const file = el('input', {
+    class: 'input', id: 'handout-file', type: 'file', multiple: true,
+    accept: '.pdf,.png,.jpg,.jpeg,.webp,.txt,.md',
+  });
+  const title = el('input', {
+    class: 'input', id: 'handout-title', type: 'text',
+    placeholder: 'Name it (optional, one file only)', autocomplete: 'off',
+  });
+
+  const add = () => {
+    const chosen = [...(file.files ?? [])];
+    if (!chosen.length) { file.focus(); return; }
+    // A prep session is a folder of eight, not one file eight times. The name
+    // box applies only when there is a single file to apply it to; otherwise
+    // each takes its own filename and can be renamed afterwards.
+    const named = chosen.length === 1 ? title.value.trim() : '';
+    actions.uploadHandouts(chosen, named);
+    file.value = '';
+    title.value = '';
+  };
+
+  const size = (bytes) => (bytes < 1024 * 1024
+    ? `${Math.max(1, Math.round(bytes / 1024))} KB`
+    : `${(bytes / 1024 / 1024).toFixed(1)} MB`);
+
+  return el('section', { class: 'panel' },
+    el('div', { class: 'panel__head' },
+      el('h2', { class: 'panel__title' }, 'Handouts')),
+
+    el('p', { class: 'muted' },
+      'PDFs, images and text, up to 25 MB each. A handout is yours until you '
+      + 'release it — then it appears on every player’s sheet, behind the link '
+      + 'they already have.'),
+
+    handouts.length
+      ? el('ul', { class: 'handouts' }, ...handouts.map((handout) => el('li', {
+        class: `handout${handout.releasedAt ? ' handout--released' : ''}`,
+      },
+      el('div', { class: 'handout__what' },
+        el('a', {
+          class: 'handout__title',
+          href: api.handoutHref(campaignId, handout.id),
+          target: '_blank', rel: 'noopener',
+        }, handout.title),
+        el('span', { class: 'faint' },
+          [handout.filename, size(handout.size),
+            handout.releasedAt ? 'with the party' : 'not released'].join(' · '))),
+
+      el('div', { class: 'row-inline' },
+        el('button', {
+          class: `btn btn--compact${handout.releasedAt ? '' : ' btn--primary'}`,
+          type: 'button',
+          onclick: () => actions.releaseHandout(handout, !handout.releasedAt),
+        }, handout.releasedAt ? 'Take back' : 'Release'),
+        el('button', {
+          class: 'btn btn--icon btn--quiet', type: 'button', title: 'Remove',
+          html: `${icon('x')}<span class="sr-only">Remove ${handout.title}</span>`,
+          onclick: () => actions.removeHandout(handout),
+        })))))
+      : el('p', { class: 'faint' }, 'Nothing yet.'),
+
+    el('form', {
+      class: 'handouts__add',
+      onsubmit: (event) => { event.preventDefault(); add(); },
+    },
+    field('File', file),
+    field('Name', title),
+    el('button', {
+      class: 'btn btn--primary', type: 'submit',
+      html: `${icon('plus')}<span>Add</span>`,
+    })));
+}

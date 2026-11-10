@@ -557,3 +557,27 @@ details.card[open] > .fold__summary--card { margin-bottom: var(--sp-3); }
 /* A slot nobody has filled yet is stated rather than hidden: an empty level 6
  * class feat is a thing to go and choose, not a thing to not know about. */
 .feats__row--empty .feats__name { font-weight: 400; color: var(--ink-faint); }
+
+/* --- Handouts ---------------------------------------------------------------
+ *
+ * Tap targets, because this is read on a phone with one hand. Each is a link
+ * out to the file behind the same token the sheet is behind.
+ */
+
+.handouts-card__list { display: grid; gap: var(--sp-2); }
+
+.handout-link {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  min-height: 44px;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  color: var(--ink);
+}
+.handout-link:hover { background: var(--surface-sunk); }
+.handout-link__title { font-weight: 600; overflow-wrap: anywhere; }
+.handout-link__meta { font-size: var(--step--2); white-space: nowrap; }

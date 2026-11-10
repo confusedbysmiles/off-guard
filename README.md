@@ -982,6 +982,29 @@ stays without a page. The remainder are entries in books nobody here has a PDF
 of, almost all of them adventure paths; see
 `tools/build-data/pages/README.md` before adding to them by hand.
 
+### Handouts
+
+Letters, maps and player aids live in the application, not on a drive
+somewhere. A GM uploads on the Setup tab; nothing is visible to anybody until
+they **release** it, and then it appears on every player's sheet behind the
+link they already have — no Google account, no sharing settings, nothing
+public. Taking one back un-lists it, and says plainly that a player who already
+opened it still has it.
+
+PDFs, PNG, JPEG, WebP, plain text and Markdown, 25 MB each. The list is what is
+*allowed* rather than what is forbidden, and HTML and SVG are absent on
+purpose: served from this origin behind a link that is also a credential,
+either could run script as the application. `X-Content-Type-Options: nosniff`
+is on every response, PDFs and images are offered inline, and everything else
+downloads.
+
+The bytes are a blob in the database rather than a directory beside it. That is
+a deliberate trade — a few tens of megabytes of SQLite in exchange for
+`npm run backup` continuing to produce one consistent file with no sidecars,
+which is what [deploy/MIGRATING.md](deploy/MIGRATING.md) turns on. A folder of
+PDFs next to the database would be a second thing to copy, and therefore
+eventually the thing somebody forgot to copy.
+
 ## Deploying it
 
 Three shapes, and the browser needs no configuration for any of them. They are

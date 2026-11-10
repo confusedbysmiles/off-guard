@@ -168,6 +168,23 @@ async function start() {
   };
   loadFeats();
 
+  /**
+   * Handouts, if the GM has released any.
+   *
+   * Same shape as the feats: one request after the sheet is already on
+   * screen, and a failure leaves the card hidden rather than the sheet
+   * waiting on it.
+   */
+  const loadHandouts = async () => {
+    try {
+      const res = await fetch(`${endpoint}/handouts`, { headers: { accept: 'application/json' } });
+      if (!res.ok) return;
+      const { handouts } = await res.json();
+      update.showHandouts(handouts, (id) => `${endpoint}/handouts/${id}/file`);
+    } catch { /* offline: nothing to show, and nothing broken */ }
+  };
+  loadHandouts();
+
   store.subscribe((state) => {
     const indicator = $('#save-state');
     indicator.textContent = SAVE_LABEL[state.status] ?? state.status;

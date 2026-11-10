@@ -28,7 +28,7 @@ const ROOT = resolve(import.meta.dirname, '..');
 const TOOL = join(ROOT, 'tools/backup.js');
 
 /** The tables `tools/backup.js` counts, which have to keep existing. */
-const COUNTED = ['campaign', 'character', 'encounter', 'token'];
+const COUNTED = ['campaign', 'character', 'encounter', 'token', 'handout'];
 
 /**
  * A database with writes that are still only in the WAL.

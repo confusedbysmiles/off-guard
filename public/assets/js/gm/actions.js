@@ -770,6 +770,79 @@ export function createActions({
       await actions.reloadRecall(recall.difficulty ?? null);
     },
 
+    // --- handouts -----------------------------------------------------------
+
+    async loadHandouts() {
+      if (!campaign()) return;
+      try {
+        store.set({ handouts: (await api.handouts(campaign())).handouts });
+      } catch (error) {
+        notices.error(`Could not load the handouts: ${error.message}`);
+      }
+    },
+
+    /**
+     * Upload one.
+     *
+     * Unreleased, always. A handout arrives for the GM to look at and hand
+     * over when the party finds it, so uploading during prep cannot put a map
+     * on somebody's sheet a week early.
+     */
+    async uploadHandouts(files, title) {
+      const id = campaign();
+      const chosen = [...(files ?? [])];
+      if (!id || !chosen.length) return;
+
+      // One at a time rather than in parallel: eight 500 KB bodies at once is
+      // a spike for no gain, and a failure part-way should say which one.
+      const added = [];
+      for (const file of chosen) {
+        try {
+          const { handout } = await api.uploadHandout(id, file, title);
+          added.push(handout.title);
+        } catch (error) {
+          notices.error(`${file.name} was not added: ${error.message}`);
+        }
+      }
+
+      await actions.loadHandouts();
+      refresh();
+      if (!added.length) return;
+      notices.info(added.length === 1
+        ? `Added “${added[0]}”. Release it when the party finds it.`
+        : `Added ${added.length} handouts, none released yet.`);
+    },
+
+    async releaseHandout(handout, released) {
+      const id = campaign();
+      if (!id) return;
+      try {
+        await api.releaseHandout(id, handout.id, released);
+        await actions.loadHandouts();
+        refresh();
+        notices.info(released
+          ? `“${handout.title}” is on the party’s sheets now.`
+          : `“${handout.title}” is off the party’s sheets. Anyone who already opened it still has it.`);
+      } catch (error) {
+        notices.error(`Could not change that handout: ${error.message}`);
+      }
+    },
+
+    async removeHandout(handout) {
+      const id = campaign();
+      if (!id) return;
+      try {
+        await api.deleteHandout(id, handout.id);
+        await actions.loadHandouts();
+        refresh();
+        // No undo: the bytes are gone, and offering one that cannot restore
+        // them would be a lie. The file is still wherever it was uploaded from.
+        notices.warn(`Removed “${handout.title}”. Upload it again if that was wrong.`);
+      } catch (error) {
+        notices.error(`Could not remove that handout: ${error.message}`);
+      }
+    },
+
     // --- links --------------------------------------------------------------
 
     async loadTokens() {

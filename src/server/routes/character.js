@@ -7,6 +7,8 @@
  */
 import { applyPatch, getOwnCharacter, versionsFor } from '../store/characters.js';
 import { getCampaign } from '../store/campaigns.js';
+import { listHandouts, readHandout } from '../store/handouts.js';
+import { sendHandout } from '../handouts.js';
 import { diffImport, mapPathbuilder, readPath } from '../../shared/pathbuilder.js';
 import { exportCharacter, isPortable, readPortable } from '../../shared/portable.js';
 import { builderState, buildWrites, startingBuild, validBuild } from '../builder.js';
@@ -51,6 +53,21 @@ function byName(options, kind, name) {
 
 export async function registerCharacterRoutes(app) {
   const { db } = app;
+
+  /**
+   * The handouts the party has been given.
+   *
+   * Metadata only -- never the bytes -- and the release filter is in the SQL,
+   * so a handout the GM has not released is not a row this request ever holds.
+   */
+  app.get('/handouts', async (request) => ({
+    handouts: listHandouts(db, request.scope),
+  }));
+
+  app.get('/handouts/:handoutId/file', async (request, reply) => {
+    const row = readHandout(db, request.scope, request.params.handoutId);
+    return sendHandout(reply, row);
+  });
 
   app.get('/', async (request) => {
     const character = getOwnCharacter(db, request.scope);

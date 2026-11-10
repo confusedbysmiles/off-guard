@@ -1421,3 +1421,37 @@
 /* The timestamps push the forget button to the far edge, away from the taps
    that are not destructive. */
 .link-devices__list li > .faint { margin-left: auto; }
+
+/* --- Handouts ---------------------------------------------------------------
+ *
+ * Released and unreleased are the distinction that matters, so it is stated in
+ * the row rather than left to the button's label alone.
+ */
+
+.handouts { list-style: none; margin: var(--sp-3) 0 0; padding: 0; display: grid; gap: 2px; }
+
+.handout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid transparent;
+}
+.handout--released { border-left-color: var(--good); }
+
+.handout__what { display: grid; gap: 2px; min-width: 0; }
+.handout__title { color: var(--primary-ink); overflow-wrap: anywhere; }
+.handout .faint { font-size: var(--step--2); }
+
+.handouts__add {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+}
+@media (min-width: 40rem) {
+  .handouts__add { grid-template-columns: 1fr 1fr auto; align-items: end; }
+}
