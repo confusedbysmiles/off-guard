@@ -6,35 +6,40 @@
  * `npm run check:contrast`, which fails the build rather than trusting a
  * palette that looks fine on the machine it was designed on.
  *
- * The brief's three colours are the primary #667EEA, the accent #764BA2 and the
- * deep ground #1A1033. Neither #667EEA nor #764BA2 reaches AA as *text* on
- * either ground, so each has a tint for text and keeps its stated value for
- * fills, borders and the gradient. That is the usual shape of this problem and
- * the reason `--primary` and `--primary-ink` are separate tokens.
+ * Blue and green, on a slate-blue ground. The primary #3B82F6 and the accent
+ * #14B8A6 are the two colours the interface is built from; neither reaches AA
+ * as *text* on either ground, so each keeps its stated value for fills,
+ * borders and the gradient and has a separate tint for text. That is the
+ * reason `--primary` and `--primary-ink` are two tokens rather than one.
+ *
+ * The accent is a teal green rather than a pure one, because `--good` is
+ * already green and means something: a fixed fault, a landed beat, a live
+ * connection. An accent that read as "good" would make the chrome look like a
+ * status. Teal sits beside it without being mistaken for it.
  */
 
 :root {
   color-scheme: dark;
 
   /* Ground */
-  --bg:            #1A1033;
-  --surface:       #241844;
-  --surface-2:     #2E2055;
-  --surface-sunk:  #150D2B;
-  --border:        #3D2E68;
-  --border-strong: #7660A8;
+  --bg:            #0E1726;
+  --surface:       #16243A;
+  --surface-2:     #1E3049;
+  --surface-sunk:  #0A111D;
+  --border:        #2A3E59;
+  --border-strong: #6B89A8;
 
   /* Ink */
-  --ink:        #F3EFFB;
-  --ink-dim:    #BCB0D8;
-  --ink-faint:  #8E82AC;
+  --ink:        #ECF3FB;
+  --ink-dim:    #B4C6DA;
+  --ink-faint:  #8AA0B8;
 
   /* Brand */
-  --primary:        #667EEA;
-  --primary-ink:    #A7B4F4;  /* the primary, as text */
-  --primary-sunk:   #2A2A66;
-  --accent:         #764BA2;
-  --accent-ink:     #C39BE4;  /* the accent, as text */
+  --primary:        #3B82F6;
+  --primary-ink:    #93C5FD;  /* the primary, as text */
+  --primary-sunk:   #14294A;
+  --accent:         #14B8A6;
+  --accent-ink:     #5EEAD4;  /* the accent, as text */
   --gradient: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
 
   /* State */
@@ -45,7 +50,7 @@
   --bad:       #F87171;
   --bad-ink:   #FCA5A5;
 
-  --focus: #A7B4F4;
+  --focus: #93C5FD;
 
   /* Type. Jost is self-hosted; the stack behind it is what a phone shows
      while the font loads, chosen so the reflow is small. */
@@ -93,52 +98,52 @@
 
 @media (prefers-color-scheme: light) {
   :root:not([data-theme='dark']) {
-    --bg:            #F6F4FB;
+    --bg:            #F3F7FC;
     --surface:       #FFFFFF;
-    --surface-2:     #EFEBF8;
-    --surface-sunk:  #E7E1F4;
-    --border:        #D5CCEA;
-    --border-strong: #8C7DB0;
+    --surface-2:     #E8EFF8;
+    --surface-sunk:  #DDE7F3;
+    --border:        #C9D8E8;
+    --border-strong: #6E8AA6;
 
-    --ink:       #1A1033;
-    --ink-dim:   #4B3F66;
-    --ink-faint: #6B5F86;
+    --ink:       #0E1726;
+    --ink-dim:   #3C5068;
+    --ink-faint: #5B7087;
 
-    --primary-ink:  #4351C4;
-    --primary-sunk: #E4E7FB;
-    --accent-ink:   #6B3F96;
+    --primary-ink:  #1D4ED8;
+    --primary-sunk: #DCE8FD;
+    --accent-ink:   #0F766E;
 
     --good-ink: #047857;
     --warn-ink: #92620A;
     --bad-ink:  #B91C1C;
 
-    --focus: #4351C4;
+    --focus: #1D4ED8;
 
-    --shadow: 0 1px 2px rgb(26 16 51 / 0.08), 0 8px 24px rgb(26 16 51 / 0.08);
+    --shadow: 0 1px 2px rgb(14 23 38 / 0.08), 0 8px 24px rgb(14 23 38 / 0.08);
   }
 }
 
 :root[data-theme='light'] {
-  --bg:            #F6F4FB;
+  --bg:            #F3F7FC;
   --surface:       #FFFFFF;
-  --surface-2:     #EFEBF8;
-  --surface-sunk:  #E7E1F4;
-  --border:        #D5CCEA;
-  --border-strong: #8C7DB0;
+  --surface-2:     #E8EFF8;
+  --surface-sunk:  #DDE7F3;
+  --border:        #C9D8E8;
+  --border-strong: #6E8AA6;
 
-  --ink:       #1A1033;
-  --ink-dim:   #4B3F66;
-  --ink-faint: #6B5F86;
+  --ink:       #0E1726;
+  --ink-dim:   #3C5068;
+  --ink-faint: #5B7087;
 
-  --primary-ink:  #4351C4;
-  --primary-sunk: #E4E7FB;
-  --accent-ink:   #6B3F96;
+  --primary-ink:  #1D4ED8;
+  --primary-sunk: #DCE8FD;
+  --accent-ink:   #0F766E;
 
   --good-ink: #047857;
   --warn-ink: #92620A;
   --bad-ink:  #B91C1C;
 
-  --focus: #4351C4;
+  --focus: #1D4ED8;
 
-  --shadow: 0 1px 2px rgb(26 16 51 / 0.08), 0 8px 24px rgb(26 16 51 / 0.08);
+  --shadow: 0 1px 2px rgb(14 23 38 / 0.08), 0 8px 24px rgb(14 23 38 / 0.08);
 }

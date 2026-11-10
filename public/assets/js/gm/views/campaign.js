@@ -24,7 +24,7 @@ import { icon } from '../../lib/icons.js';
  * as well as hue, so the swatch is legible even where the hue is not.
  */
 export const ACCENTS = [
-  ['#667EEA', 'Indigo'],
+  ['#3B82F6', 'Blue'],
   ['#34D399', 'Green'],
   ['#F59E0B', 'Amber'],
   ['#EC4899', 'Pink'],
