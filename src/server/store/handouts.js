@@ -116,7 +116,11 @@ export function createHandout(db, scope, requestedCampaignId, fields = {}) {
   }
 
   const filename = safeFilename(fields.filename, contentType);
-  const title = clean(fields.title, 120) || filename;
+  // The filename makes a reasonable default title, without its extension:
+  // "Surveyor's Plan", not "Surveyor's Plan.pdf". The filename itself is kept
+  // whole, because that is what a download is called.
+  const title = clean(fields.title, 120) || clean(filename.replace(/\.[A-Za-z0-9]{1,5}$/, ''), 120)
+    || filename;
   const next = db.prepare(
     'SELECT COALESCE(MAX(sort_order), -1) + 1 AS n FROM handout WHERE campaign_id = ?',
   ).get(campaignId).n;

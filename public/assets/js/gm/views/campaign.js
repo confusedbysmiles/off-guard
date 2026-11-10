@@ -13,6 +13,7 @@
  * that are actually distinguishable from each other.
  */
 import { displayName, isUnnamed } from '../../../../engine/shared/character-name.js';
+import { displayTitles } from '../../lib/handout-titles.js';
 import { el } from '../../lib/dom.js';
 import { icon } from '../../lib/icons.js';
 
@@ -309,6 +310,10 @@ export function handoutsPanel({ handouts, campaignId, actions, api }) {
     ? `${Math.max(1, Math.round(bytes / 1024))} KB`
     : `${(bytes / 1024 / 1024).toFixed(1)} MB`);
 
+  // Eight names that all begin the same way is a list you read by scanning for
+  // the tail of a wrapped line. The shared opening is said once, above.
+  const { shared, short } = displayTitles(handouts);
+
   return el('section', { class: 'panel' },
     el('div', { class: 'panel__head' },
       el('h2', { class: 'panel__title' }, 'Handouts')),
@@ -317,6 +322,8 @@ export function handoutsPanel({ handouts, campaignId, actions, api }) {
       'PDFs, images and text, up to 25 MB each. A handout is yours until you '
       + 'release it — then it appears on every player’s sheet, behind the link '
       + 'they already have.'),
+
+    shared ? el('p', { class: 'faint handouts__shared' }, `All of these: ${shared}`) : null,
 
     handouts.length
       ? el('ul', { class: 'handouts' }, ...handouts.map((handout) => el('li', {
@@ -340,7 +347,7 @@ export function handoutsPanel({ handouts, campaignId, actions, api }) {
           el('input', {
             type: 'checkbox',
             checked: Boolean(handout.releasedAt),
-            'aria-label': `Show ${handout.title} to the players`,
+            'aria-label': `Show ${short.get(handout.id) ?? handout.title} to the players`,
             onchange: (event) => actions.releaseHandout(handout, event.target.checked),
           }),
           el('span', {}, 'Players')),

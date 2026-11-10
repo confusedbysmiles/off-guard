@@ -1469,3 +1469,6 @@
 @media (min-width: 40rem) {
   .handouts__add { grid-template-columns: 1fr 1fr auto; align-items: end; }
 }
+
+/* Said once, above the list, so each row can carry only what tells it apart. */
+.handouts__shared { margin-top: var(--sp-2); font-size: var(--step--1); }

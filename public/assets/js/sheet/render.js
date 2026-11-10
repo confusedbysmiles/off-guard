@@ -10,6 +10,7 @@
  * value. `update(state)` runs the updaters. An input the player is currently
  * typing into is never written to.
  */
+import { displayTitles } from '../lib/handout-titles.js';
 import { armorClass, classDc, isDerivedPath, statistic } from '../../../engine/rules/index.js';
 import { el, formatMod, titleCase } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
@@ -892,6 +893,7 @@ export function mount(root, store, { onImport = () => {} } = {}) {
 
   function renderHandouts(handouts, href) {
     const rows = handouts ?? [];
+    const { short } = displayTitles(rows);
     handoutsCard.hidden = rows.length === 0;
     // The tab appears with the first handout and goes away with the last.
     const tab = tabs.get('handouts');
@@ -899,7 +901,7 @@ export function mount(root, store, { onImport = () => {} } = {}) {
     handoutsList.replaceChildren(...rows.map((handout) => el('a', {
       class: 'handout-link', href: href(handout.id), target: '_blank', rel: 'noopener',
     },
-    el('span', { class: 'handout-link__title' }, handout.title),
+    el('span', { class: 'handout-link__title' }, short.get(handout.id) ?? handout.title),
     el('span', { class: 'faint handout-link__meta' },
       handout.contentType === 'application/pdf' ? 'PDF' : handout.filename))));
   }
