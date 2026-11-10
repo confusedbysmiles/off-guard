@@ -96,16 +96,22 @@ for (const [label, path] of SURFACES) {
 test.describe('the character sheet, panel by panel', () => {
   test('names every control on every panel', async ({ page }) => {
     await page.goto(`/c/${world.characterToken}`);
-    const tabs = page.locator('.sheet-tabs button');
-    // Five always, and Handouts when the GM has released one -- which an
-    // earlier spec in this run may have done, since both share a server. The
-    // count is here to catch tabs vanishing, not to pin an optional one, and
-    // pinning it made this fail on test order rather than on anything real.
+    // The tabs a player can actually reach. Handouts is rendered but `hidden`
+    // until the GM releases something, and an earlier spec sharing this server
+    // may have done so -- so this counts what is visible rather than what is
+    // in the DOM, and does not pin a number that depends on test order.
+    const tabs = page.locator('.sheet-tabs button:not([hidden])');
     await expect(tabs.first()).toBeVisible();
     expect(await tabs.count()).toBeGreaterThanOrEqual(5);
 
-    for (const label of await tabs.allTextContents()) {
-      await page.locator('.sheet-tabs').getByRole('button', { name: label, exact: true }).click();
+    // By index, not by name. Re-finding a tab by its text between reading the
+    // list and clicking it means an optional tab that comes and goes -- the
+    // Handouts one -- can vanish in the gap and time the click out.
+    const count = await tabs.count();
+    for (let i = 0; i < count; i += 1) {
+      const tab = tabs.nth(i);
+      const label = (await tab.textContent()).trim();
+      await tab.click();
       await expect(page.locator(`#panel-${label.toLowerCase()}`)).toBeVisible();
       const audit = await page.evaluate(NAME_AUDIT);
       expect(audit.total, `${label} has controls`).toBeGreaterThan(0);

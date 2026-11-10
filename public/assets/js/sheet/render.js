@@ -661,7 +661,14 @@ export function mount(root, store, { onImport = () => {} } = {}) {
         }),
         removeButton('gear', index)),
       labelled('How many', number(`gear.${index}.quantity`)),
-    ], { name: '', quantity: 1 }, {
+      // Where it is packed. A plain field rather than a nested list: the
+      // answer a player wants at a table is "is it in the backpack", and a
+      // tree would make reordering and removing rows harder for a gain
+      // nobody asked for.
+      labelled('In', text(`gear.${index}.container`, {
+        placeholder: 'Carried loose', 'aria-label': `What item ${index + 1} is packed in`,
+      })),
+    ], { name: '', quantity: 1, container: null }, {
       above: el('div', { class: 'stack-md' }, coins, bulkLine), wide: true,
     });
   }
@@ -816,6 +823,32 @@ export function mount(root, store, { onImport = () => {} } = {}) {
     el('h2', { class: 'section__title' }, 'Feats'),
     featsList);
 
+  /**
+   * The features a character is given rather than choosing.
+   *
+   * Derived from the build -- class, ancestry and heritage grants -- so this
+   * needs no fetch and is right for a character built here as well as one
+   * imported. Read-only for the same reason: nobody picks these.
+   */
+  const featuresList = el('div', { class: 'feats' });
+  const featuresCard = el('section', { class: 'card section--wide' },
+    el('h2', { class: 'section__title' }, 'Class and ancestry features'),
+    featuresList);
+
+  onUpdate((state) => {
+    const features = readPath(state.sheet, 'features') ?? [];
+    if (!features.length) {
+      featuresList.replaceChildren(el('p', { class: 'empty' },
+        'Set an ancestry and a class in the builder and these fill in by themselves.'));
+      return;
+    }
+    featuresList.replaceChildren(el('ul', { class: 'feats__list' },
+      ...features.map((feature) => el('li', { class: 'feats__row' },
+        el('span', { class: 'feats__name' }, feature.name),
+        el('span', { class: 'faint feats__meta' },
+          `${feature.source} · level ${feature.level}`)))));
+  });
+
   const KIND_LABEL = {
     classFeat: 'Class', ancestryFeat: 'Ancestry',
     skillFeat: 'Skill', generalFeat: 'General',
@@ -872,7 +905,7 @@ export function mount(root, store, { onImport = () => {} } = {}) {
   }
 
   const notes = el('section', { class: 'card section--wide' },
-    el('h2', { class: 'section__title' }, 'Features and notes'),
+    el('h2', { class: 'section__title' }, 'Reactions, items and notes'),
     el('div', { class: 'grid grid--2' },
       ...NOTES_SECTIONS.map(([key, label]) => labelled(label, area(key)))));
 
@@ -947,7 +980,7 @@ export function mount(root, store, { onImport = () => {} } = {}) {
   const PANELS = [
     ['combat', 'Combat', [vitals, strikes, conditions, proficiencies, armour]],
     ['skills', 'Skills', [skills]],
-    ['feats', 'Feats', [featsCard, notes, spellcasting]],
+    ['feats', 'Feats', [featsCard, featuresCard, notes, spellcasting]],
     ['gear', 'Gear', [carried]],
     ['character', 'Character', [attributes, movement, identity]],
     // Hidden, tab and all, until the GM releases something. A player told

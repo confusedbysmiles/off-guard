@@ -377,7 +377,9 @@ export function buildFromImport(exported, { find = () => null, sheet = {} } = {}
         shield: null,
         weapons: weaponsFrom(pb, sheet),
         gear: (sheet?.gear ?? []).map((row) => ({
-          custom: { name: row.name }, quantity: row.quantity ?? 1,
+          custom: { name: row.name },
+          quantity: row.quantity ?? 1,
+          container: row.container ?? null,
         })),
       },
       coins,

@@ -216,6 +216,61 @@ export function hitPoints({ ancestry, klass, conMod, level, bonusPerLevel = 0, b
  *   arithmetic lives here and not in either one.
  * @returns {{sheet: object, problems: object[], proficiencies: object}}
  */
+/**
+ * The features a character is simply given.
+ *
+ * Not chosen and not typed: a level 5 barbarian *has* Rage, Quick-Tempered,
+ * Furious Footfalls and Brutality because they are a level 5 barbarian, and an
+ * automaton has Automaton Core and Constructed Body because it is an automaton.
+ * These used to be a free-text box, which meant an import dropped seven of
+ * them in silence and a character built here never had them at all.
+ *
+ * `grants` on each record is the right source and the only one. Reading the
+ * feature catalogue by trait instead would sweep in every *option* a class
+ * offers -- a barbarian has nine instincts to choose between at level 1 and
+ * takes one -- and list all nine. `grants` is what the class confers, which is
+ * a different question with a different answer.
+ *
+ * The chosen instinct is not here because it is already the sheet's
+ * `subclass`. Vision is, because it is a line on the ancestry rather than a
+ * grant, and a player wants to know they can see in the dark.
+ */
+function grantedFeatures({ ancestry, heritage, klass, level }) {
+  const out = [];
+  const seen = new Set();
+
+  const take = (grants, source) => {
+    for (const grant of grants ?? []) {
+      const at = Number(grant?.level ?? 1);
+      // A grant above this character's level has not happened yet. Same rule
+      // as everywhere else here: a plan is stored and contributes nothing.
+      if (!Number.isFinite(at) || at > level) continue;
+      const name = String(grant?.name ?? '').trim();
+      if (!name) continue;
+      const key = name.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ name, level: at, source });
+    }
+  };
+
+  take(klass?.grants, klass?.name ?? 'Class');
+  take(ancestry?.grants, ancestry?.name ?? 'Ancestry');
+  take(heritage?.grants, heritage?.name ?? 'Heritage');
+
+  // Named rather than un-slugged: "low-light-vision" title-cased by rule comes
+  // out "Low-Light-Vision", because a slug does not record which hyphens were
+  // spaces. The data holds three values in total, so writing them down is both
+  // shorter and right.
+  const VISION = { 'low-light-vision': 'Low-Light Vision', darkvision: 'Darkvision' };
+  const vision = VISION[String(ancestry?.vision ?? '').trim().toLowerCase()];
+  if (vision && !seen.has(vision.toLowerCase())) {
+    out.push({ name: vision, level: 1, source: ancestry?.name ?? 'Ancestry' });
+  }
+
+  return out.sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
+}
+
 export function deriveCharacter(build = {}, {
   ancestry = null, heritage = null, background = null, klass = null, progression = null,
   items = {},
@@ -350,6 +405,7 @@ export function deriveCharacter(build = {}, {
 
   const sheet = {
     level,
+    features: grantedFeatures({ ancestry, heritage, klass, level }),
     ancestry: ancestry?.name ?? '',
     heritage: heritage?.name ?? '',
     background: background?.name ?? '',
@@ -534,7 +590,7 @@ export const DERIVED_PATHS = [
   // sheet's field while leaving nowhere to set it. It stays the player's until
   // there is a slot for it.
   'name',
-  'level', 'ancestry', 'heritage', 'background', 'class',
+  'level', 'ancestry', 'heritage', 'background', 'class', 'features',
   'keyAttribute', 'size', 'abilities', 'classDc.rank', 'perception.rank',
   'saves.fortitude.rank', 'saves.reflex.rank', 'saves.will.rank',
   'ac.rank', 'ac.dexCap', 'ac.itemBonus',

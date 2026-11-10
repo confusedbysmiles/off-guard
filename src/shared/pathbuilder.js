@@ -353,13 +353,33 @@ function mapMoney(build) {
  * elsewhere -- an item somebody wrote down rather than chose. Bulk is 0 because
  * the export does not carry it; the warning says so.
  */
+/**
+ * Gear, and what it is packed inside.
+ *
+ * Pathbuilder puts the container's own id in the third field of a row --
+ * `["Bedroll", 1, "0179cc98-...", "Invested"]` -- and names it in
+ * `equipmentContainers`. A row without one is carried loose.
+ *
+ * Kept as the container's *name* rather than its id. The id is Pathbuilder's
+ * and means nothing here; it would survive one import and be a dangling
+ * reference after any edit. The name is what a player reads off their own
+ * sheet, and two backpacks called Backpack are the same answer to "where is
+ * it" either way.
+ */
 function mapGear(build) {
+  const containers = new Map(Object.entries(build.equipmentContainers ?? {})
+    .map(([id, container]) => [id, String(container?.containerName ?? '').trim()])
+    .filter(([, name]) => name));
+
   return (build.equipment ?? []).map((entry) => {
-    const [rawName, rawQuantity] = Array.isArray(entry)
+    const [rawName, rawQuantity, third] = Array.isArray(entry)
       ? entry
-      : [entry?.name, entry?.qty ?? entry?.quantity];
+      : [entry?.name, entry?.qty ?? entry?.quantity, entry?.container];
     const name = String(rawName ?? '').trim();
     if (!name) return null;
+    // The third field is a container id when there is one and a flag like
+    // "Invested" when there is not, so it is looked up rather than trusted.
+    const container = containers.get(String(third ?? '')) ?? null;
     return {
       id: null,
       name,
@@ -369,6 +389,9 @@ function mapGear(build) {
       level: null,
       price: null,
       missing: false,
+      // Null rather than absent: a row that is explicitly loose reads the same
+      // as one from a file that has no containers at all, which is what it is.
+      container: container && container !== name ? container : null,
     };
   }).filter(Boolean);
 }

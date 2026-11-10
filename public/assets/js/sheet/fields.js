@@ -45,7 +45,6 @@ export const NOTES_SECTIONS = [
   // catalogue, so the sheet renders them from the build rather than asking a
   // player to retype what the import already knows. See `featsCard` in
   // `render.js`.
-  ['features', 'Class features'],
   ['reactions', 'Reactions and free actions'],
   ['items', 'Items'],
   ['notes', 'Notes'],

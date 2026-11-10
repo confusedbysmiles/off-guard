@@ -211,6 +211,9 @@ export function gearRows(entries = [], items = {}) {
       level: record?.level ?? null,
       price: record?.price ?? null,
       missing: Boolean(entry?.id && !record),
+      // What it is packed in, by name. The build carries it so that a derived
+      // gear list does not quietly flatten a pack somebody arrived with.
+      container: entry?.container ? String(entry.container) : null,
     };
   });
 }

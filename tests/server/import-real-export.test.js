@@ -29,6 +29,18 @@ const post = (path, payload) => app.inject({
   method: 'POST', url: `/api/c/${world.tuesday.characterToken}${path}`, payload,
 });
 
+/** Import the file the way the dialog does, and read the sheet that results. */
+async function applied() {
+  const preview = (await post('/import/preview', { json: EXPORT })).json();
+  await post('/import/apply', {
+    sheet: preview.sheet, changes: preview.changes, build: preview.builder.build,
+  });
+  const res = await app.inject({
+    method: 'GET', url: `/api/c/${world.tuesday.characterToken}`,
+  });
+  return res.json().character.sheet;
+}
+
 describe('previewing it', () => {
   it('is accepted, and reads the character out of it', async () => {
     const res = await post('/import/preview', { json: EXPORT });
@@ -74,6 +86,50 @@ describe('previewing it', () => {
     expect(ids).not.toContain('feat:quick-repair');
     // And the heritage is a field of its own, not a feat slot.
     expect(ids.join(' ')).not.toMatch(/defensive-automaton/);
+  });
+
+  it('derives the features a character is given rather than choosing', async () => {
+    // Seven of the file's ten specials used to vanish. They are not imported
+    // even now -- they are derived from the class, ancestry and heritage the
+    // import established, which is also right for a character built here. So
+    // this asserts the sheet that results, not the mapper's half of it.
+    const names = (await applied()).features.map((f) => f.name);
+    expect(names).toEqual(expect.arrayContaining([
+      'Rage', 'Quick-Tempered', 'Furious Footfalls', 'Brutality',
+      'Automaton Core', 'Constructed Body', 'Low-Light Vision',
+    ]));
+  });
+
+  it('holds a grant above the character\u2019s level until they reach it', async () => {
+    // Brutality is a level 5 grant and this barbarian is level 5, so it counts.
+    // Juggernaut is level 7 and does not.
+    const features = (await applied()).features;
+    expect(features.find((f) => f.name === 'Brutality')).toMatchObject({ level: 5 });
+    expect(features.map((f) => f.name)).not.toContain('Juggernaut');
+  });
+
+  it('lists only the instinct that was chosen, not the nine on offer', async () => {
+    // The trap this avoids: reading the feature catalogue by trait sweeps in
+    // every option a class offers. A barbarian picks one instinct of nine.
+    const sheet = await applied();
+    const names = sheet.features.map((f) => f.name);
+    for (const other of ['Animal Instinct', 'Giant Instinct', 'Fury Instinct', 'Spirit Instinct']) {
+      expect(names).not.toContain(other);
+    }
+    // The one they took is the subclass, and already shown as such.
+    expect(sheet.subclass).toBe('Dragon Instinct');
+  });
+
+  it('remembers what is packed inside what', async () => {
+    // The applied sheet, not the preview. The mapper always carried containers;
+    // what dropped them was the build's own gear list overwriting it, and a
+    // test against the preview passes either way.
+    const sheet = await applied();
+    const inBag = sheet.gear.filter((g) => g.container === 'Backpack').map((g) => g.name);
+    expect(inBag).toEqual(expect.arrayContaining(['Bedroll', 'Chalk', 'Rope', 'Waterskin']));
+    // The backpack is not inside itself, and loose items stay loose.
+    expect(sheet.gear.find((g) => g.name === 'Backpack').container).toBeNull();
+    expect(sheet.gear.find((g) => g.name === 'Arrows').container).toBeNull();
   });
 
   it('does not import Pathbuilder\u2019s placeholder as a language', async () => {
