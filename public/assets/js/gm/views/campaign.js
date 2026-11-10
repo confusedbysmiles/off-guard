@@ -333,11 +333,17 @@ export function handoutsPanel({ handouts, campaignId, actions, api }) {
             handout.releasedAt ? 'with the party' : 'not released'].join(' · '))),
 
       el('div', { class: 'row-inline' },
-        el('button', {
-          class: `btn btn--compact${handout.releasedAt ? '' : ' btn--primary'}`,
-          type: 'button',
-          onclick: () => actions.releaseHandout(handout, !handout.releasedAt),
-        }, handout.releasedAt ? 'Take back' : 'Release'),
+        // A checkbox, because releasing is a state the row is in rather than
+        // an action taken on it -- and because a GM mid-session wants to see
+        // at a glance which handouts the party has, not read eight buttons.
+        el('label', { class: 'handout__release' },
+          el('input', {
+            type: 'checkbox',
+            checked: Boolean(handout.releasedAt),
+            'aria-label': `Show ${handout.title} to the players`,
+            onchange: (event) => actions.releaseHandout(handout, event.target.checked),
+          }),
+          el('span', {}, 'Players')),
         el('button', {
           class: 'btn btn--icon btn--quiet', type: 'button', title: 'Remove',
           html: `${icon('x')}<span class="sr-only">Remove ${handout.title}</span>`,

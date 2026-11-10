@@ -1446,6 +1446,20 @@
 .handout__title { color: var(--primary-ink); overflow-wrap: anywhere; }
 .handout .faint { font-size: var(--step--2); }
 
+/* The release checkbox. A real target rather than a 13px square, because it
+   gets used mid-session with one hand. */
+.handout__release {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  min-height: 44px;
+  white-space: nowrap;
+  cursor: pointer;
+  font-size: var(--step--1);
+}
+.handout__release input { width: 1.15em; height: 1.15em; accent-color: var(--good); }
+
 .handouts__add {
   display: grid;
   grid-template-columns: 1fr;

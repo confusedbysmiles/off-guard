@@ -1141,7 +1141,7 @@ test.describe('handouts', () => {
     await player.waitForTimeout(800);
     await expect(player.locator('.handout-link')).toHaveCount(0);
 
-    await row.getByRole('button', { name: 'Release' }).click();
+    await row.getByRole('checkbox', { name: /Show The letter to the players/ }).check();
     await expect(row).toContainText('with the party');
 
     await player.reload();
@@ -1164,7 +1164,7 @@ test.describe('handouts', () => {
     await page.goto(`/gm/${world.gmToken}`);
     await page.locator('body').press('s');
     const row = page.locator('.handout', { hasText: 'The letter' });
-    await row.getByRole('button', { name: 'Take back' }).click();
+    await row.getByRole('checkbox', { name: /Show The letter to the players/ }).uncheck();
     await expect(row).toContainText('not released');
 
     const player = await page.context().newPage();
