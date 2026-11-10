@@ -362,6 +362,74 @@ test.describe('Recall Knowledge', () => {
   });
 });
 
+/**
+ * Before the links panel, deliberately.
+ *
+ * These open the player's sheet with `world.characterToken`, and the links
+ * panel's own tests rotate that token -- which is what they are for. Run
+ * afterwards, this one's `player.goto` lands on a dead link, there is no
+ * Handouts tab, and the failure reads as a handouts bug rather than as test
+ * order. `the sheet's Start here` sits near the top of this file for the same
+ * reason.
+ */
+test.describe('handouts', () => {
+  test('are the GM’s until released, then they are on the player’s sheet', async ({ page }) => {
+    await page.goto(`/gm/${world.gmToken}`);
+    await page.locator('body').press('s');
+
+    // A tiny PDF, uploaded the way a GM would: pick a file, press Add.
+    await page.locator('#handout-file').setInputFiles({
+      name: 'the-letter.pdf',
+      mimeType: 'application/pdf',
+      buffer: Buffer.from('%PDF-1.4\n the letter \n%%EOF'),
+    });
+    await page.locator('#handout-title').fill('The letter');
+    await page.locator('.handouts__add').getByRole('button', { name: 'Add' }).click();
+
+    const row = page.locator('.handout', { hasText: 'The letter' });
+    await expect(row).toBeVisible();
+    await expect(row).toContainText('not released');
+
+    // The player cannot see it yet.
+    const player = await page.context().newPage();
+    await player.goto(`/c/${world.characterToken}`);
+    await player.waitForTimeout(800);
+    await expect(player.locator('.handout-link')).toHaveCount(0);
+
+    await row.getByRole('checkbox', { name: /Show The letter to the players/ }).check();
+    await expect(row).toContainText('with the party');
+
+    await player.reload();
+    // A tab of its own, which only exists because there is now a handout.
+    const tab = player.getByRole('button', { name: 'Handouts' });
+    await expect(tab).toBeVisible();
+    await tab.click();
+    await expect(player.locator('.handout-link', { hasText: 'The letter' })).toBeVisible();
+
+    // And the file itself comes back, as a PDF, behind the player's own link.
+    const href = await player.locator('.handout-link').first().getAttribute('href');
+    const got = await player.request.get(href);
+    expect(got.status()).toBe(200);
+    expect(got.headers()['content-type']).toBe('application/pdf');
+    expect(got.headers()['x-content-type-options']).toBe('nosniff');
+    await player.close();
+  });
+
+  test('taking one back removes it from the sheet again', async ({ page }) => {
+    await page.goto(`/gm/${world.gmToken}`);
+    await page.locator('body').press('s');
+    const row = page.locator('.handout', { hasText: 'The letter' });
+    await row.getByRole('checkbox', { name: /Show The letter to the players/ }).uncheck();
+    await expect(row).toContainText('not released');
+
+    const player = await page.context().newPage();
+    await player.goto(`/c/${world.characterToken}`);
+    await player.waitForTimeout(800);
+    await expect(player.getByRole('button', { name: 'Handouts' })).toBeHidden();
+    await player.close();
+  });
+});
+
 test.describe('the links panel', () => {
   test('shows a new link once, and never again', async ({ page }) => {
     await page.goto(`/gm/${world.gmToken}`);
@@ -1117,60 +1185,3 @@ test.describe('a built character’s sheet', () => {
   });
 });
 
-test.describe('handouts', () => {
-  test('are the GM’s until released, then they are on the player’s sheet', async ({ page }) => {
-    await page.goto(`/gm/${world.gmToken}`);
-    await page.locator('body').press('s');
-
-    // A tiny PDF, uploaded the way a GM would: pick a file, press Add.
-    await page.locator('#handout-file').setInputFiles({
-      name: 'the-letter.pdf',
-      mimeType: 'application/pdf',
-      buffer: Buffer.from('%PDF-1.4\n the letter \n%%EOF'),
-    });
-    await page.locator('#handout-title').fill('The letter');
-    await page.locator('.handouts__add').getByRole('button', { name: 'Add' }).click();
-
-    const row = page.locator('.handout', { hasText: 'The letter' });
-    await expect(row).toBeVisible();
-    await expect(row).toContainText('not released');
-
-    // The player cannot see it yet.
-    const player = await page.context().newPage();
-    await player.goto(`/c/${world.characterToken}`);
-    await player.waitForTimeout(800);
-    await expect(player.locator('.handout-link')).toHaveCount(0);
-
-    await row.getByRole('checkbox', { name: /Show The letter to the players/ }).check();
-    await expect(row).toContainText('with the party');
-
-    await player.reload();
-    // A tab of its own, which only exists because there is now a handout.
-    const tab = player.getByRole('button', { name: 'Handouts' });
-    await expect(tab).toBeVisible();
-    await tab.click();
-    await expect(player.locator('.handout-link', { hasText: 'The letter' })).toBeVisible();
-
-    // And the file itself comes back, as a PDF, behind the player's own link.
-    const href = await player.locator('.handout-link').first().getAttribute('href');
-    const got = await player.request.get(href);
-    expect(got.status()).toBe(200);
-    expect(got.headers()['content-type']).toBe('application/pdf');
-    expect(got.headers()['x-content-type-options']).toBe('nosniff');
-    await player.close();
-  });
-
-  test('taking one back removes it from the sheet again', async ({ page }) => {
-    await page.goto(`/gm/${world.gmToken}`);
-    await page.locator('body').press('s');
-    const row = page.locator('.handout', { hasText: 'The letter' });
-    await row.getByRole('checkbox', { name: /Show The letter to the players/ }).uncheck();
-    await expect(row).toContainText('not released');
-
-    const player = await page.context().newPage();
-    await player.goto(`/c/${world.characterToken}`);
-    await player.waitForTimeout(800);
-    await expect(player.getByRole('button', { name: 'Handouts' })).toBeHidden();
-    await player.close();
-  });
-});
