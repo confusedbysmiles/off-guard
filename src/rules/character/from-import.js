@@ -24,6 +24,7 @@ import {
   ATTRIBUTES, BOOST_LEVELS, BOOSTS_PER_LEVEL, boosted,
 } from './attributes.js';
 import { SKILLS } from './derive.js';
+import { damageAttribute } from './equipment.js';
 
 const RANK_ORDER = ['untrained', 'trained', 'expert', 'master', 'legendary'];
 const RANK_BY_BONUS = { 0: 'untrained', 2: 'trained', 4: 'expert', 6: 'master', 8: 'legendary' };
@@ -249,12 +250,30 @@ function armorFrom(pb, sheet, find) {
  * a bonus the sheet cannot explain but the player can see. The strike then
  * comes out at the number the file said.
  */
-function weaponsFrom(pb, sheet) {
+/**
+ * Weapons, from the catalogue where it knows them.
+ *
+ * It matters which, because a weapon the catalogue knows carries its *range*
+ * and its traits, and those are what decide whether a strike adds Strength or
+ * Dexterity. Built purely from the export -- which has neither -- every weapon
+ * looked like a melee weapon, so a composite longbow attacked with Strength.
+ * Gir Whir Clank's bow came out at +13 where Pathbuilder said +11, which is
+ * the Strength modifier in place of the Dexterity one, exactly.
+ *
+ * Pathbuilder's own name wins for display: a player calls it "+1 Striking War
+ * Flail". The catalogue supplies the mechanics underneath.
+ */
+function weaponsFrom(pb, sheet, find) {
   const byName = new Map((sheet?.strikes ?? []).map((strike) => [strike.name, strike]));
+  const mods = Object.fromEntries(ATTRIBUTES.map(
+    (a) => [a, Math.floor((Number(pb.abilities?.[a] ?? 10) - 10) / 2)],
+  ));
   return (pb.weapons ?? []).filter((w) => w?.name).map((w) => {
     const strike = byName.get(w.display) ?? byName.get(w.name) ?? null;
     const potency = whole(w.pot, 0, 4, 0);
+    const record = find ? find('equipment-weapon', w.name) : null;
     return {
+      ...(record ? { id: record.id } : {}),
       custom: {
         name: String(w.display || w.name),
         category: w.prof ?? 'simple',
@@ -264,9 +283,17 @@ function weaponsFrom(pb, sheet) {
       },
       potency,
       striking: String(w.str ?? '').includes('striking') ? 1 : 0,
-      damageBonus: whole(w.damageBonus, -20, 20, 0),
-      // Filled in by `reconcileStrikes`, which needs the derived sheet to know
-      // what the engine would have said without it.
+      // Pathbuilder's `damageBonus` is the *whole* flat bonus, attribute
+      // included; the build's field means whatever is left on top of the
+      // attribute. Writing one into the other added Strength twice, so a war
+      // flail read 2d10+8 where Pathbuilder said 2d10+4. Keep the remainder:
+      // whatever Pathbuilder counted that the engine cannot derive -- an item
+      // bonus, a feat -- survives, and nothing is counted twice.
+      damageBonus: whole(w.damageBonus, -20, 20, 0)
+        - damageAttribute(
+          { range: record?.range ?? null, traits: record?.traits ?? w.traits ?? [] },
+          mods,
+        ),
       other: 0,
       attack: Number(strike?.attack ?? w.attack ?? 0),
     };
@@ -392,7 +419,7 @@ export function buildFromImport(exported, { find = () => null, sheet = {} } = {}
       equipment: {
         armor: armorFrom(pb, sheet, find),
         shield: shieldEntryFrom(pb, find),
-        weapons: weaponsFrom(pb, sheet),
+        weapons: weaponsFrom(pb, sheet, find),
         gear: (sheet?.gear ?? []).map((row) => ({
           custom: { name: row.name },
           quantity: row.quantity ?? 1,
@@ -404,6 +431,13 @@ export function buildFromImport(exported, { find = () => null, sheet = {} } = {}
       // without it the derivation writes 0 over whatever the file said, and a
       // sorcerer arrives with their focus pool emptied.
       focusPool: Math.max(0, Math.trunc(Number(pb.focusPoints ?? 0)) || 0),
+      // Bonus hit points, which `hitPoints()` has always accepted and the
+      // build has never passed. Toughness is the per-level one and an ancestry
+      // or heritage grant is usually the flat one; for a level 5 automaton
+      // barbarian they are +5 and +2, and their absence is the seven points
+      // the player counted.
+      hpPerLevel: whole(pb.attributes?.bonushpPerLevel, -10, 10, 0),
+      hpBonus: whole(pb.attributes?.bonushp, -100, 100, 0),
     },
     notes,
   };

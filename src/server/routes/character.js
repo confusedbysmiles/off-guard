@@ -45,7 +45,7 @@ const asNumber = (value) => (value === undefined || value === '' ? null : Number
  * Steel Shield arrived as a custom entry worth +0 AC rather than the catalogue
  * one worth +2.
  */
-const ITEM_TYPE = { equipment: 'armor', shield: 'shield' };
+const ITEM_TYPE = { equipment: 'armor', shield: 'shield', 'equipment-weapon': 'weapon' };
 
 /** "Sorcerer" -> "sorcerer", which is how the catalogue spells a class trait. */
 const slugOfClass = (name) => String(name ?? '').trim().toLowerCase().replace(/\s+/g, '-') || null;

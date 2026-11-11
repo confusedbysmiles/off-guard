@@ -91,12 +91,14 @@ export function attackAttribute(weapon, mods = {}) {
  *
  * A rapier attacks with Dexterity and damages with Strength; a bow does neither
  * unless it is propulsive, which adds half a positive Strength modifier and all
- * of a negative one.
+ * of a negative one. A thrown weapon is ranged but still thrown by an arm, so
+ * it adds Strength in full -- the javelin that was missing it here only looked
+ * right on an imported sheet because a second bug was adding it back.
  */
 export function damageAttribute(weapon, mods = {}) {
   const str = Number(mods.str ?? 0);
   const ranged = Number.isFinite(weapon?.range) && weapon.range !== null;
-  if (!ranged) return str;
+  if (!ranged || has(weapon, 'thrown')) return str;
   if (has(weapon, 'propulsive')) return str >= 0 ? Math.floor(str / 2) : str;
   return 0;
 }

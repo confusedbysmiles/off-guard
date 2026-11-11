@@ -173,3 +173,73 @@ describe('applying it', () => {
     expect(after.json().character.sheet.name).toBe('Gir Whir Clank');
   });
 });
+
+/**
+ * Two numbers a player at the table checked against Pathbuilder by hand, and
+ * found wrong. Both were the same bug twice: the import wrote a value, and the
+ * build document derived over the top of it with something it had never been
+ * given. Asserting on the preview would have missed both -- the preview was
+ * right. These read the saved sheet.
+ */
+describe('the numbers the player checks', () => {
+  const byName = (strikes, name) => strikes.find((s) => s.name.includes(name));
+
+  it('attacks with a bow using Dexterity, not Strength', async () => {
+    // Gir's Strength is two points above his Dexterity, so a bow built
+    // without a range reads as a melee weapon and comes out exactly two
+    // points high: +13 where Pathbuilder says +11.
+    const sheet = await applied();
+    expect(byName(sheet.strikes, 'Composite Longbow').mod).toBe(11);
+    expect(byName(sheet.strikes, 'Javelin').mod).toBe(11);
+  });
+
+  it('still adds Strength for the melee weapon', async () => {
+    // The other half of the same fix: ranged must not become the new default.
+    const sheet = await applied();
+    expect(byName(sheet.strikes, 'War Flail').mod).toBe(14);
+  });
+
+  it('matches Pathbuilder’s own to-hit for every weapon it exported', async () => {
+    const sheet = await applied();
+    for (const weapon of EXPORT.build.weapons) {
+      const strike = sheet.strikes.find((s) => s.name.includes(weapon.name));
+      expect(strike, weapon.name).toBeTruthy();
+      expect(strike.mod, weapon.name).toBe(weapon.attack);
+    }
+  });
+
+  it('adds the attribute to damage once, not twice', async () => {
+    // Pathbuilder's `damageBonus` is the whole flat bonus; the build's field is
+    // only what sits on top of the attribute. Copying one into the other made
+    // the flail 2d10+8 against Pathbuilder's 2d10+4.
+    const sheet = await applied();
+    expect(byName(sheet.strikes, 'War Flail').damage).toBe('2d10+4');
+  });
+
+  it('gives a propulsive bow half Strength and a thrown javelin all of it', async () => {
+    const sheet = await applied();
+    expect(byName(sheet.strikes, 'Composite Longbow').damage).toBe('1d8+2');
+    expect(byName(sheet.strikes, 'Javelin').damage).toBe('1d6+4');
+  });
+
+  it('matches Pathbuilder’s own flat damage for every weapon it exported', async () => {
+    const sheet = await applied();
+    for (const weapon of EXPORT.build.weapons) {
+      const strike = sheet.strikes.find((s) => s.name.includes(weapon.name));
+      expect(strike.components.damageFlat, weapon.name).toBe(weapon.damageBonus);
+    }
+  });
+
+  it('counts the bonus hit points from Toughness and the heritage', async () => {
+    // bonushpPerLevel 1 x level 5, plus a flat bonushp 2: the seven points
+    // the sheet was short. Neither feature alone accounts for seven.
+    const sheet = await applied();
+    const { ancestryhp, classhp, bonushp, bonushpPerLevel } = EXPORT.build.attributes;
+    const conMod = Math.floor((EXPORT.build.abilities.con - 10) / 2);
+    const level = EXPORT.build.level;
+    expect(sheet.hp.max).toBe(
+      ancestryhp + (classhp + conMod) * level + bonushpPerLevel * level + bonushp,
+    );
+    expect(sheet.hp.max).toBe(90);
+  });
+});
