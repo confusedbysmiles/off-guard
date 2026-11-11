@@ -200,6 +200,37 @@ export function slotsFor(build = {}, {
     }
   }
 
+  /**
+   * Bonus feats, which sit outside the schedule entirely.
+   *
+   * A heritage or a feat can hand out a feat of a kind at a level the class
+   * never prints -- Versatile Human's general feat at level 1 -- or at one it
+   * does, in which case there are simply two. Each carries its own id from the
+   * import, so neither hides the other, and each gets a slot the player can
+   * change like any other.
+   */
+  for (const entry of build.bonusFeats ?? []) {
+    const featLevel = Number(entry?.level ?? 1);
+    if (!entry?.id || featLevel > horizon) continue;
+    const [key, , label] = FEAT_KINDS.find(([, kind]) => kind === entry.kind) ?? [];
+    if (!key) continue;
+    slots.push({
+      id: entry.id, level: featLevel, kind: entry.kind, label: `${label} (bonus)`,
+      section: featLevel,
+      bonus: true,
+      /** What granted it, so the builder can say why this slot is here. */
+      source: entry.source ?? null,
+      filled: build.feats?.[entry.id] ?? null,
+      filter: {
+        kind: 'feat',
+        category: key,
+        ...(key === 'class' && klass ? { trait: slugOf(klass.name) } : {}),
+        ...(key === 'ancestry' && ancestry ? { trait: slugOf(ancestry.name) } : {}),
+        maxLevel: featLevel,
+      },
+    });
+  }
+
   for (const increaseLevel of klass?.skillIncreaseLevels ?? []) {
     if (increaseLevel > horizon) continue;
     slots.push({

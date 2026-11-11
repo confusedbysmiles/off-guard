@@ -873,7 +873,10 @@ export function mount(root, store, { onImport = () => {} } = {}) {
         el('span', { class: 'feats__name' },
           slot.filledName ?? 'Not chosen'),
         el('span', { class: 'faint feats__meta' },
-          `${KIND_LABEL[slot.kind]} · level ${slot.level}`)))));
+          // The slot's own label where it has one, so a bonus feat says it is
+          // one -- otherwise a character with a granted general feat at the
+          // same level as their own shows two identical lines.
+          `${slot.label ?? KIND_LABEL[slot.kind]} · level ${slot.level}`)))));
   }
 
   renderFeats(null);

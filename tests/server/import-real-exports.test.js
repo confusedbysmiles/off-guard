@@ -33,6 +33,18 @@ const preview = (json) => app
   .inject({ method: 'POST', url: `/api/c/${token()}/import/preview`, payload: { json } })
   .then((res) => res.json());
 
+/** The builder's slots after an import, which is where feats are shown. */
+async function slotsAfter(json) {
+  const p = await preview(json);
+  await app.inject({
+    method: 'POST',
+    url: `/api/c/${token()}/import/apply`,
+    payload: { sheet: p.sheet, changes: p.changes, build: p.builder.build },
+  });
+  const res = await app.inject({ method: 'GET', url: `/api/c/${token()}/builder` });
+  return res.json().slots;
+}
+
 /** Import the way the dialog does, and read the sheet that results. */
 async function applied(json) {
   const p = await preview(json);
@@ -112,6 +124,40 @@ describe('a ranger with a familiar', () => {
       'classFeat-1': 'feat:monster-hunter',
       'ancestryFeat-1': 'feat:devil-s-advocate',
     });
+  });
+
+  it('gives the heritage’s bonus general feat a slot of its own', async () => {
+    // Versatile Human hands out a general feat at level 1, and general feat
+    // slots are at 3, 7 and 11. Filed under `generalFeat-1` it had no slot to
+    // appear in, so the feat was in the build and nowhere on the screen.
+    const { builder } = await preview(FILE);
+    expect(builder.build.feats['generalFeat-bonus-1']).toBe('feat:pet');
+    expect(builder.build.bonusFeats).toContainEqual(
+      expect.objectContaining({ id: 'generalFeat-bonus-1', kind: 'generalFeat', level: 1 }),
+    );
+
+    const slots = await slotsAfter(FILE);
+    const slot = slots.find((s) => s.id === 'generalFeat-bonus-1');
+    expect(slot).toBeTruthy();
+    expect(slot.filled).toBe('feat:pet');
+    expect(slot.label).toMatch(/bonus/i);
+    // And nothing in the build is left without somewhere to show it.
+    const ids = new Set(slots.map((s) => s.id));
+    expect(Object.keys(builder.build.feats).filter((k) => !ids.has(k))).toEqual([]);
+  });
+
+  it('does not let a granted feat overwrite one the player chose', async () => {
+    // General Training is an ancestry feat that grants a general feat, so a
+    // human can hold two general feats at the same level. Keyed by kind and
+    // level alone, the granted one landed on top of the chosen one and the
+    // chosen one was gone, with nothing said about it.
+    const json = structuredClone(FILE);
+    json.build.feats.push(['Fleet', null, 'General Feat', 3, 'General Feat 3', 'standardChoice', null]);
+    json.build.feats.push(['Toughness', null, 'General Feat', 3, 'General Traininggeneral training', 'childChoice', 'Ancestry Feat']);
+
+    const { builder } = await preview(json);
+    expect(builder.build.feats['generalFeat-3']).toBe('feat:fleet');
+    expect(builder.build.feats['generalFeat-bonus-3']).toBe('feat:toughness');
   });
 
   it('imports a character whose gear, weapons and armour are all empty', async () => {

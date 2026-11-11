@@ -337,11 +337,29 @@ const FEAT_KIND_BY_TYPE = new Map([
   ['general feat', 'generalFeat'],
 ]);
 
+/**
+ * Feats, and the bonus ones that do not fit the schedule.
+ *
+ * A slot id is `<kind>-<level>`, which assumes a character has at most one
+ * feat of a kind at a level. Bonus feats break that assumption: Versatile
+ * Human hands out a general feat at level 1, where no general slot exists, and
+ * the General Training ancestry feat hands out another at whatever level it
+ * was taken -- which is a level that usually *does* have a general slot. The
+ * first kind vanished; the second overwrote the feat the player had chosen
+ * themselves, with nothing said about it either way.
+ *
+ * Pathbuilder marks both: the granted feat is a `childChoice` and names the
+ * choice that granted it. Those get an id of their own and a slot of their
+ * own, so a bonus feat is never confused with a scheduled one.
+ */
 function featsFrom(pb, look) {
   const feats = {};
+  const bonus = [];
+  const taken = new Set();
+
   for (const row of pb.feats ?? []) {
     if (!Array.isArray(row)) continue;
-    const [name, , type, level] = row;
+    const [name, , type, level, , choice, parent] = row;
     // Four fields and no slot name: awarded, not chosen.
     if (row.length < 5) continue;
 
@@ -353,9 +371,24 @@ function featsFrom(pb, look) {
 
     const found = look('feat', name);
     if (!found) continue;                // `look` has already said so.
+
+    if (String(choice ?? '') === 'childChoice') {
+      // A second bonus feat of the same kind at the same level is rare but
+      // possible -- General Training is repeatable -- so the id carries an
+      // ordinal rather than letting the second overwrite the first.
+      const base = `${kind}-bonus-${featLevel}`;
+      let id = base;
+      for (let n = 2; taken.has(id); n += 1) id = `${base}-${n}`;
+      taken.add(id);
+      bonus.push({ id, kind, level: featLevel, source: String(parent ?? '').trim() || null });
+      feats[id] = found.id;
+      continue;
+    }
+
+    taken.add(`${kind}-${featLevel}`);
     feats[`${kind}-${featLevel}`] = found.id;
   }
-  return feats;
+  return { feats, bonus };
 }
 
 export function buildFromImport(exported, { find = () => null, sheet = {} } = {}) {
@@ -389,6 +422,7 @@ export function buildFromImport(exported, { find = () => null, sheet = {} } = {}
   });
 
   const skills = solveSkills(pb.proficiencies ?? {}, { background, klass, level });
+  const imported = featsFrom(pb, look);
   if (skills.unplaced) {
     notes.push(
       `${skills.unplaced} skill increase${skills.unplaced === 1 ? '' : 's'} could not be placed: `
@@ -415,7 +449,8 @@ export function buildFromImport(exported, { find = () => null, sheet = {} } = {}
         increases: skills.increases,
         lores: loresFrom(pb.lores, background),
       },
-      feats: featsFrom(pb, look),
+      feats: imported.feats,
+      bonusFeats: imported.bonus,
       equipment: {
         armor: armorFrom(pb, sheet, find),
         shield: shieldEntryFrom(pb, find),
