@@ -105,6 +105,33 @@ export function proficienciesAt(progression, level) {
 }
 
 /**
+ * Ranks an import stated, laid over the ones the class progression prints.
+ *
+ * A floor, never a ceiling: `higher` means a rank the rules grant cannot be
+ * reduced by a file, only raised to meet one. That matters because the
+ * progression table can only describe advancement that covers a whole
+ * category, and several classes advance a subset -- a rogue's weapons, a
+ * ranger's Reflex save -- which the table reads as no advancement at all.
+ */
+export function withStatedRanks(derived, stated = null) {
+  if (!stated || typeof stated !== 'object') return derived;
+  const merged = {
+    ...derived,
+    saves: { ...derived.saves },
+    attacks: { ...derived.attacks },
+    defenses: { ...derived.defenses },
+  };
+  if (stated.perception) merged.perception = higher(merged.perception, stated.perception);
+  if (stated.classDc) merged.classDc = higher(merged.classDc, stated.classDc);
+  for (const group of ['saves', 'attacks', 'defenses']) {
+    for (const [key, rank] of Object.entries(stated[group] ?? {})) {
+      merged[group][key] = higher(merged[group][key], rank);
+    }
+  }
+  return merged;
+}
+
+/**
  * Skill ranks.
  *
  * Trained skills come from three places that can overlap -- the background, the
@@ -305,7 +332,9 @@ export function deriveCharacter(build = {}, {
     level,
   }));
 
-  const proficiencies = proficienciesAt(progression, level);
+  const proficiencies = withStatedRanks(
+    proficienciesAt(progression, level), build.proficiencies,
+  );
 
   const skills = skillRanks(build, {
     klass, background, intMod: mods.int, level,

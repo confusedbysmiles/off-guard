@@ -230,6 +230,17 @@ describe('the numbers the player checks', () => {
     }
   });
 
+  it('counts the Speed the character bought with feats', async () => {
+    // Fleet and Furious Footfalls are +5 each. Pathbuilder totals them into
+    // `speedBonus`, and the derivation used to write the bare ancestry Speed
+    // over the top, so a barbarian who had paid for both still ran at 25.
+    const sheet = await applied();
+    const { speed, speedBonus } = EXPORT.build.attributes;
+    expect(speedBonus).toBe(10);
+    expect(sheet.speed).toBe(speed + speedBonus);
+    expect(sheet.speed).toBe(35);
+  });
+
   it('counts the bonus hit points from Toughness and the heritage', async () => {
     // bonushpPerLevel 1 x level 5, plus a flat bonushp 2: the seven points
     // the sheet was short. Neither feature alone accounts for seven.

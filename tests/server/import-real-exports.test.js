@@ -110,6 +110,40 @@ describe('an alchemist with a shield and a formula book', () => {
   });
 });
 
+describe('proficiency ranks the class table cannot describe', () => {
+  // The progression table only knows advancement that covers a whole
+  // category. Several classes advance a subset -- a rogue's Weapon Tricks
+  // raises simple and rogue weapons but not martial, a ranger's Evasion
+  // raises Reflex at 7 -- and the table reads both as no advancement at all.
+  // Pathbuilder has already resolved them, so the file's ranks are the ones
+  // to trust.
+  it('gives a rogue the weapon proficiency the file states', async () => {
+    const FILE = load('rogue-6');
+    const sheet = await applied(FILE);
+    for (const weapon of FILE.build.weapons) {
+      const strike = sheet.strikes.find((s) => s.name.includes(weapon.name));
+      expect(strike.mod, weapon.name).toBe(weapon.attack);
+    }
+    expect(sheet.strikes[0].components.rank).toBe('expert');
+  });
+
+  it('gives a ranger the save the file states', async () => {
+    const sheet = await applied(load('ranger-8-familiar'));
+    expect(sheet.saves.reflex.rank).toBe('master');
+  });
+
+  it('never lowers a rank the class grants to match the file', async () => {
+    // A floor, not a replacement. The barbarian's own ranks must survive a
+    // file that happens to state something lower.
+    const FILE = structuredClone(load('barbarian-5-automaton'));
+    FILE.build.proficiencies.martial = 0;      // untrained, per the file
+    FILE.build.proficiencies.fortitude = 0;
+    const sheet = await applied(FILE);
+    expect(sheet.strikes[0].components.rank).toBe('expert');
+    expect(sheet.saves.fortitude.rank).toBe('expert');
+  });
+});
+
 describe('a ranger with a familiar', () => {
   const FILE = load('ranger-8-familiar');
 

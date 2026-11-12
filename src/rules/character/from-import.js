@@ -352,6 +352,51 @@ const FEAT_KIND_BY_TYPE = new Map([
  * choice that granted it. Those get an id of their own and a slot of their
  * own, so a bonus feat is never confused with a scheduled one.
  */
+/**
+ * The proficiency ranks the file states, kept so the build can honour them.
+ *
+ * The class progression table is good, but it only knows advancement that
+ * applies to a whole category. Real classes are fussier: a rogue's Weapon
+ * Tricks raises simple and *rogue* weapons, not martial ones, and a ranger's
+ * Evasion raises Reflex at 7. The table has no way to say either, so a rogue
+ * stayed trained in martial weapons and every strike came out two low.
+ *
+ * Pathbuilder has already resolved all of that into a flat rank per category,
+ * so those are the ranks to trust. They are applied as a floor rather than a
+ * replacement: a rank the rules grant is never quietly reduced to match a
+ * file, only raised to meet it, and anything still disagreeing afterwards
+ * shows up in the import's own differences list.
+ */
+const RANK_FOR = { 0: 'untrained', 2: 'trained', 4: 'expert', 6: 'master', 8: 'legendary' };
+function proficienciesFrom(pb) {
+  const p = pb.proficiencies ?? {};
+  const rank = (v) => RANK_FOR[Number(v)] ?? null;
+  const group = (pairs) => {
+    const out = {};
+    for (const [key, source] of pairs) {
+      const r = rank(p[source]);
+      if (r) out[key] = r;
+    }
+    return out;
+  };
+  const stated = {
+    saves: group([['fortitude', 'fortitude'], ['reflex', 'reflex'], ['will', 'will']]),
+    attacks: group([
+      ['unarmed', 'unarmed'], ['simple', 'simple'],
+      ['martial', 'martial'], ['advanced', 'advanced'],
+    ]),
+    defenses: group([
+      ['unarmored', 'unarmored'], ['light', 'light'],
+      ['medium', 'medium'], ['heavy', 'heavy'],
+    ]),
+  };
+  const perception = rank(p.perception);
+  if (perception) stated.perception = perception;
+  const classDc = rank(p.classDC);
+  if (classDc) stated.classDc = classDc;
+  return stated;
+}
+
 function featsFrom(pb, look) {
   const feats = {};
   const bonus = [];
@@ -423,6 +468,7 @@ export function buildFromImport(exported, { find = () => null, sheet = {} } = {}
 
   const skills = solveSkills(pb.proficiencies ?? {}, { background, klass, level });
   const imported = featsFrom(pb, look);
+  const statedRanks = proficienciesFrom(pb);
   if (skills.unplaced) {
     notes.push(
       `${skills.unplaced} skill increase${skills.unplaced === 1 ? '' : 's'} could not be placed: `
@@ -449,6 +495,7 @@ export function buildFromImport(exported, { find = () => null, sheet = {} } = {}
         increases: skills.increases,
         lores: loresFrom(pb.lores, background),
       },
+      proficiencies: statedRanks,
       feats: imported.feats,
       bonusFeats: imported.bonus,
       equipment: {
@@ -473,6 +520,12 @@ export function buildFromImport(exported, { find = () => null, sheet = {} } = {}
       // the player counted.
       hpPerLevel: whole(pb.attributes?.bonushpPerLevel, -10, 10, 0),
       hpBonus: whole(pb.attributes?.bonushp, -100, 100, 0),
+      // Everything added to the ancestry's base Speed. Pathbuilder totals it
+      // for us -- Fleet and Furious Footfalls are +5 each and arrive as a
+      // single 10 -- and without it the derivation writes the bare ancestry
+      // Speed over the top, which is how a barbarian who had bought twice
+      // kept turning up at 25 feet.
+      speedBonus: whole(pb.attributes?.speedBonus, -50, 50, 0),
     },
     notes,
   };
