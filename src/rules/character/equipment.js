@@ -47,13 +47,16 @@ export function weaponSpecializationDamage(rank, kind) {
  * first -- so the absent case is `null` and never conflated with zero.
  */
 export function armorClassFrom({
-  armor = null, worn = null, proficiencies = {}, dexMod = 0, level = 1,
+  armor = null, worn = null, proficiencies = {}, dexMod = 0, strMod = 0, level = 1,
 } = {}) {
   // Nothing worn is not an absence of rules: unarmoured defence has its own
   // proficiency, and for most classes it is trained from level 1.
   const category = armor?.category ?? 'unarmored';
   const rank = proficiencies.defenses?.[category] ?? 'untrained';
   const potency = Number(worn?.potency ?? 0);
+  const strengthRequired = armor?.strength ?? null;
+  const meetsStrength = strengthRequired !== null
+    && Number(strMod) >= Number(strengthRequired);
 
   return {
     rank,
@@ -61,14 +64,20 @@ export function armorClassFrom({
     itemBonus: Number(armor?.acBonus ?? 0) + potency,
     category,
     checkPenalty: Number(armor?.checkPenalty ?? 0),
-    speedPenalty: Number(armor?.speedPenalty ?? 0),
     /**
-     * Armour asks for a Strength modifier and stops penalising you at it. Not
-     * applied automatically -- the penalty is to skills and Speed rather than
-     * to AC -- but reported, because a heavily armoured character who never
-     * met the requirement is carrying a penalty they may not know about.
+     * The Speed penalty actually paid.
+     *
+     * Armour asks for a Strength modifier, and a wearer who meets it reduces
+     * the penalty by 5 feet, to a floor of none. This used to be reported and
+     * left for somebody else to apply, which was harmless only for as long as
+     * imported armour failed to resolve and carried no penalty at all. Once it
+     * resolved, a barbarian strong enough to shrug off his hide armour was
+     * being slowed by it.
      */
+    speedPenalty: Math.min(0, Number(armor?.speedPenalty ?? 0) + (meetsStrength ? 5 : 0)),
+    /** Reported either way: a wearer who does not meet it should know. */
     strengthRequired: armor?.strength ?? null,
+    meetsStrength,
   };
 }
 

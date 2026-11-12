@@ -361,6 +361,7 @@ export function deriveCharacter(build = {}, {
     worn,
     proficiencies,
     dexMod: mods.dex,
+    strMod: mods.str,
     level,
   });
 

@@ -214,9 +214,26 @@ describe('equipment through the whole derivation', () => {
     expect(sheet.ac).toEqual({ rank: 'trained', dexCap: 0, itemBonus: 7 });
   });
 
-  it('applies the armour’s speed penalty', () => {
-    // Dwarf 20, full plate -10.
-    expect(deriveCharacter(build, context).sheet.speed).toBe(10);
+  it('applies the armour’s speed penalty, less what Strength pays off', () => {
+    // Dwarf 20, full plate -10, and a Strength modifier of +4 that meets the
+    // armour's own Strength of 4 -- which reduces the penalty by 5. This
+    // fighter is built Strength-first at every boost, so they meet it.
+    expect(deriveCharacter(build, context).sheet.speed).toBe(15);
+  });
+
+  it('charges the whole penalty to someone not strong enough for the armour', () => {
+    // The same plate on someone who never boosted Strength: the threshold is
+    // unmet, so the full -10 stands.
+    const weak = {
+      ...build,
+      attributes: {
+        ancestry: ['cha'], background: ['wis', 'int'], class: 'dex',
+        1: ['cha', 'dex', 'con', 'wis'], 5: ['cha', 'dex', 'con', 'wis'],
+      },
+    };
+    const { sheet } = deriveCharacter(weak, context);
+    expect(sheet.abilities.str).toBeLessThan(4);
+    expect(sheet.speed).toBe(10);
   });
 
   it('puts strikes on the sheet in the shape an import produces', () => {

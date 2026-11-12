@@ -230,6 +230,27 @@ describe('the numbers the player checks', () => {
     }
   });
 
+  it('resolves armour the file names without the catalogue’s “Armor”', async () => {
+    // Pathbuilder calls it "Hide"; the catalogue calls it "Hide Armor". The
+    // miss was silent -- armour that fails to resolve becomes a custom entry
+    // with no Dex cap and no penalties -- so the only evidence was a Dex cap
+    // that quietly went missing.
+    expect(EXPORT.build.armor[0].name).toBe('Hide');
+    const { builder } = (await post('/import/preview', { json: EXPORT })).json();
+    expect(builder.build.equipment.armor).toMatchObject({ id: 'equipment:hide-armor' });
+
+    const sheet = await applied();
+    expect(sheet.ac.dexCap).toBe(2);
+  });
+
+  it('does not slow a barbarian strong enough for his own armour', async () => {
+    // Hide costs -5 Speed and asks for a Strength modifier of 2; Gir has 4.
+    // Resolving the armour at all is what first exposed this: before that it
+    // carried no penalty, so nothing had to be paid off.
+    const sheet = await applied();
+    expect(sheet.speed).toBe(35);
+  });
+
   it('counts the Speed the character bought with feats', async () => {
     // Fleet and Furious Footfalls are +5 each. Pathbuilder totals them into
     // `speedBonus`, and the derivation used to write the bare ancestry Speed

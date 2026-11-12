@@ -93,6 +93,27 @@ function byName(options, kind, name, { trait = null } = {}) {
     if (byTrait.length === 1) return options.get(byTrait[0].id);
   }
 
+  /**
+   * The category word the catalogue prints and the file leaves off.
+   *
+   * Pathbuilder calls it "Hide"; the catalogue calls it "Hide Armor". That is
+   * the same disagreement as the parenthetical one above -- an annotation on
+   * a name, not a different item -- and it matters more than it looks, because
+   * armour that fails to resolve falls back to a custom entry with no Dex cap,
+   * no check penalty and no Speed penalty, quietly.
+   *
+   * Only for armour, and only when the answer is unique. Of the 21 armour
+   * records whose name ends in " Armor", all 21 bare forms are unique and
+   * none is itself the name of another record, so there is nothing here for
+   * this to get wrong.
+   */
+  if (itemType === 'armor' && !/\s+armor$/.test(needle)) {
+    const withWord = `${needle} armor`;
+    const named = options.search({ kind: null, itemType, q: withWord, limit: 50 })
+      .rows.filter((row) => row.name.toLowerCase() === withWord);
+    if (named.length === 1) return options.get(named[0].id);
+  }
+
   // The other direction: drop what Pathbuilder added and ask again, exactly.
   const bare = needle.replace(/\s*\([^()]*\)\s*$/, '').trim();
   if (bare && bare !== needle) {
