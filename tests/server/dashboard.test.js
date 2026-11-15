@@ -113,6 +113,68 @@ describe('the party panel', () => {
     expect(kestrel.hp).toEqual({ current: 58, max: 73, temp: 0 });
   });
 
+  it('shows what the player is looking at, effects and conditions included', async () => {
+    const scope = resolveScope(db, world.gmToken);
+    applyPatch(db, scope, world.tuesday.characters.kestrel.id, [
+      { path: 'level', value: 5 },
+      { path: 'abilities', value: { str: 4, dex: 2, con: 3, int: 0, wis: 1, cha: -1 } },
+      { path: 'ac', value: { rank: 'expert', itemBonus: 6, dexCap: 1 } },
+      { path: 'saves', value: { fortitude: { rank: 'master' }, reflex: { rank: 'expert' }, will: { rank: 'expert' } } },
+      { path: 'hp', value: { max: 73, current: 58 } },
+    ], { by: 'gm', campaignId: tuesday() });
+
+    const plain = (await gm(`/campaigns/${tuesday()}/party`)).json()
+      .characters.find((c) => c.name === 'Kestrel');
+    expect(plain.ac).toBe(26);
+    expect(plain.effects).toBeNull();
+
+    // A condition the player set, and an effect the GM pushed.
+    applyPatch(db, scope, world.tuesday.characters.kestrel.id, [
+      { path: 'conditions', value: [{ slug: 'frightened', value: 2 }, { slug: 'drained', value: 3 }] },
+      {
+        path: 'effects',
+        value: [{
+          id: 'e1',
+          name: 'Heroism',
+          active: true,
+          modifiers: [{ target: 'all', type: 'status', value: 1 }],
+        }],
+      },
+    ], { by: 'gm', campaignId: tuesday() });
+
+    const body = (await gm(`/campaigns/${tuesday()}/party`)).json();
+    const kestrel = body.characters.find((c) => c.name === 'Kestrel');
+
+    // Heroism's +1 and frightened's -2 are both status, so they settle to -1.
+    expect(kestrel.ac).toBe(25);
+    expect(kestrel.saves.will).toBe(plain.saves.will - 1);
+    /**
+     * Fortitude carries drained as well, and the two penalties do not add:
+     * both are status, so only the worse one is in play. Drained 3 beats
+     * frightened 2, and Heroism's +1 comes off that -- which is the whole
+     * stacking rule, visible in one number.
+     */
+    expect(kestrel.saves.fortitude).toBe(plain.saves.fortitude - 2);
+    // "Hit Points equal to your level (minimum 1) times the drained value."
+    expect(kestrel.hp.max).toBe(73 - 15);
+
+    expect(kestrel.effects.names).toEqual(['Heroism', 'frightened 2', 'drained 3']);
+    expect(kestrel.effects.before.ac).toBe(26);
+    expect(kestrel.effects.before['hp.max']).toBe(73);
+
+    // And the other way round: a drained the frightened outweighs does
+    // nothing to the save, while still costing the hit points.
+    applyPatch(db, scope, world.tuesday.characters.kestrel.id, [
+      { path: 'conditions', value: [{ slug: 'frightened', value: 2 }, { slug: 'drained', value: 1 }] },
+    ], { by: 'gm', campaignId: tuesday() });
+    const lighter = (await gm(`/campaigns/${tuesday()}/party`)).json()
+      .characters.find((c) => c.name === 'Kestrel');
+    // Frightened 2 is the worst status penalty on Fortitude now, so the save
+    // lands where every other one does: -2 for the fear, +1 for Heroism.
+    expect(lighter.saves.fortitude).toBe(plain.saves.fortitude - 1);
+    expect(lighter.hp.max).toBe(73 - 5);
+  });
+
   it('flags a sheet whose level trails the party', async () => {
     const body = (await gm(`/campaigns/${tuesday()}/party`)).json();
     const behind = body.characters.filter((c) => c.flags.some((f) => f.kind === 'behind'));

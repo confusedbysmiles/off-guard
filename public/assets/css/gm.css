@@ -1490,3 +1490,40 @@
 
 /* Said once, above the list, so each row can carry only what tells it apart. */
 .handouts__shared { margin-top: var(--sp-2); font-size: var(--step--1); }
+
+
+/* --- Effects on the party panel ---------------------------------------------
+ *
+ * A pushed effect is the table's, not a fault, so it is an accent pill rather
+ * than the warning colour conditions use.
+ */
+
+.pill--off { opacity: 0.5; }
+
+.pill__remove {
+  display: inline-flex;
+  align-items: center;
+  margin-left: var(--sp-1);
+  padding: 0;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+}
+.pill__remove .icon { width: 0.85em; height: 0.85em; }
+
+/* A number something is currently moving. Underlined rather than only
+   coloured, so it does not depend on colour to say so, and the old value is in
+   the title. */
+.pc__stat--affected strong {
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+.push-effect__who {
+  margin: 0;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.push-effect__pc { display: flex; align-items: center; gap: var(--sp-2); padding: 2px 0; }

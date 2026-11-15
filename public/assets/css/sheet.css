@@ -273,6 +273,40 @@
 /* A Lore's modifier sits in a row beside its own name and rank, not in a
    column of statistics, so it is the size of the text around it rather than
    the size of the numbers on the skills card. */
+/* --- Effects -----------------------------------------------------------------
+ *
+ * A row per effect, with its modifiers stacked under its name. An effect that
+ * is off stays on the list and stops counting, because the next fight wants it
+ * back and retyping it is the thing that stops people using this at all.
+ */
+
+.effect__toggle { display: inline-flex; align-items: center; }
+.effect--off { opacity: 0.55; }
+
+.effect__modifier {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+.effect__modifier .rank-select { flex: 1 1 8rem; min-width: 0; }
+.effect__modifier .input--number { flex: 0 0 5rem; }
+
+.effect__tools { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.effect__note { flex: 1 1 12rem; min-width: 0; }
+
+/* What a strike comes to with the effects on it, beside the fields that hold
+   what it is without them. */
+.strike__effect {
+  margin: var(--sp-1) 0 0;
+  font-size: var(--step--1);
+  color: var(--accent-ink, var(--ink-dim));
+}
+
+/* A number an effect moved. Marked rather than recoloured alone, so it does
+   not rely on colour to say so -- the working line names the effect. */
+.is-affected { font-style: italic; }
+
 .lore__value {
   flex: 0 0 auto;
   min-width: 3ch;

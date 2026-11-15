@@ -18,6 +18,7 @@ import { createNotices } from '../lib/notices.js';
 import { api } from './api.js';
 import * as store from './state.js';
 import { createActions } from './actions.js';
+import { displayName } from '../../../engine/shared/character-name.js';
 import { partyPanel } from './views/party.js';
 import { applyAccents, applyCurrentAccent, overviewPanel } from './views/overview.js';
 import { builderView } from './views/builder.js';
@@ -126,6 +127,84 @@ function showPersistentDamage(combatant) {
     },
   }));
   dialog.querySelector('#pd-formula')?.focus();
+}
+
+/**
+ * Put an effect on some of the party.
+ *
+ * One modifier, because that is what a GM pushes mid-fight -- Bless is +1
+ * status to attacks and nothing else. An effect that needs three modifiers is
+ * one the player builds on their own sheet, where there is room for it.
+ */
+const PUSH_TARGETS = [
+  ['all', 'Every check and DC'],
+  ['ac', 'Armour Class'],
+  ['perception', 'Perception'],
+  ['saves', 'All saves'],
+  ['skills', 'All skills'],
+  ['strike.attack', 'Attack rolls'],
+  ['strike.damage', 'Damage rolls'],
+  ['speed', 'Speed'],
+];
+
+function showPushEffect(characters) {
+  const field = (label, control) => el('label', { class: 'field' },
+    el('span', { class: 'field__label' }, label), control);
+
+  const name = el('input', { class: 'input', type: 'text', placeholder: 'Bless', required: true });
+  const target = el('select', { class: 'rank-select' },
+    ...PUSH_TARGETS.map(([key, text]) => el('option', { value: key }, text)));
+  const type = el('select', { class: 'rank-select' },
+    ...[['status', 'Status'], ['circumstance', 'Circumstance'], ['item', 'Item'], ['untyped', 'Untyped']]
+      .map(([key, text]) => el('option', { value: key }, text)));
+  const value = el('input', {
+    class: 'input input--number', type: 'number', inputmode: 'numeric', value: '1', required: true,
+  });
+
+  const who = characters.map((character) => ({
+    character,
+    box: el('input', { type: 'checkbox', checked: true }),
+  }));
+
+  const form = el('form', { class: 'stack-md' },
+    el('div', { class: 'grid grid--auto' },
+      field('Name', name),
+      field('What it changes', target),
+      field('Kind', type),
+      field('By how much', value)),
+    el('fieldset', { class: 'push-effect__who' },
+      el('legend', {}, 'Who gets it'),
+      ...who.map(({ character, box }) => el('label', { class: 'push-effect__pc' },
+        box, el('span', {}, displayName(character))))),
+    el('button', { class: 'btn btn--primary', type: 'submit' },
+      'Push it'));
+
+  const dialog = showDialog('push-effect-dialog',
+    el('h2', {}, 'Push an effect'),
+    el('p', { class: 'muted' },
+      'It lands on their sheet straight away, and they can turn it off '
+      + 'themselves. Nothing is written to the numbers it changes, so taking '
+      + 'it away puts them back exactly.'),
+    form);
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const chosen = who.filter(({ box }) => box.checked).map(({ character }) => character);
+    if (!chosen.length) return;
+    actions.pushEffect(chosen, {
+      id: `g${Date.now().toString(36)}`,
+      name: name.value.trim() || 'Effect',
+      active: true,
+      modifiers: [{
+        target: target.value,
+        type: type.value,
+        value: Number(value.value) || 0,
+      }],
+    });
+    dialog.close();
+  });
+
+  name.focus();
 }
 
 const showPrompts = (prompts) => showDialog('prompt-dialog',
@@ -308,7 +387,8 @@ function renderNow() {
     return;
   }
 
-  main.replaceChildren(el('div', { class: 'panels' }, partyPanel(state.party)));
+  main.replaceChildren(el('div', { class: 'panels' },
+    partyPanel(state.party, { actions, onPush: showPushEffect })));
 }
 
 /** Dragging a row is how a tie gets broken; the rules give no tiebreak. */

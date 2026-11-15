@@ -6,7 +6,7 @@
  * the player is looking at, and the only way to guarantee that is to run the
  * same arithmetic.
  */
-import { armorClass, statistic } from '../rules/index.js';
+import { armorClass, effectsOn, statistic } from '../rules/index.js';
 import { listCharacters } from './store/characters.js';
 import { campaignFor } from './scope.js';
 import { getCampaign } from './store/campaigns.js';
@@ -37,6 +37,24 @@ function describeCharacter(row, { partyLevel, now }) {
   const level = Number(sheet.level ?? row.level ?? 1);
   const mod = (key) => Number(read(sheet, `abilities.${key}`, 0));
 
+  /**
+   * What is in play on this character right now.
+   *
+   * The panel shows what the player is looking at, which means the effects and
+   * conditions have to be folded in here too -- a GM reading a Will save of
+   * +12 off this panel while the player reads +10 off their phone is the
+   * failure the whole "computed, never stored" rule exists to prevent.
+   */
+  const effects = effectsOn(sheet);
+  const own = Array.isArray(sheet.effects) ? sheet.effects : [];
+  const before = {};
+  const withEffects = (target, result) => {
+    const { total } = effects.on(target);
+    if (!total) return result.total;
+    before[target] = result.total;
+    return result.total + total;
+  };
+
   const stat = (attribute, path) => statistic({
     attributeMod: mod(attribute),
     rank: read(sheet, `${path}.rank`, 'untrained'),
@@ -59,6 +77,13 @@ function describeCharacter(row, { partyLevel, now }) {
   });
 
   const hpMax = Number(read(sheet, 'hp.max', 0));
+  /**
+   * Drained lowers the maximum, not just the current total, so a drained
+   * character's bar is shorter rather than merely emptier. Floored at zero:
+   * a maximum below it is not a thing the panel can draw.
+   */
+  const effectiveHpMax = Math.max(0, hpMax + effects.hpMaxPenalty);
+  if (effectiveHpMax !== hpMax) before['hp.max'] = hpMax;
   const hpCurrent = read(sheet, 'hp.current', null);
   const updatedAt = row.updatedAt ? new Date(`${row.updatedAt.replace(' ', 'T')}Z`) : null;
   const daysSinceEdit = updatedAt ? Math.floor((now - updatedAt) / 86_400_000) : null;
@@ -73,17 +98,43 @@ function describeCharacter(row, { partyLevel, now }) {
     playerName: sheet.playerName || row.playerName || '',
     class: sheet.class ?? '',
     level,
-    ac: ac.total,
-    hp: { current: hpCurrent === null ? hpMax : Number(hpCurrent), max: hpMax, temp: Number(read(sheet, 'hp.temp', 0)) },
-    perception: stat('wis', 'perception').total,
+    ac: withEffects('ac', ac),
+    hp: {
+      current: hpCurrent === null ? effectiveHpMax : Number(hpCurrent),
+      max: effectiveHpMax,
+      temp: Number(read(sheet, 'hp.temp', 0)),
+    },
+    perception: withEffects('perception', stat('wis', 'perception')),
     saves: {
-      fortitude: stat('con', 'saves.fortitude').total,
-      reflex: stat('dex', 'saves.reflex').total,
-      will: stat('wis', 'saves.will').total,
+      fortitude: withEffects('saves.fortitude', stat('con', 'saves.fortitude')),
+      reflex: withEffects('saves.reflex', stat('dex', 'saves.reflex')),
+      will: withEffects('saves.will', stat('wis', 'saves.will')),
     },
     skills: Object.fromEntries(SKILLS.map((skill) => [
-      skill, stat(SKILL_ATTRIBUTE[skill], `skills.${skill}`).total,
+      skill,
+      withEffects(`skills.${skill}`, stat(SKILL_ATTRIBUTE[skill], `skills.${skill}`)),
     ])),
+    /**
+     * What is running, and what each number was without it.
+     *
+     * `before` is only populated for the numbers that actually moved, so a
+     * character with nothing on them carries nothing extra and the panel can
+     * tell "unaffected" from "affected by zero".
+     */
+    effects: effects.any || own.length
+      ? {
+        /**
+         * The sheet's own list, in full.
+         *
+         * So the dashboard can add one without reading the sheet first -- and
+         * so an effect the player has turned off is still visible to the GM,
+         * which `names` deliberately leaves out.
+         */
+        own,
+        names: effects.names,
+        before,
+      }
+      : null,
     heroPoints: Number(read(sheet, 'heroPoints', 0)),
     conditions: read(sheet, 'conditions', []) ?? [],
     updatedAt: row.updatedAt,

@@ -10,8 +10,11 @@
  * value. `update(state)` runs the updaters. An input the player is currently
  * typing into is never written to.
  */
+import { adjustFormulaFlat } from '../../../engine/shared/damage-expression.js';
 import { displayTitles } from '../lib/handout-titles.js';
-import { armorClass, classDc, isDerivedPath, statistic } from '../../../engine/rules/index.js';
+import {
+  armorClass, classDc, effectsOn, isDerivedPath, statistic,
+} from '../../../engine/rules/index.js';
 import { el, formatMod, titleCase } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
 import { readPath } from './store.js';
@@ -175,6 +178,36 @@ export function mount(root, store, { onImport = () => {} } = {}) {
   const attrMod = (sheet, key) => Number(readPath(sheet, `abilities.${key}`) ?? 0);
   const level = (sheet) => Number(sheet.level ?? 1);
 
+  /**
+   * What is in play on this sheet, worked out once per update.
+   *
+   * Every row asks the same question of the same list, and the sheet has
+   * twenty-five of them. The store mutates its sheet in place rather than
+   * replacing it, so this cannot key on identity -- it is cleared at the top
+   * of each pass instead, which is the only moment the answer can change.
+   */
+  let inPlayCache = null;
+  const inPlay = (sheet) => {
+    if (!inPlayCache) inPlayCache = effectsOn(sheet);
+    return inPlayCache;
+  };
+
+  /**
+   * A statistic with whatever is in play folded in.
+   *
+   * Added here rather than written to the sheet. `strikes` and the ranks are
+   * the builder's, and a raging barbarian's +2 stored on one of them would be
+   * overwritten the next time the build saved -- and, worse, would stay on the
+   * sheet after the rage ended. Nothing is ever written to the field it
+   * changes, so turning an effect off restores the number exactly.
+   */
+  const affected = (target, compute, context = null) => (sheet) => {
+    const base = compute(sheet);
+    const effect = inPlay(sheet).on(target, context ? context(sheet) : {});
+    if (!effect.total) return base;
+    return { ...base, total: base.total + effect.total, effect };
+  };
+
   const skillStat = (key, attribute) => (sheet) => statistic({
     attributeMod: attrMod(sheet, attribute),
     rank: readPath(sheet, `skills.${key}.rank`) ?? 'untrained',
@@ -184,9 +217,21 @@ export function mount(root, store, { onImport = () => {} } = {}) {
     override: readPath(sheet, `skills.${key}.override`) ?? null,
   });
 
+  /**
+   * What an effect contributed, named.
+   *
+   * "-2" with no author is the thing this feature could most easily get
+   * wrong: a number that moved and will not say why is worse than a number
+   * the player works out themselves.
+   */
+  const effectText = (r) => (r.effect?.parts ?? [])
+    .map((part) => ` ${formatMod(part.value)} ${part.from}`)
+    .join('');
+
   const workingText = (r) => `${formatMod(r.components.attributeMod)} attr `
     + `${formatMod(r.components.proficiency)} prof`
-    + (r.components.itemBonus ? ` ${formatMod(r.components.itemBonus)} item` : '');
+    + (r.components.itemBonus ? ` ${formatMod(r.components.itemBonus)} item` : '')
+    + effectText(r);
 
   // --- sections ----------------------------------------------------------
 
@@ -298,7 +343,7 @@ export function mount(root, store, { onImport = () => {} } = {}) {
       statRow({
         label: 'Armour Class',
         format: String,
-        compute: (sheet) => armorClass({
+        compute: affected('ac', (sheet) => armorClass({
           dexMod: attrMod(sheet, 'dex'),
           dexCap: readPath(sheet, 'ac.dexCap') ?? null,
           rank: readPath(sheet, 'ac.rank') ?? 'untrained',
@@ -308,12 +353,13 @@ export function mount(root, store, { onImport = () => {} } = {}) {
           shieldBonus: Number(readPath(sheet, 'shield.bonus') ?? 0),
           shieldRaised: Boolean(readPath(sheet, 'shield.raised')),
           override: readPath(sheet, 'ac.override') ?? null,
-        }),
+        })),
         workingOf: (r) => `10 ${formatMod(r.components.dexApplied)} dex`
           + (r.components.dexCapped ? ' (capped by your armour)' : '')
           + ` ${formatMod(r.components.proficiency)} prof`
           + (r.components.itemBonus ? ` ${formatMod(r.components.itemBonus)} item` : '')
-          + (r.components.shield ? ` ${formatMod(r.components.shield)} shield` : ''),
+          + (r.components.shield ? ` ${formatMod(r.components.shield)} shield` : '')
+          + effectText(r),
         detail: [
           labelled('Proficiency', rankSelect('ac.rank')),
           labelled('Item bonus', number('ac.itemBonus')),
@@ -489,13 +535,13 @@ export function mount(root, store, { onImport = () => {} } = {}) {
   function perception() {
     return statRow({
       label: 'Perception',
-      compute: (sheet) => statistic({
+      compute: affected('perception', (sheet) => statistic({
         attributeMod: attrMod(sheet, 'wis'),
         rank: readPath(sheet, 'perception.rank') ?? 'untrained',
         level: level(sheet),
         itemBonus: Number(readPath(sheet, 'perception.itemBonus') ?? 0),
         override: readPath(sheet, 'perception.override') ?? null,
-      }),
+      })),
       detail: [
         labelled('Item bonus', number('perception.itemBonus')),
         labelled('Set by hand', number('perception.override', { placeholder: 'auto' })),
@@ -517,13 +563,13 @@ export function mount(root, store, { onImport = () => {} } = {}) {
     el('div', { class: 'stat-rows' },
       ...SAVES.map(([key, name, attribute]) => statRow({
         label: name,
-        compute: (sheet) => statistic({
+        compute: affected(`saves.${key}`, (sheet) => statistic({
           attributeMod: attrMod(sheet, attribute),
           rank: readPath(sheet, `saves.${key}.rank`) ?? 'untrained',
           level: level(sheet),
           itemBonus: Number(readPath(sheet, `saves.${key}.itemBonus`) ?? 0),
           override: readPath(sheet, `saves.${key}.override`) ?? null,
-        }),
+        })),
         detail: [
           labelled('Proficiency', rankSelect(`saves.${key}.rank`)),
           labelled('Item bonus', number(`saves.${key}.itemBonus`)),
@@ -534,14 +580,15 @@ export function mount(root, store, { onImport = () => {} } = {}) {
       statRow({
         label: 'Class DC',
         format: String,
-        compute: (sheet) => classDc({
+        compute: affected('classDc', (sheet) => classDc({
           attributeMod: attrMod(sheet, sheet.keyAttribute || 'str'),
           rank: readPath(sheet, 'classDc.rank') ?? 'untrained',
           level: level(sheet),
           override: readPath(sheet, 'classDc.override') ?? null,
-        }),
+        })),
         workingOf: (r) => `10 ${formatMod(r.components.attributeMod)} key attribute `
-          + `${formatMod(r.components.proficiency)} prof`,
+          + `${formatMod(r.components.proficiency)} prof`
+          + effectText(r),
         detail: [
           labelled('Proficiency', rankSelect('classDc.rank')),
           labelled('Set by hand', number('classDc.override', { placeholder: 'auto' })),
@@ -557,7 +604,7 @@ export function mount(root, store, { onImport = () => {} } = {}) {
       ...SKILLS.map(([key, name, attribute]) => statRow({
         label: name,
         sub: attribute,
-        compute: skillStat(key, attribute),
+        compute: affected(`skills.${key}`, skillStat(key, attribute)),
         detail: [
           labelled('Proficiency', rankSelect(`skills.${key}.rank`)),
           labelled('Item bonus', number(`skills.${key}.itemBonus`)),
@@ -620,14 +667,20 @@ export function mount(root, store, { onImport = () => {} } = {}) {
       for (const node of list.querySelectorAll('[data-lore-index]')) {
         const entry = entries[Number(node.dataset.loreIndex)];
         if (!entry) continue;
-        node.textContent = formatMod(statistic({
+        const base = statistic({
           attributeMod: attrMod(state.sheet, 'int'),
           rank: entry.rank ?? 'untrained',
           level: level(state.sheet),
           itemBonus: Number(entry.itemBonus ?? 0),
           other: Number(entry.other ?? 0),
           override: entry.override ?? null,
-        }).total);
+        });
+        const effect = inPlay(state.sheet).on('skills.lore');
+        node.textContent = formatMod(base.total + effect.total);
+        node.classList.toggle('is-affected', Boolean(effect.total));
+        node.title = effect.total
+          ? `Intelligence, plus proficiency,${effectText({ effect })}`
+          : 'Intelligence, plus proficiency';
       }
     });
     return el('div', {},
@@ -637,6 +690,173 @@ export function mount(root, store, { onImport = () => {} } = {}) {
         class: 'btn stack-sm', type: 'button',
         html: `${icon('plus')}<span>Add a Lore</span>`,
         onclick: () => store.set('lores', [...(store.sheet.lores ?? []), { name: '', rank: 'trained' }]),
+      }));
+  }
+
+  /**
+   * Effects: the things that change a number for a while.
+   *
+   * The whole list is written at once rather than field by field, the way
+   * conditions and the bag are. The GM pushes effects through the same path,
+   * and two writers at different depths of one array is how a version history
+   * starts disagreeing with itself.
+   *
+   * Nothing here is a rule the application knows. The player says what Rage
+   * does and turns it on; `effectsOn` adds it up wherever a number is drawn.
+   */
+  const EFFECT_TARGETS = [
+    ['all', 'Every check and DC'],
+    ['ac', 'Armour Class'],
+    ['perception', 'Perception'],
+    ['saves', 'All saves'],
+    ['saves.fortitude', 'Fortitude'],
+    ['saves.reflex', 'Reflex'],
+    ['saves.will', 'Will'],
+    ['skills', 'All skills'],
+    ...SKILLS.map(([key, name]) => [`skills.${key}`, name]),
+    ['skills.lore', 'Lore skills'],
+    ['strike.attack', 'Attack rolls'],
+    ['strike.damage', 'Damage rolls'],
+    ['classDc', 'Class DC'],
+    ['speed', 'Speed'],
+  ];
+
+  const EFFECT_TYPES = [
+    ['status', 'Status'],
+    ['circumstance', 'Circumstance'],
+    ['item', 'Item'],
+    ['untyped', 'Untyped'],
+  ];
+
+  const targetName = (value) => (EFFECT_TARGETS.find(([key]) => key === value) ?? [])[1] ?? value;
+
+  function effectsSection() {
+    const list = el('div', { class: 'rows stack-md' });
+    const empty = el('p', { class: 'empty' },
+      'Nothing running. An effect is anything that moves a number for a '
+      + 'while — a rage, a spell, a potion — and it changes the sheet only '
+      + 'while it is on.');
+
+    const all = () => (store.sheet.effects ?? []).map((e) => ({ ...e }));
+    const write = (next) => store.set('effects', next);
+    const edit = (index, change) => {
+      const next = all();
+      next[index] = { ...next[index], ...change };
+      write(next);
+    };
+    const editModifier = (index, at, change) => {
+      const next = all();
+      const modifiers = [...(next[index].modifiers ?? [])];
+      modifiers[at] = { ...modifiers[at], ...change };
+      next[index] = { ...next[index], modifiers };
+      write(next);
+    };
+
+    const select = (options, value, onchange, label) => el('select', {
+      class: 'rank-select', 'aria-label': label, onchange,
+    }, ...options.map(([key, name]) => el('option', {
+      value: key, selected: key === value,
+    }, name)));
+
+    function modifierRow(effect, index, modifier, at) {
+      return el('div', { class: 'effect__modifier' },
+        select(EFFECT_TARGETS, modifier.target, (e) => {
+          editModifier(index, at, { target: e.target.value });
+        }, 'What it changes'),
+        select(EFFECT_TYPES, modifier.type ?? 'status', (e) => {
+          editModifier(index, at, { type: e.target.value });
+        }, 'Kind of modifier'),
+        el('input', {
+          class: 'input input--number', type: 'number', inputmode: 'numeric',
+          'aria-label': 'By how much', value: String(modifier.value ?? 0),
+          onchange: (e) => editModifier(index, at, { value: Number(e.target.value) || 0 }),
+        }),
+        el('button', {
+          class: 'btn btn--icon btn--quiet', type: 'button',
+          title: 'Remove this modifier',
+          html: `${icon('x')}<span class="sr-only">Remove this modifier</span>`,
+          onclick: () => {
+            const next = all();
+            next[index] = {
+              ...next[index],
+              modifiers: (next[index].modifiers ?? []).filter((_, i) => i !== at),
+            };
+            write(next);
+          },
+        }));
+    }
+
+    function effectRow(effect, index) {
+      const modifiers = effect.modifiers ?? [];
+      return el('div', { class: `row effect${effect.active === false ? ' effect--off' : ''}` },
+        el('div', { class: 'row__head' },
+          el('label', { class: 'effect__toggle' },
+            el('input', {
+              type: 'checkbox',
+              checked: effect.active !== false,
+              'aria-label': `${effect.name || 'This effect'} is on`,
+              onchange: (e) => edit(index, { active: e.target.checked }),
+            }),
+            el('span', { class: 'sr-only' }, 'On')),
+          el('input', {
+            class: 'input', type: 'text', placeholder: 'Rage',
+            'aria-label': `Effect ${index + 1} name`, value: effect.name ?? '',
+            onchange: (e) => edit(index, { name: e.target.value }),
+          }),
+          el('button', {
+            class: 'btn btn--icon btn--quiet', type: 'button',
+            title: `Remove ${effect.name || 'this effect'}`,
+            html: `${icon('x')}<span class="sr-only">Remove ${effect.name || 'this effect'}</span>`,
+            onclick: () => write(all().filter((_, i) => i !== index)),
+          })),
+        ...modifiers.map((modifier, at) => modifierRow(effect, index, modifier, at)),
+        el('div', { class: 'effect__tools' },
+          el('button', {
+            class: 'btn btn--quiet', type: 'button',
+            html: `${icon('plus')}<span>Add a modifier</span>`,
+            onclick: () => edit(index, {
+              modifiers: [...modifiers, { target: 'all', type: 'status', value: 1 }],
+            }),
+          }),
+          el('input', {
+            class: 'input effect__note', type: 'text',
+            placeholder: 'Note — e.g. no Concentrate actions',
+            'aria-label': `Note on effect ${index + 1}`, value: effect.note ?? '',
+            onchange: (e) => edit(index, { note: e.target.value }),
+          })));
+    }
+
+    /**
+     * Rebuilt when the shape changes, not when a word does.
+     *
+     * The key counts the effects and their modifiers, so adding one redraws
+     * the list and typing a name does not -- which matters because a redraw
+     * takes the field out from under the player's caret.
+     */
+    const rebuild = (state) => {
+      const entries = readPath(state.sheet, 'effects') ?? [];
+      const key = `${entries.length}|${entries.map((e) => (e?.modifiers ?? []).length).join(',')}`;
+      if (list.dataset.key !== key) {
+        list.dataset.key = key;
+        list.replaceChildren(...entries.map((effect, index) => effectRow(effect, index)));
+      }
+      empty.hidden = entries.length > 0;
+    };
+    onUpdate(rebuild);
+
+    return el('section', { class: 'card' },
+      el('h2', { class: 'section__title' }, 'Effects'),
+      empty,
+      list,
+      el('button', {
+        class: 'btn stack-sm', type: 'button',
+        html: `${icon('plus')}<span>Add an effect</span>`,
+        onclick: () => write([...all(), {
+          id: `e${Date.now().toString(36)}`,
+          name: '',
+          active: true,
+          modifiers: [{ target: 'all', type: 'status', value: 1 }],
+        }]),
       }));
   }
 
@@ -657,7 +877,44 @@ export function mount(root, store, { onImport = () => {} } = {}) {
       labelled('Damage', text(`strikes.${index}.damage`, { placeholder: '1d8+4' })),
       labelled('Type', text(`strikes.${index}.damageType`, { placeholder: 'slashing' }))),
     labelled('Traits', text(`strikes.${index}.traitsText`, { placeholder: 'agile, finesse' })),
+    /**
+     * What this strike comes to right now.
+     *
+     * Beside the fields rather than in them. `strikes` is a derived path, so
+     * the boxes above are the build's and are read-only on a built character
+     * -- and even on a typed one, writing the rage into the box is how it
+     * stays there after the rage ends.
+     */
+    el('p', { class: 'strike__effect', dataset: { strikeIndex: String(index) }, hidden: true }),
   ], { name: '', mod: 0, damage: '', damageType: '', traitsText: '' });
+
+  /**
+   * One updater for every strike, for the same reason the Lores have one: the
+   * rows are rebuilt when their number changes and `updaters` only grows.
+   */
+  onUpdate((state) => {
+    const entries = readPath(state.sheet, 'strikes') ?? [];
+    for (const node of strikes.querySelectorAll('[data-strike-index]')) {
+      const strike = entries[Number(node.dataset.strikeIndex)];
+      if (!strike) continue;
+      const effects = inPlay(state.sheet);
+      const attack = effects.on('strike.attack', { strike });
+      const damage = effects.on('strike.damage', { strike });
+      node.hidden = !attack.total && !damage.total;
+      if (node.hidden) continue;
+
+      const said = [];
+      if (attack.total) {
+        said.push(`attack ${formatMod(Number(strike.mod ?? 0) + attack.total)}`
+          + ` (${effectText({ effect: attack }).trim()})`);
+      }
+      if (damage.total) {
+        said.push(`damage ${adjustFormulaFlat(strike.damage, damage.total)}`
+          + ` (${effectText({ effect: damage }).trim()})`);
+      }
+      node.textContent = said.join(' · ');
+    }
+  });
 
   /**
    * Money and the bag.
@@ -1021,7 +1278,9 @@ export function mount(root, store, { onImport = () => {} } = {}) {
    * usually the tab you wanted.
    */
   const PANELS = [
-    ['combat', 'Combat', [vitals, strikes, conditions, proficiencies, armour]],
+    // Effects sit beside conditions because they are the same kind of thing:
+    // what is true of this character right now, rather than what they are.
+    ['combat', 'Combat', [vitals, strikes, conditions, effectsSection(), proficiencies, armour]],
     ['skills', 'Skills', [skills]],
     ['feats', 'Feats', [featsCard, featuresCard, notes, spellcasting]],
     ['gear', 'Gear', [carried]],
@@ -1084,6 +1343,7 @@ export function mount(root, store, { onImport = () => {} } = {}) {
     // guard that recursion would run the whole list twice per change.
     if (updating) return;
     updating = true;
+    inPlayCache = null;
     try {
       for (const fn of updaters) fn(state);
     } finally {

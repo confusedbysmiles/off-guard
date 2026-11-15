@@ -106,10 +106,26 @@ export function attackAttribute(weapon, mods = {}) {
  */
 export function damageAttribute(weapon, mods = {}) {
   const str = Number(mods.str ?? 0);
+  if (damageAttributeKey(weapon) !== 'str') return 0;
   const ranged = Number.isFinite(weapon?.range) && weapon.range !== null;
   if (!ranged || has(weapon, 'thrown')) return str;
-  if (has(weapon, 'propulsive')) return str >= 0 ? Math.floor(str / 2) : str;
-  return 0;
+  // Propulsive: half a positive Strength modifier, and all of a negative one.
+  return str >= 0 ? Math.floor(str / 2) : str;
+}
+
+/**
+ * The same question asked for its answer rather than its arithmetic.
+ *
+ * Whether the damage is Strength's at all, which is what an effect aimed at an
+ * attribute needs to know -- enfeebled takes "Strength-based damage rolls",
+ * and a character whose Strength modifier happens to be zero is still making
+ * one. Kept beside `damageAttribute` and used by it, so the rule about which
+ * weapons those are is written once.
+ */
+export function damageAttributeKey(weapon) {
+  const ranged = Number.isFinite(weapon?.range) && weapon.range !== null;
+  if (!ranged || has(weapon, 'thrown') || has(weapon, 'propulsive')) return 'str';
+  return null;
 }
 
 /**
@@ -160,6 +176,13 @@ export function strikeFrom(entry = {}, {
     components: {
       attributeMod: attack.mod,
       attribute: attack.key,
+      /**
+       * Which attribute fed the damage, which is not always the one that fed
+       * the attack: a rapier attacks with Dexterity and damages with Strength.
+       * Named so an effect aimed at an attribute can tell the two apart --
+       * clumsy takes the attack roll and enfeebled takes the damage.
+       */
+      damageAttribute: damageAttributeKey(weapon),
       proficiency: proficiencyBonus(rank, level),
       rank: rankName(rank),
       potency,

@@ -1200,6 +1200,48 @@ export function createActions({
       }
     },
 
+    /**
+     * Put an effect on characters, from the GM's side.
+     *
+     * Appended to each sheet's own list rather than replacing it: the player
+     * has their own effects running and a Bless from the GM is one more, not
+     * instead. The patch route publishes to the character's stream, so it
+     * appears on their phone without them reloading.
+     */
+    async pushEffect(characters, effect) {
+      const id = campaign();
+      const named = effect.name || 'that effect';
+      try {
+        await Promise.all(characters.map((character) => api.patchCharacter(
+          id,
+          character.id,
+          [{ path: 'effects', value: [...(character.effects?.own ?? []), effect] }],
+        )));
+        await loadParty();
+        refresh();
+        notices.info(characters.length === 1
+          ? `${displayName(characters[0])} now has ${named}.`
+          : `${characters.length} characters now have ${named}.`);
+      } catch (error) {
+        notices.error(`Could not push that effect: ${error.message}`);
+      }
+    },
+
+    /** Take one off again, by its id. */
+    async clearEffect(character, effectId) {
+      const id = campaign();
+      try {
+        await api.patchCharacter(id, character.id, [{
+          path: 'effects',
+          value: (character.effects?.own ?? []).filter((e) => e?.id !== effectId),
+        }]);
+        await loadParty();
+        refresh();
+      } catch (error) {
+        notices.error(`Could not remove that effect: ${error.message}`);
+      }
+    },
+
     // --- campaigns ----------------------------------------------------------
 
     async newCampaign(name) {

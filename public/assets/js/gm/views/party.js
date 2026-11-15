@@ -6,6 +6,7 @@
  */
 import { displayName } from '../../../../engine/shared/character-name.js';
 import { el, formatMod, titleCase } from '../../lib/dom.js';
+import { icon } from '../../lib/icons.js';
 
 const SKILLS = [
   'acrobatics', 'arcana', 'athletics', 'crafting', 'deception', 'diplomacy',
@@ -20,9 +21,19 @@ const SHORT = {
   society: 'Soci', stealth: 'Stea', survival: 'Surv', thievery: 'Thie',
 };
 
-const stat = (label, value) => el('div', { class: 'pc__stat' },
-  el('span', {}, label),
-  el('strong', {}, String(value)));
+/**
+ * One number, and what it was before anything was put on this character.
+ *
+ * Marked rather than only recoloured, and the old value is in the title: a
+ * GM reading AC off this panel to set a DC needs to know the 18 is a frightened
+ * 22 rather than a sheet nobody has updated.
+ */
+const stat = (label, value, before = undefined) => el('div', {
+  class: `pc__stat${before === undefined ? '' : ' pc__stat--affected'}`,
+  ...(before === undefined ? {} : { title: `${before} before effects` }),
+},
+el('span', {}, label),
+el('strong', {}, String(value)));
 
 function skillGrid(skills) {
   return el('div', { class: 'skill-grid' }, ...SKILLS.map((skill) => el(
@@ -38,7 +49,8 @@ function skillGrid(skills) {
   )));
 }
 
-function characterRow(character) {
+function characterRow(character, { actions }) {
+  const was = character.effects?.before ?? {};
   const hpFraction = character.hp.max > 0
     ? Math.max(0, Math.min(1, character.hp.current / character.hp.max))
     : 0;
@@ -50,11 +62,11 @@ function characterRow(character) {
         [character.playerName, character.class, `Level ${character.level}`]
           .filter(Boolean).join(' · '))),
 
-    stat('AC', character.ac),
-    stat('Perc', formatMod(character.perception)),
-    stat('Fort', formatMod(character.saves.fortitude)),
-    stat('Ref', formatMod(character.saves.reflex)),
-    stat('Will', formatMod(character.saves.will)),
+    stat('AC', character.ac, was.ac),
+    stat('Perc', formatMod(character.perception), was.perception && formatMod(was.perception)),
+    stat('Fort', formatMod(character.saves.fortitude), was['saves.fortitude'] && formatMod(was['saves.fortitude'])),
+    stat('Ref', formatMod(character.saves.reflex), was['saves.reflex'] && formatMod(was['saves.reflex'])),
+    stat('Will', formatMod(character.saves.will), was['saves.will'] && formatMod(was['saves.will'])),
 
     el('div', { class: 'pc__hp' },
       el('div', { class: 'row-inline row-inline--wrap' },
@@ -74,6 +86,26 @@ function characterRow(character) {
           `${titleCase(c.slug)}${c.value ? ` ${c.value}` : ''}`,
         )))
         : null,
+      /**
+       * What is running on them, each one removable from here.
+       *
+       * An effect the player turned off is still listed, greyed: the GM
+       * pushing a second Bless onto somebody who already has one switched off
+       * is the confusion this avoids.
+       */
+      character.effects?.own?.length
+        ? el('div', { class: 'pc__flags stack-sm' }, ...character.effects.own.map((effect) => el(
+          'span',
+          { class: `pill pill--accent${effect?.active === false ? ' pill--off' : ''}` },
+          effect?.name || 'Effect',
+          el('button', {
+            class: 'pill__remove', type: 'button',
+            title: `Remove ${effect?.name || 'this effect'} from ${displayName(character)}`,
+            html: `${icon('x')}<span class="sr-only">Remove</span>`,
+            onclick: () => actions.clearEffect(character, effect?.id),
+          }),
+        )))
+        : null,
       character.flags.length
         ? el('div', { class: 'pc__flags stack-sm' }, ...character.flags.map((flag) => el(
           'span', { class: 'pill pill--warn', title: flag.detail },
@@ -83,7 +115,7 @@ function characterRow(character) {
       skillGrid(character.skills)));
 }
 
-export function partyPanel(party) {
+export function partyPanel(party, { actions, onPush = () => {} } = {}) {
   if (!party || !party.characters.length) {
     return el('section', { class: 'panel' },
       el('div', { class: 'panel__head' }, el('h2', { class: 'panel__title' }, 'Party')),
@@ -96,7 +128,12 @@ export function partyPanel(party) {
     el('div', { class: 'panel__head' },
       el('h2', { class: 'panel__title' }, 'Party'),
       el('span', { class: 'muted' },
-        `${party.size} character${party.size === 1 ? '' : 's'}, level ${party.effectiveLevel}`)),
+        `${party.size} character${party.size === 1 ? '' : 's'}, level ${party.effectiveLevel}`),
+      el('button', {
+        class: 'btn', type: 'button',
+        html: `${icon('plus')}<span>Push an effect</span>`,
+        onclick: () => onPush(party.characters),
+      })),
 
     party.levelDisagrees
       ? el('p', { class: 'pill pill--warn' },
@@ -104,7 +141,8 @@ export function partyPanel(party) {
         + `${party.effectiveLevel}. Encounter maths uses the sheets.`)
       : null,
 
-    el('div', { class: 'party' }, ...party.characters.map(characterRow)),
+    el('div', { class: 'party' },
+      ...party.characters.map((character) => characterRow(character, { actions }))),
 
     anyFlags
       ? el('p', { class: 'faint stack-sm' },

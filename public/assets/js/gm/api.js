@@ -89,6 +89,10 @@ export const api = {
   deleteCharacter: (id, characterId) =>
     request(`/campaigns/${id}/characters/${characterId}`, { method: 'DELETE' }),
 
+  /** A write to a player's sheet, by path, the way the player's own client writes. */
+  patchCharacter: (id, characterId, writes) =>
+    request(`/campaigns/${id}/characters/${characterId}`, { method: 'PATCH', body: { writes } }),
+
   sessions: (id) => request(`/campaigns/${id}/sessions`),
   createSession: (id, fields) =>
     request(`/campaigns/${id}/sessions`, { method: 'POST', body: fields }),

@@ -86,3 +86,7 @@ export {
 } from './character/attributes.js';
 
 export { outstanding, slotsFor } from './character/slots.js';
+
+export {
+  BONUS_TYPES, CONDITION_RULES, TARGETS, effectsOn, stack,
+} from './character/effects.js';
