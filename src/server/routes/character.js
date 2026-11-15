@@ -7,6 +7,7 @@
  */
 import { applyPatch, getOwnCharacter, versionsFor } from '../store/characters.js';
 import { getCampaign } from '../store/campaigns.js';
+import { readCalendar } from '../store/calendar.js';
 import { listHandouts, readHandout } from '../store/handouts.js';
 import { sendHandout } from '../handouts.js';
 import { diffImport, mapPathbuilder, readPath } from '../../shared/pathbuilder.js';
@@ -137,6 +138,15 @@ export async function registerCharacterRoutes(app) {
   app.get('/handouts', async (request) => ({
     handouts: listHandouts(db, request.scope),
   }));
+
+  /**
+   * The campaign's calendar, as the party may see it.
+   *
+   * The date and the events the GM has shared, and nothing else -- the filter
+   * is in the SQL, so an event the GM has not handed over is not a row this
+   * request ever holds. See `readCalendar`.
+   */
+  app.get('/calendar', async (request) => readCalendar(db, request.scope));
 
   app.get('/handouts/:handoutId/file', async (request, reply) => {
     const row = readHandout(db, request.scope, request.params.handoutId);

@@ -45,6 +45,16 @@ export const api = {
 
   party: (id) => request(`/campaigns/${id}/party`),
 
+  calendar: (id) => request(`/campaigns/${id}/calendar`),
+  setCalendarDate: (id, date) =>
+    request(`/campaigns/${id}/calendar/date`, { method: 'PUT', body: { date } }),
+  createCalendarEvent: (id, fields) =>
+    request(`/campaigns/${id}/calendar/events`, { method: 'POST', body: fields }),
+  updateCalendarEvent: (id, eventId, fields) =>
+    request(`/campaigns/${id}/calendar/events/${eventId}`, { method: 'PATCH', body: fields }),
+  deleteCalendarEvent: (id, eventId) =>
+    request(`/campaigns/${id}/calendar/events/${eventId}`, { method: 'DELETE' }),
+
   characters: (id) => request(`/campaigns/${id}/characters`),
   exportCharacter: (id, characterId) =>
     request(`/campaigns/${id}/characters/${characterId}/export`),

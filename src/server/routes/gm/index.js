@@ -5,6 +5,7 @@
  * search and party statistics on top of what is here, and a single module would
  * have made the campaign-scoping rule harder to see rather than easier.
  */
+import { registerCalendarRoutes } from './calendar.js';
 import { registerCampaignRoutes } from './campaigns.js';
 import { registerCharacterAdminRoutes } from './characters.js';
 import { registerEncounterRoutes } from './encounters.js';
@@ -20,6 +21,7 @@ import { registerSessionRoutes } from './sessions.js';
 import { registerHandoutRoutes } from './handouts.js';
 
 export async function registerGmRoutes(app) {
+  await registerCalendarRoutes(app);
   await registerCampaignRoutes(app);
   await registerCharacterAdminRoutes(app);
   await registerEncounterRoutes(app);

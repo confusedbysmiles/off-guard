@@ -1045,6 +1045,74 @@ export function createActions({
       }
     },
 
+    // --- the calendar -------------------------------------------------------
+
+    async loadCalendar() {
+      if (!campaign()) return;
+      try {
+        store.set({ calendar: await api.calendar(campaign()) });
+      } catch (error) {
+        notices.error(`Could not load the calendar: ${error.message}`);
+      }
+    },
+
+    /** Which month is on screen, and which day the GM is working on. */
+    viewCalendar(view) {
+      store.set({ calendarView: view });
+      refresh();
+    },
+
+    async setCampaignDate(date) {
+      try {
+        await api.setCalendarDate(campaign(), date);
+        await actions.loadCalendar();
+        refresh();
+        notices.info(date ? 'Moved the party’s date.' : 'Cleared the campaign’s date.');
+      } catch (error) {
+        notices.error(`Could not set the date: ${error.message}`);
+      }
+    },
+
+    /** @returns {Promise<boolean>} whether it was written, so a form can clear itself. */
+    async markDay(fields) {
+      if (!fields.title) {
+        notices.warn('A mark needs something to say.');
+        return false;
+      }
+      try {
+        await api.createCalendarEvent(campaign(), fields);
+        await actions.loadCalendar();
+        refresh();
+        return true;
+      } catch (error) {
+        notices.error(`Could not mark that day: ${error.message}`);
+        return false;
+      }
+    },
+
+    async shareEvent(event, shared) {
+      try {
+        await api.updateCalendarEvent(campaign(), event.id, { shared });
+        await actions.loadCalendar();
+        refresh();
+        notices.info(shared
+          ? `The party can see “${event.title || 'that'}” now.`
+          : `“${event.title || 'That'}” is yours again.`);
+      } catch (error) {
+        notices.error(`Could not change that: ${error.message}`);
+      }
+    },
+
+    async unmarkDay(event) {
+      try {
+        await api.deleteCalendarEvent(campaign(), event.id);
+        await actions.loadCalendar();
+        refresh();
+      } catch (error) {
+        notices.error(`Could not remove that: ${error.message}`);
+      }
+    },
+
     /** The GM's own link, which no campaign listing contains. */
     async loadMe() {
       try {

@@ -20,6 +20,12 @@ export const TABS = [
   // Only meaningful for a looping adventure, but a tab that appears and
   // disappears is worse at a table than one that is sometimes empty.
   ['loop', 'Loop', 'L'],
+  // Golarion's own calendar. The players have this tab too, which is why it
+  // sits with the tabs they share rather than among the GM's settings.
+  //
+  // `M` for the month it shows, because every letter of "Calendar" is already
+  // claimed -- C by the campaign switcher, and A, L, E, N, D and R elsewhere.
+  ['calendar', 'Calendar', 'M'],
   ['overview', 'All campaigns', 'A'],
   ['start', 'Start here', '?'],
 ];

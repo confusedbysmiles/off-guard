@@ -185,6 +185,16 @@ async function start() {
   };
   loadHandouts();
 
+  /** The campaign's calendar, which is the GM's and arrives the same way. */
+  const loadCalendar = async () => {
+    try {
+      const res = await fetch(`${endpoint}/calendar`, { headers: { accept: 'application/json' } });
+      if (!res.ok) return;
+      update.showCalendar(await res.json());
+    } catch { /* offline: the tab stays hidden, and nothing is broken */ }
+  };
+  loadCalendar();
+
   store.subscribe((state) => {
     const indicator = $('#save-state');
     indicator.textContent = SAVE_LABEL[state.status] ?? state.status;

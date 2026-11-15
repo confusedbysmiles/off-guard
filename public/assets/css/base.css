@@ -410,3 +410,102 @@ button, input, select, textarea {
    the accent as text, which is what makes it legible on `--surface-2` in both
    themes -- see the note on the token. */
 .pill--accent { color: var(--accent-ink); border-color: var(--accent); }
+
+/* --- The calendar -----------------------------------------------------------
+ *
+ * One component on two screens, so it lives here rather than in either
+ * stylesheet. A month is a seven-column grid whose cells stay square-ish and
+ * legible at phone width, which is where a player reads it.
+ */
+
+.cal { display: grid; gap: var(--sp-2); }
+
+.cal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+.cal__title { font-size: var(--step-1); }
+/* The chevron points forward; the one that goes back is turned round. */
+.cal__head .btn--icon svg { transform: rotate(180deg); }
+.cal__head .cal__next svg { transform: none; }
+
+.cal__weekdays,
+.cal__grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+
+.cal__weekday {
+  padding: var(--sp-1) 0;
+  color: var(--ink-faint);
+  font-size: var(--step--1);
+  text-align: center;
+  text-decoration: none;
+}
+
+.cal__cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: var(--tap);
+  padding: var(--sp-1) 0;
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: inherit;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+button.cal__cell { cursor: pointer; }
+.cal__cell--empty { background: none; }
+
+/* Where the party is: ringed in the accent and set in bold.
+ *
+ * Ringed rather than filled. The accent is the campaign's and a GM picks it
+ * from a palette, so text on top of it is a contrast ratio nobody has checked
+ * -- and the bold weight carries the meaning on its own for anyone who cannot
+ * tell the ring from the border beside it. */
+.cal__cell--today {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+  font-weight: 700;
+}
+
+/* The day a GM is working on, which is a different question from where the
+   party is -- so a different treatment, not a second colour. */
+.cal__cell--selected { background: var(--surface-3, var(--surface)); }
+
+.cal__marks { display: flex; gap: 2px; }
+.cal__mark {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+/* An event the party cannot see yet is hollow, so a GM can tell at a glance
+   which marks on their calendar are theirs alone. */
+.cal__mark--private { background: none; box-shadow: inset 0 0 0 1px var(--ink-faint); }
+
+.cal__empty { margin: var(--sp-2) 0 0; }
+
+.cal__list { list-style: none; margin: var(--sp-3) 0 0; padding: 0; display: grid; gap: 2px; }
+
+.cal__entry {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-3);
+  padding: var(--sp-2);
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--step--1);
+}
+.cal__entry--private { border-left: 2px solid var(--ink-faint); }
+.cal__when { flex: 0 0 auto; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+.cal__what { display: grid; gap: 2px; min-width: 0; }
+.cal__entry .btn { margin-left: auto; }

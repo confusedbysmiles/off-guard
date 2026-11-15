@@ -19,6 +19,7 @@ import { api } from './api.js';
 import * as store from './state.js';
 import { createActions } from './actions.js';
 import { displayName } from '../../../engine/shared/character-name.js';
+import { calendarPanel } from './views/calendar.js';
 import { partyPanel } from './views/party.js';
 import { applyAccents, applyCurrentAccent, overviewPanel } from './views/overview.js';
 import { builderView } from './views/builder.js';
@@ -354,6 +355,17 @@ function renderNow() {
     return;
   }
 
+  if (state.tab === 'calendar') {
+    main.replaceChildren(el('div', { class: 'panels' }, calendarPanel({
+      calendar: state.calendar,
+      view: state.calendarView,
+      actions,
+    })));
+    // The last branch in this function is the Table tab's fallback, so a
+    // branch that does not return has its panel replaced by the party.
+    return;
+  }
+
   if (state.tab === 'setup') {
     main.replaceChildren(el('div', { class: 'panels' },
       campaignPanel({ campaign: store.currentCampaign(), actions }),
@@ -454,7 +466,9 @@ async function selectCampaign(id) {
     actions.loadHandouts(),
     actions.loadHomebrew(), actions.loadMe(),
   ]);
+  store.set({ calendar: null, calendarView: null });
   if (store.get().tab === 'loop') await actions.loadLoop(NINE_MINUTES);
+  if (store.get().tab === 'calendar') await actions.loadCalendar();
   render();
   drawer.render();
 }
@@ -468,6 +482,7 @@ function selectTab(tab) {
   // running a looping adventure, and a fetch per campaign switch for a tab
   // nobody opened is a request that buys nothing.
   if (tab === 'loop' && !store.get().loopState) actions.loadLoop(NINE_MINUTES);
+  if (tab === 'calendar' && !store.get().calendar) actions.loadCalendar().then(render);
   if (tab === 'encounters' && !store.get().searchResults) actions.search(actions.searchQuery);
   render();
 }
@@ -591,6 +606,7 @@ async function start() {
   // A reload straight onto #/campaign/3/loop restores the tab without going
   // through selectTab, so the console has to be loaded here too.
   if (store.get().tab === 'loop' && !store.get().loopState) await actions.loadLoop(NINE_MINUTES);
+  if (store.get().tab === 'calendar' && !store.get().calendar) await actions.loadCalendar();
   render();
 }
 

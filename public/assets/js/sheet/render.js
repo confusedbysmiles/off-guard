@@ -11,6 +11,8 @@
  * typing into is never written to.
  */
 import { adjustFormulaFlat } from '../../../engine/shared/damage-expression.js';
+import { format as formatDate, fromKey, monthList, monthView, openingMonth }
+  from '../lib/calendar-view.js';
 import { displayTitles } from '../lib/handout-titles.js';
 import {
   armorClass, classDc, effectsOn, isDerivedPath, statistic,
@@ -1244,6 +1246,51 @@ export function mount(root, store, { onImport = () => {} } = {}) {
       }));
   }
 
+  /**
+   * The campaign's calendar, as the party may see it.
+   *
+   * Read-only and the same component the GM uses, because it is the same
+   * month: a calendar that disagreed across two screens would be worse than
+   * none. What a player does not get is the marks the GM has kept -- those
+   * are filtered in the SQL and never reach this page at all.
+   *
+   * The tab appears only once there is a calendar, the way the handouts tab
+   * does. Most tables never set a date, and an empty Abadius of a year nobody
+   * chose is a tab that reads like a fault.
+   */
+  const calendarCard = el('section', { class: 'card section--wide', hidden: true },
+    el('h2', { class: 'section__title' }, 'Calendar'));
+  let calendarState = null;
+  let calendarAt = null;
+
+  function renderCalendar(calendar) {
+    if (calendar) calendarState = calendar;
+    const { date = null, events = [] } = calendarState ?? {};
+    const has = Boolean(date) || events.length > 0;
+
+    const tab = tabs.get('calendar');
+    if (tab) tab.hidden = !has;
+    calendarCard.hidden = !has;
+    if (!has) return;
+
+    const at = calendarAt ?? openingMonth(calendarState);
+    calendarAt = at;
+
+    calendarCard.replaceChildren(
+      el('h2', { class: 'section__title' },
+        'Calendar',
+        date
+          ? el('span', { class: 'faint' }, formatDate(fromKey(date), { weekday: true }))
+          : null),
+      monthView({
+        year: at.year,
+        month: at.month,
+        date,
+        events,
+        onMove: (next) => { calendarAt = next; renderCalendar(); },
+      }),
+      monthList(at.year, at.month, events));
+  }
   // Rebuilt when the sheet's shape changes rather than on every keystroke: what
   // it says depends on whether the sheet is blank and how many conditions are
   // on it, and neither of those changes while somebody is typing a note.
@@ -1288,6 +1335,8 @@ export function mount(root, store, { onImport = () => {} } = {}) {
     // Hidden, tab and all, until the GM releases something. A player told
     // "check the handouts" should find a tab called Handouts; a table that
     // uses none should not have an empty one.
+    // Hidden until the GM starts one, for the same reason Handouts is.
+    ['calendar', 'Calendar', [calendarCard]],
     ['handouts', 'Handouts', [handoutsCard]],
   ];
 
@@ -1299,8 +1348,9 @@ export function mount(root, store, { onImport = () => {} } = {}) {
     id,
     el('button', {
       class: 'sheet-tab', type: 'button',
-      // Handouts start hidden and appear when the GM releases one.
-      hidden: id === 'handouts',
+      // Handouts start hidden and appear when the GM releases one; the
+      // calendar does the same, and most tables never start one.
+      hidden: id === 'handouts' || id === 'calendar',
       onclick: () => showPanel(id),
     }, label),
   ]));
@@ -1337,6 +1387,7 @@ export function mount(root, store, { onImport = () => {} } = {}) {
    */
   update.showFeats = renderFeats;
   update.showHandouts = renderHandouts;
+  update.showCalendar = renderCalendar;
 
   function update(state) {
     // `repeatingSection` re-runs the updaters after a rebuild; without this
