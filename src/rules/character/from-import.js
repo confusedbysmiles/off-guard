@@ -338,6 +338,21 @@ const FEAT_KIND_BY_TYPE = new Map([
 ]);
 
 /**
+ * The same four kinds, keyed by what the catalogue calls a feat's category.
+ *
+ * An awarded feat names no slot, so there is nothing in the row to say what
+ * kind it is -- but the catalogue already knows, because that is what it files
+ * feats under. Toughness is a general feat whether a character chose it or was
+ * handed it.
+ */
+const FEAT_KIND_BY_CATEGORY = new Map([
+  ['class', 'classFeat'],
+  ['ancestry', 'ancestryFeat'],
+  ['skill', 'skillFeat'],
+  ['general', 'generalFeat'],
+]);
+
+/**
  * Feats, and the bonus ones that do not fit the schedule.
  *
  * A slot id is `<kind>-<level>`, which assumes a character has at most one
@@ -397,19 +412,41 @@ function proficienciesFrom(pb) {
   return stated;
 }
 
-function featsFrom(pb, look) {
+function featsFrom(pb, look, notes = []) {
   const feats = {};
   const bonus = [];
   const taken = new Set();
 
+  /** `bonus-3`, `bonus-3-2`, `bonus-3-3`: never let a second one overwrite a first. */
+  const freeId = (base) => {
+    let id = base;
+    for (let n = 2; taken.has(id); n += 1) id = `${base}-${n}`;
+    taken.add(id);
+    return id;
+  };
+
   for (const row of pb.feats ?? []) {
     if (!Array.isArray(row)) continue;
     const [name, , type, level, , choice, parent] = row;
-    // Four fields and no slot name: awarded, not chosen.
-    if (row.length < 5) continue;
 
-    const kind = FEAT_KIND_BY_TYPE.get(String(type ?? '').trim().toLowerCase());
-    if (!kind) continue;                 // Heritage, and anything new Pathbuilder adds.
+    /**
+     * Four fields and no slot name: awarded, not chosen.
+     *
+     * Dropped until now, on the reasoning that a feat nobody picked is not a
+     * choice the builder has to reproduce. That was wrong twice over: it is
+     * still a feat the character has, and the sheet lists feats by reading the
+     * builder's slots -- so skipping it here did not leave it to be inferred
+     * elsewhere, it deleted it. Every one of the real exports carries some,
+     * and the automaton barbarian lost Quick Repair, Toughness and
+     * Intimidating Glare this way.
+     */
+    const awarded = row.length < 5;
+
+    const kind = awarded
+      ? null
+      : FEAT_KIND_BY_TYPE.get(String(type ?? '').trim().toLowerCase());
+    // Heritage, and anything new Pathbuilder adds.
+    if (!awarded && !kind) continue;
 
     const featLevel = whole(level, 1, 20, 0);
     if (!featLevel) continue;
@@ -417,14 +454,28 @@ function featsFrom(pb, look) {
     const found = look('feat', name);
     if (!found) continue;                // `look` has already said so.
 
+    if (awarded) {
+      const awardedKind = FEAT_KIND_BY_CATEGORY
+        .get(String(found.category ?? '').trim().toLowerCase());
+      // A feat the catalogue files under none of the four -- a calling or a
+      // bonus feat. There is no slot shaped like it, so say so rather than
+      // inventing one.
+      if (!awardedKind) {
+        notes.push(`“${found.name}” was awarded to this character, and there is `
+          + 'no slot of its kind to put it in. Add it to your notes.');
+        continue;
+      }
+      const id = freeId(`${awardedKind}-granted-${featLevel}`);
+      bonus.push({ id, kind: awardedKind, level: featLevel, source: null, granted: true });
+      feats[id] = found.id;
+      continue;
+    }
+
     if (String(choice ?? '') === 'childChoice') {
       // A second bonus feat of the same kind at the same level is rare but
       // possible -- General Training is repeatable -- so the id carries an
       // ordinal rather than letting the second overwrite the first.
-      const base = `${kind}-bonus-${featLevel}`;
-      let id = base;
-      for (let n = 2; taken.has(id); n += 1) id = `${base}-${n}`;
-      taken.add(id);
+      const id = freeId(`${kind}-bonus-${featLevel}`);
       bonus.push({ id, kind, level: featLevel, source: String(parent ?? '').trim() || null });
       feats[id] = found.id;
       continue;
@@ -467,7 +518,7 @@ export function buildFromImport(exported, { find = () => null, sheet = {} } = {}
   });
 
   const skills = solveSkills(pb.proficiencies ?? {}, { background, klass, level });
-  const imported = featsFrom(pb, look);
+  const imported = featsFrom(pb, look, notes);
   const statedRanks = proficienciesFrom(pb);
   if (skills.unplaced) {
     notes.push(

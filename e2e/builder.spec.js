@@ -65,6 +65,16 @@ test('a built character can add a Lore, and it reaches the sheet', async ({ page
   const field = page.getByLabel('Lore 1 name');
   await expect(field).toHaveValue('Underworld Lore');
   await expect(field).toHaveAttribute('readonly', '');
+
+  /**
+   * And with the number on it.
+   *
+   * A Lore is an ordinary Intelligence skill; the only unusual thing about it
+   * is that its name is typed rather than chosen. Its row showed a name and a
+   * proficiency and no modifier -- the one row on the skills card that made
+   * you do the arithmetic yourself.
+   */
+  await expect(page.locator('.lore__value').first()).toHaveText(/^[+-]\d+$/);
 });
 
 test('the Lore a background grants is shown but not editable in the builder', async ({ page }) => {

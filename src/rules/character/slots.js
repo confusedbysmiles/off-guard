@@ -208,16 +208,27 @@ export function slotsFor(build = {}, {
    * does, in which case there are simply two. Each carries its own id from the
    * import, so neither hides the other, and each gets a slot the player can
    * change like any other.
+   *
+   * A granted one is the same shape with the choosing taken out: the character
+   * was handed Toughness by their ancestry rather than picking it. It still
+   * gets a slot, because the sheet lists feats by reading these -- but it says
+   * "granted" rather than "bonus", so the row reads as something that arrived
+   * rather than something still to decide.
    */
   for (const entry of build.bonusFeats ?? []) {
     const featLevel = Number(entry?.level ?? 1);
     if (!entry?.id || featLevel > horizon) continue;
     const [key, , label] = FEAT_KINDS.find(([, kind]) => kind === entry.kind) ?? [];
     if (!key) continue;
+    const granted = Boolean(entry.granted);
     slots.push({
-      id: entry.id, level: featLevel, kind: entry.kind, label: `${label} (bonus)`,
+      id: entry.id,
+      level: featLevel,
+      kind: entry.kind,
+      label: `${label} (${granted ? 'granted' : 'bonus'})`,
       section: featLevel,
       bonus: true,
+      granted,
       /** What granted it, so the builder can say why this slot is here. */
       source: entry.source ?? null,
       filled: build.feats?.[entry.id] ?? null,

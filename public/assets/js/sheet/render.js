@@ -580,6 +580,20 @@ export function mount(root, store, { onImport = () => {} } = {}) {
         el('div', { class: 'row__head' },
           bind(el('input', { class: 'input', type: 'text', 'aria-label': `Lore ${index + 1} name`,
             value: entry.name ?? '' }), `lores.${index}.name`),
+          /**
+           * The number, which every other skill on this card has had and a
+           * Lore never did.
+           *
+           * A Lore is an ordinary Intelligence skill -- the only thing unusual
+           * about it is that its name is typed rather than chosen -- so a row
+           * that shows a name and a proficiency and no modifier is the one
+           * row on the sheet that makes you do the arithmetic yourself.
+           */
+          el('strong', {
+            class: 'stat-row__value tabular lore__value',
+            dataset: { loreIndex: String(index) },
+            title: 'Intelligence, plus proficiency',
+          }, '—'),
           rankSelect(`lores.${index}.rank`),
           el('button', {
             class: 'btn btn--icon btn--quiet', type: 'button',
@@ -592,6 +606,30 @@ export function mount(root, store, { onImport = () => {} } = {}) {
           })))));
     };
     onUpdate(rebuild);
+
+    /**
+     * One updater for every Lore, rather than one per row.
+     *
+     * The rows are rebuilt whenever their number changes, and `updaters` only
+     * ever grows -- so registering from inside `rebuild` would add a handler
+     * per Lore per rebuild, each writing to a node that is no longer on the
+     * page.
+     */
+    onUpdate((state) => {
+      const entries = readPath(state.sheet, 'lores') ?? [];
+      for (const node of list.querySelectorAll('[data-lore-index]')) {
+        const entry = entries[Number(node.dataset.loreIndex)];
+        if (!entry) continue;
+        node.textContent = formatMod(statistic({
+          attributeMod: attrMod(state.sheet, 'int'),
+          rank: entry.rank ?? 'untrained',
+          level: level(state.sheet),
+          itemBonus: Number(entry.itemBonus ?? 0),
+          other: Number(entry.other ?? 0),
+          override: entry.override ?? null,
+        }).total);
+      }
+    });
     return el('div', {},
       el('h3', { class: 'heading-spaced' }, 'Lore skills'),
       list,

@@ -41,6 +41,18 @@ async function applied() {
   return res.json().character.sheet;
 }
 
+/** The builder's slots after that import, which is where feats are shown. */
+async function slotsAfter() {
+  const preview = (await post('/import/preview', { json: EXPORT })).json();
+  await post('/import/apply', {
+    sheet: preview.sheet, changes: preview.changes, build: preview.builder.build,
+  });
+  const res = await app.inject({
+    method: 'GET', url: `/api/c/${world.tuesday.characterToken}/builder`,
+  });
+  return res.json().slots;
+}
+
 describe('previewing it', () => {
   it('is accepted, and reads the character out of it', async () => {
     const res = await post('/import/preview', { json: EXPORT });
@@ -78,14 +90,45 @@ describe('previewing it', () => {
 
   it('does not spend a choice on a feat nobody chose', async () => {
     // Quick Repair, Toughness and Intimidating Glare are awarded by the
-    // background and ancestry -- four fields and no slot name. Filling a slot
-    // with one would cost the character a choice they still have.
+    // background and ancestry -- four fields and no slot name. Filling a
+    // chosen slot with one would cost the character a choice they still have,
+    // which is the bug this started as. Dropping them instead was the
+    // overcorrection: they are feats the character has, and the sheet reads
+    // the builder's slots to list feats, so skipping them deleted them.
     const { builder } = (await post('/import/preview', { json: EXPORT })).json();
-    const ids = Object.values(builder.build.feats);
-    expect(ids).not.toContain('feat:toughness');
-    expect(ids).not.toContain('feat:quick-repair');
+    const { feats } = builder.build;
+
+    // Present, and each in a slot of its own.
+    expect(Object.values(feats)).toEqual(expect.arrayContaining([
+      'feat:toughness', 'feat:quick-repair', 'feat:intimidating-glare',
+    ]));
+
+    // Not in the chosen slots. The level 1 general slot is the one that
+    // matters: Toughness is a level 1 general feat and would fit it exactly.
+    expect(feats['generalFeat-1']).toBeUndefined();
+    expect(feats['skillFeat-1']).toBeUndefined();
+    for (const [id, featId] of Object.entries(feats)) {
+      if (['feat:toughness', 'feat:quick-repair', 'feat:intimidating-glare'].includes(featId)) {
+        expect(id).toMatch(/-granted-/);
+      }
+    }
+
+    // The choices the player did make are still theirs.
+    expect(feats['generalFeat-3']).toBe('feat:fleet');
+    expect(feats['skillFeat-2']).toBe('feat:titan-wrestler');
+
     // And the heritage is a field of its own, not a feat slot.
-    expect(ids.join(' ')).not.toMatch(/defensive-automaton/);
+    expect(Object.values(feats).join(' ')).not.toMatch(/defensive-automaton/);
+  });
+
+  it('shows an awarded feat as granted rather than as something still to pick', async () => {
+    const slots = await slotsAfter();
+    const toughness = slots.find((s) => s.filled === 'feat:toughness');
+    expect(toughness).toBeTruthy();
+    expect(toughness.granted).toBe(true);
+    expect(toughness.label).toBe('General feat (granted)');
+    // A feat the character chose is not labelled that way.
+    expect(slots.find((s) => s.filled === 'feat:fleet').granted).toBeFalsy();
   });
 
   it('derives the features a character is given rather than choosing', async () => {

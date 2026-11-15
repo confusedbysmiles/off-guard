@@ -270,6 +270,15 @@
 }
 .row__head .input { flex: 1; }
 
+/* A Lore's modifier sits in a row beside its own name and rank, not in a
+   column of statistics, so it is the size of the text around it rather than
+   the size of the numbers on the skills card. */
+.lore__value {
+  flex: 0 0 auto;
+  min-width: 3ch;
+  font-size: var(--step-1);
+}
+
 .slot-track { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; }
 
 .slot {
