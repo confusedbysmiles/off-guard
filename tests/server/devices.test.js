@@ -42,6 +42,19 @@ const cookieFrom = (res) => {
   return header ? header.slice(COOKIE.length + 1).split(';')[0] : null;
 };
 
+/**
+ * What a browser does: ask once with nothing, then come back with the cookie.
+ *
+ * A device is written down on the second request, not the first -- see the
+ * note in `device-gate.js`. Every test that wants a recorded device has to do
+ * what a browser does, because doing less is exactly what a crawler does.
+ */
+async function visit(options = {}) {
+  const secret = cookieFrom(await sheet(options));
+  await sheet({ ...options, cookie: secret });
+  return secret;
+}
+
 const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 '
   + '(KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
 
@@ -60,7 +73,7 @@ describe('recording a device', () => {
   });
 
   it('writes down what it can honestly say, and no more', async () => {
-    await sheet({ agent: IPHONE });
+    await visit({ agent: IPHONE });
     const [device] = listDevices(db, tokenId());
     expect(device.label).toBe('iPhone · Safari');
     // The agent string itself is identifying and the panel has no use for it.
@@ -76,9 +89,45 @@ describe('recording a device', () => {
   });
 
   it('counts a second browser separately', async () => {
-    await sheet({ cookie: cookieFrom(await sheet()) });
-    await sheet({ agent: IPHONE });
+    await visit();
+    await visit({ agent: IPHONE });
     expect(listDevices(db, tokenId())).toHaveLength(2);
+  });
+
+  /**
+   * The bug this whole rule exists for.
+   *
+   * A chat client fetching a link preview, a crawler, a private window, curl:
+   * none of them keep the cookie, and every one of their requests used to be
+   * a device. One player's link had a hundred and sixty-two rows and perhaps
+   * three browsers.
+   */
+  it('does not count anything that never comes back', async () => {
+    for (let i = 0; i < 20; i += 1) await sheet();
+    expect(listDevices(db, tokenId())).toHaveLength(0);
+  });
+
+  it('counts a browser on the request that proves it kept the cookie', async () => {
+    const secret = cookieFrom(await sheet());
+    expect(listDevices(db, tokenId())).toHaveLength(0);
+
+    await sheet({ cookie: secret });
+    expect(listDevices(db, tokenId())).toHaveLength(1);
+  });
+
+  /**
+   * One cookie serves every link on this origin -- it is salted per token on
+   * the way into the table, not per browser -- so a browser arriving at a
+   * second link already has the thing the first request exists to hand out.
+   */
+  it('counts a browser that already has a cookie on its first request here', async () => {
+    const elsewhere = cookieFrom(await app.inject({
+      method: 'GET', url: `/api/gm/${world.gmToken}/campaigns`,
+    }));
+    expect(elsewhere).toBeTruthy();
+
+    await sheet({ cookie: elsewhere });
+    expect(listDevices(db, tokenId())).toHaveLength(1);
   });
 
   /**
@@ -91,15 +140,22 @@ describe('recording a device', () => {
   });
 
   it('does not let the page and the API disagree about a device', async () => {
+    // Both doors run the same gate, so the page hands out the cookie and the
+    // sheet's first request records the browser that carried it back. A page
+    // nobody's browser followed up on is not a device.
     const page = await app.inject({ method: 'GET', url: `/c/${token()}` });
     expect(page.statusCode).toBe(200);
-    expect(cookieFrom(page)).toBeTruthy();
+    const secret = cookieFrom(page);
+    expect(secret).toBeTruthy();
+    expect(listDevices(db, tokenId())).toHaveLength(0);
+
+    await sheet({ cookie: secret });
     expect(listDevices(db, tokenId())).toHaveLength(1);
   });
 });
 
 describe('locking a link to the devices it knows', () => {
-  const known = async () => cookieFrom(await sheet({ agent: IPHONE }));
+  const known = async () => visit({ agent: IPHONE });
 
   it('still lets the devices it knows in', async () => {
     const secret = await known();
@@ -173,6 +229,56 @@ describe('locking a link to the devices it knows', () => {
   });
 });
 
+describe('emptying the list', () => {
+  const forgetAll = (id) => app.inject({
+    method: 'DELETE', url: `/api/gm/${world.gmToken}/tokens/${id}/devices`,
+  });
+
+  it('clears a list that filled up with things that were not devices', async () => {
+    await visit();
+    await visit({ agent: IPHONE });
+    expect(listDevices(db, tokenId())).toHaveLength(2);
+
+    const res = await forgetAll(tokenId());
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({ forgotten: 2 });
+    expect(listDevices(db, tokenId())).toHaveLength(0);
+  });
+
+  it('costs nothing, because a browser puts itself back when it next asks', async () => {
+    const secret = await visit();
+    await forgetAll(tokenId());
+
+    expect((await sheet({ cookie: secret })).statusCode).toBe(200);
+    expect(listDevices(db, tokenId())).toHaveLength(1);
+  });
+
+  /**
+   * Emptying the list a lock enforces locks out everybody, including the
+   * person the link was minted for, and `npm run unlock` on the server is the
+   * only way back. Refused with the reason rather than done.
+   */
+  it('refuses while the link is locked to that very list', async () => {
+    const secret = await visit();
+    await lock(tokenId());
+
+    const res = await forgetAll(tokenId());
+    expect(res.statusCode).toBe(403);
+    expect(res.json().error).toMatch(/unlock it first/i);
+    expect(listDevices(db, tokenId())).toHaveLength(1);
+    expect((await sheet({ cookie: secret })).statusCode).toBe(200);
+  });
+
+  it('is not the player’s to do', async () => {
+    await visit();
+    const res = await app.inject({
+      method: 'DELETE', url: `/api/gm/${token()}/tokens/${tokenId()}/devices`,
+    });
+    expect(res.statusCode).toBe(404);
+    expect(listDevices(db, tokenId())).toHaveLength(1);
+  });
+});
+
 describe('who may do any of this', () => {
   it('is not the player, for their own link', async () => {
     await sheet();
@@ -191,7 +297,12 @@ describe('who may do any of this', () => {
   });
 
   it('reaches the GM their own link’s devices, which no campaign lists', async () => {
-    await app.inject({ method: 'GET', url: `/api/gm/${world.gmToken}/campaigns` });
+    const gmCall = (cookie) => app.inject({
+      method: 'GET',
+      url: `/api/gm/${world.gmToken}/campaigns`,
+      headers: cookie ? { cookie: `${COOKIE}=${cookie}` } : {},
+    });
+    await gmCall(cookieFrom(await gmCall()));
     const me = (await app.inject({
       method: 'GET', url: `/api/gm/${world.gmToken}/me`,
     })).json();

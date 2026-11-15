@@ -120,6 +120,8 @@ export const api = {
   forgetDevice: (tokenId, deviceId) =>
     request(`/tokens/${tokenId}/devices/${deviceId}`, { method: 'DELETE' }),
 
+  forgetDevices: (tokenId) => request(`/tokens/${tokenId}/devices`, { method: 'DELETE' }),
+
   reference: () => request('/reference'),
 
   catalogue: () => request('/catalogue'),

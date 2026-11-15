@@ -10,7 +10,7 @@
 import {
   listTokens, mintCharacterToken, mintTableToken, recentFailures, rotateToken,
 } from '../../store/tokens.js';
-import { forgetDevice, listDevices, setLocked } from '../../store/devices.js';
+import { forgetDevice, forgetDevices, listDevices, setLocked } from '../../store/devices.js';
 
 export async function registerLinkRoutes(app) {
   const { db } = app;
@@ -62,6 +62,11 @@ export async function registerLinkRoutes(app) {
    * grants devices. `tools/unlock-link.js` is the way back from that, and it
    * needs a shell rather than a link.
    */
+  /** The whole list, for one that filled up with things that were not devices. */
+  app.delete('/tokens/:tokenId/devices', async (request) => forgetDevices(
+    db, request.scope, request.params.tokenId,
+  ));
+
   app.delete('/tokens/:tokenId/devices/:deviceId', async (request) => forgetDevice(
     db, request.scope, request.params.tokenId, request.params.deviceId,
   ));

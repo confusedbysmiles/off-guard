@@ -1418,6 +1418,8 @@
   cursor: pointer;
 }
 
+.link-devices__clear { margin-top: var(--sp-2); }
+
 .link-devices__toggle svg { transition: transform 120ms ease; }
 .link-devices__toggle[aria-expanded='false'] svg { transform: rotate(-90deg); }
 

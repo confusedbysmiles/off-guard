@@ -37,13 +37,34 @@ export function gate(db, { request, reply, scope, mount = '' }) {
     return { allowed: false };
   }
 
-  // A browser with no cookie gets one. The secret is minted here rather than
-  // taken from anything the client sent, so a device cannot choose its own
-  // identity and collide with one already on the list.
+  /**
+   * A browser with no cookie gets one, and is not written down for it.
+   *
+   * A device is a browser that came back. Recording the first sight of one
+   * recorded everything that ever touched the URL: a chat client fetching a
+   * link preview, a crawler, a private window, curl. None of those keep the
+   * cookie, so every request was a fresh row -- a player's link collected a
+   * hundred and sixty "devices" that were nothing of the kind, which made the
+   * list unreadable and made locking to it worse the longer the link had been
+   * in a group chat.
+   *
+   * So the cookie is handed out on the first request and the row is written on
+   * the second, when the browser proves it kept it. Nothing that discards
+   * cookies is ever counted, and a real browser is counted within milliseconds
+   * -- the page issues the cookie and the sheet's first API call carries it
+   * back. A browser that already has one from another link is counted on its
+   * first request here, because it already has the thing being asked for.
+   *
+   * The secret is minted here rather than taken from anything the client sent,
+   * so a device cannot choose its own identity and collide with one already on
+   * the list.
+   */
   const issued = secret ? null : mintDeviceSecret();
-  see(db, scope.tokenId, secret ?? issued, {
-    label: labelFor(request.headers?.['user-agent']),
-  });
+  if (secret) {
+    see(db, scope.tokenId, secret, {
+      label: labelFor(request.headers?.['user-agent']),
+    });
+  }
 
   if (issued) {
     reply.header('set-cookie', deviceCookie(issued, {

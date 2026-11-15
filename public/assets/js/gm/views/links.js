@@ -120,6 +120,20 @@ function devices(token, { actions, subject }) {
         })
         : null),
 
+    /**
+     * Emptying the list, offered only with the list open and the link
+     * unlocked: on a locked one it would shut out everybody, so the server
+     * refuses it and there is no sense putting the button there.
+     */
+    open && list.length && !locked
+      ? el('button', {
+        class: 'btn btn--quiet link-devices__clear', type: 'button',
+        html: `${icon('x')}<span>Forget them all</span>`,
+        title: 'Clear this list. Every browser still using the link comes back on it.',
+        onclick: () => actions.forgetAllDevices(token.id, subject, list.length),
+      })
+      : null,
+
     open && list.length
       ? el('ul', { class: 'link-devices__list' }, ...list.map((device) => el('li', {},
         el('span', {}, device.label || 'Unknown device'),

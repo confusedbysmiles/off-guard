@@ -164,6 +164,10 @@ describe('the device it is', () => {
   it('shows up as what it is, not as a browser', async () => {
     const mcp = client();
     await mcp.rpc('initialize', { protocolVersion: '2025-06-18' });
+    // Twice, because a device is one that came back -- see `device-gate.js`.
+    // This client keeps its cookie between runs, let alone between calls, so
+    // the second request is the one that puts it on the list.
+    await mcp.tool('whoami');
     await mcp.tool('whoami');
 
     const [device] = listDevices(db, tokenId());

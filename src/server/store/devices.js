@@ -73,6 +73,36 @@ export function forgetDevice(db, scope, tokenId, deviceId) {
 }
 
 /**
+ * Forget every device on a link.
+ *
+ * For a list that has filled up with rows that were never devices -- the state
+ * `gate` used to leave behind. Every real browser puts itself back on the list
+ * the next time it asks for anything, so this costs the GM nothing but the
+ * first-seen dates.
+ *
+ * Refused on a locked link, and that refusal is the point: emptying the list
+ * a lock enforces locks out everybody, including the person the link was
+ * minted for, with `npm run unlock` on the server as the only way back.
+ */
+export function forgetDevices(db, scope, tokenId) {
+  assertWritable(scope);
+  if (!isGm(scope)) throw new ScopeError('Only the GM manages links');
+
+  const token = db.prepare('SELECT id, locked_at AS lockedAt FROM token WHERE id = ? AND revoked_at IS NULL')
+    .get(Number(tokenId));
+  if (!token) throw new NotFoundError('No such link');
+  if (token.lockedAt) {
+    throw new ScopeError(
+      'This link is locked to the devices on this list, so emptying it would '
+      + 'lock out everybody. Unlock it first.',
+    );
+  }
+
+  const info = db.prepare('DELETE FROM token_device WHERE token_id = ?').run(Number(tokenId));
+  return { forgotten: info.changes };
+}
+
+/**
  * Turn enforcement on or off for one link.
  *
  * Locking a link that no device has ever used would be locking it against

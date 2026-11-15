@@ -1019,6 +1019,32 @@ export function createActions({
       }
     },
 
+    /**
+     * Empty one link's device list.
+     *
+     * For a list left full by the old rule, which wrote a row for anything
+     * that touched the URL. Confirmed because it is a delete, and cheap
+     * because every real browser puts itself back the next time it asks for
+     * anything -- only the first-seen dates are actually lost.
+     */
+    async forgetAllDevices(tokenId, subject = 'this link', count = 0) {
+      const sure = globalThis.confirm(
+        `Forget all ${count} devices on ${subject}?\n\n`
+        + 'Every browser still using the link reappears on the list the next '
+        + 'time it loads anything, so this clears the old rows rather than '
+        + 'shutting anyone out. The dates they were first seen are lost.',
+      );
+      if (!sure) return;
+      try {
+        const { forgotten } = await api.forgetDevices(tokenId);
+        await Promise.all([actions.loadTokens(), actions.loadMe()]);
+        refresh();
+        notices.info(`Forgot ${forgotten} device${forgotten === 1 ? '' : 's'} on ${subject}.`);
+      } catch (error) {
+        notices.error(`Could not empty that list: ${error.message}`);
+      }
+    },
+
     /** The GM's own link, which no campaign listing contains. */
     async loadMe() {
       try {
