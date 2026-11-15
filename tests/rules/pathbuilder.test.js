@@ -81,7 +81,22 @@ describe('mapping a level 5 fighter', () => {
   });
 
   it('keeps Lore skills, which the player adds themselves', () => {
-    expect(sheet.lores).toEqual([{ name: 'Warfare', rank: 'trained' }]);
+    // Named the way the sheet prints one. This reading used to leave the
+    // suffix off while the build's reading of the same file added it, so one
+    // file produced "Warfare" or "Warfare Lore" depending on which half of
+    // the import you were looking at.
+    expect(sheet.lores).toEqual([{ name: 'Warfare Lore', rank: 'trained' }]);
+  });
+
+  it('capitalises a Lore the player typed in lower case', () => {
+    const { sheet: typed } = mapPathbuilder({
+      build: { ...fixture.build, lores: [['engineering', 2], ['the Pactmasters’ debts', 2]] },
+    });
+    expect(typed.lores.map((lore) => lore.name)).toEqual([
+      'Engineering Lore',
+      // Only the first letter: the rest is the player's own wording.
+      'The Pactmasters’ debts Lore',
+    ]);
   });
 
   it('maps strikes with a usable damage formula', () => {

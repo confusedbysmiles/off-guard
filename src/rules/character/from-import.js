@@ -26,7 +26,7 @@ import {
 import { SKILLS } from './derive.js';
 import { damageAttribute } from './equipment.js';
 import { proficiencyBonus } from '../proficiency.js';
-import { strikingSteps } from '../../shared/pathbuilder.js';
+import { loreName, strikingSteps } from '../../shared/pathbuilder.js';
 
 const RANK_ORDER = ['untrained', 'trained', 'expert', 'master', 'legendary'];
 const RANK_BY_BONUS = { 0: 'untrained', 2: 'trained', 4: 'expert', 6: 'master', 8: 'legendary' };
@@ -190,7 +190,7 @@ export function solveSkills(proficiencies = {}, { background, klass, level }) {
 const loresFrom = (lores, background) => (lores ?? [])
   .map((entry) => (Array.isArray(entry) ? { name: entry[0], rank: rankOf(entry[1]) } : null))
   .filter((lore) => lore?.name)
-  .map((lore) => ({ name: String(lore.name).endsWith('Lore') ? lore.name : `${lore.name} Lore`, rank: lore.rank }))
+  .map((lore) => ({ name: loreName(lore.name), rank: lore.rank }))
   // The background's own Lore is granted by the background, not written down
   // here, or the character would have it twice.
   .filter((lore) => !(background?.trainedLore ?? []).includes(lore.name));

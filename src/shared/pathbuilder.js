@@ -26,6 +26,25 @@ export const PLAY_STATE_PATHS = new Set([
   'focus.current', 'spellcasting.slotsUsed',
 ]);
 
+/**
+ * A Lore as the sheet prints it.
+ *
+ * Pathbuilder writes what the player typed into its box -- `["engineering", 2]`
+ * -- and the sheet prints it beside Acrobatics and Arcana, where a lowercase
+ * "engineering Lore" reads like a fault rather than like a choice. Only the
+ * first letter: the rest is the player's wording, and a Lore in somebody's
+ * own campaign is as likely to be "the Pactmasters' debts" as "Warfare".
+ *
+ * The suffix is added here too, so the two readings of one file agree about
+ * what the skill is called.
+ */
+export function loreName(name) {
+  const printed = String(name ?? '').trim();
+  if (!printed) return '';
+  const capitalised = printed[0].toUpperCase() + printed.slice(1);
+  return capitalised.endsWith('Lore') ? capitalised : `${capitalised} Lore`;
+}
+
 const RANK_BY_BONUS = { 0: 'untrained', 2: 'trained', 4: 'expert', 6: 'master', 8: 'legendary' };
 
 /** Pathbuilder stores proficiency as the bonus it adds, not as a rank index. */
@@ -100,7 +119,7 @@ export function mapPathbuilder(exported) {
       ...(itemBonuses[skill] ?? {}),
     }])),
     lores: (build.lores ?? []).map(([name, bonus]) => ({
-      name: String(name ?? ''),
+      name: loreName(name),
       rank: rankFromBonus(bonus),
     })),
     // Pathbuilder writes a placeholder rather than an empty list when nobody
