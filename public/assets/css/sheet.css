@@ -117,9 +117,42 @@
   align-items: start;
 }
 
+/**
+ * Two columns that pack independently, rather than two columns locked into
+ * rows.
+ *
+ * A grid puts every card in a row with the card beside it, and a row is as
+ * tall as its tallest member -- so Strikes, which is eight hundred pixels of
+ * weapons, left a hole beside it the height of seven Conditions cards, and
+ * every card below that started from a ragged edge. The holes moved whenever
+ * a card was added, which is how this got noticed.
+ *
+ * Multi-column has no rows to be ragged: each card is placed under the one
+ * before it in its column, the browser balances the two columns, and a card
+ * that spans both still can -- `column-span: all` is what `grid-column: 1/-1`
+ * was doing. `break-inside: avoid` is what keeps a card whole; without it a
+ * long one is cut in half at the column boundary.
+ *
+ * Only above 60rem. Below it the panel is one column and none of this applies.
+ */
 @media (min-width: 60rem) {
-  .sheet__panel { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .section--wide { grid-column: 1 / -1; }
+  .sheet__panel {
+    display: block;
+    columns: 2;
+    column-gap: var(--sp-4);
+  }
+
+  .sheet__panel > * {
+    break-inside: avoid;
+    margin-bottom: var(--sp-4);
+  }
+
+  .section--wide {
+    column-span: all;
+    /* A spanning element ends the run of columns above it and starts a new
+       one below, so its own gap is a margin rather than the grid's. */
+    margin-bottom: var(--sp-4);
+  }
 }
 
 .section__title {
