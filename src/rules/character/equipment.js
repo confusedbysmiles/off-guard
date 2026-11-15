@@ -24,6 +24,7 @@
  */
 import { PROFICIENCY_BONUS, proficiencyBonus, rankName } from '../proficiency.js';
 import { coinBulk, tenthsOf, wornTenths } from './bulk.js';
+import { steppedDie } from '../../shared/damage-expression.js';
 
 /** A striking rune adds dice, not a bonus. Getting this wrong halves damage. */
 export const STRIKING_DICE = { 0: 1, 1: 2, 2: 3, 3: 4 };
@@ -85,6 +86,21 @@ const has = (weapon, trait) => (weapon?.traits ?? []).some((t) => t === trait ||
 
 /** Which attribute a weapon attacks with. */
 export function attackAttribute(weapon, mods = {}) {
+  /**
+   * An attribute stated outright, which beats working one out.
+   *
+   * Everything below reads the weapon's traits, and traits come from the
+   * catalogue -- so a weapon the catalogue has never heard of has none, and
+   * falls through to Strength. That is every unarmed attack a monk makes:
+   * there is no Fist in the catalogue, because upstream treats it as a system
+   * attack rather than an item, and Pathbuilder's weapon rows carry no traits
+   * of their own. A Dexterity monk's Fist came out three points light.
+   */
+  const stated = weapon?.attackAttribute;
+  if (stated === 'str' || stated === 'dex') {
+    return { key: stated, mod: Number(mods[stated] ?? 0) };
+  }
+
   const ranged = Number.isFinite(weapon?.range) && weapon.range !== null;
   if (ranged) return { key: 'dex', mod: Number(mods.dex ?? 0) };
   // Finesse lets you attack with Dexterity instead, and a player choosing
@@ -146,15 +162,22 @@ export function strikeFrom(entry = {}, {
 
   const dice = (STRIKING_DICE[Number(entry.striking ?? 0)] ?? 1)
     + Number(weapon?.damage?.dice ?? 1) - 1;
-  const die = weapon?.damage?.die ?? null;
+  // A die the character's own weapon steps up, which the record cannot know.
+  const die = steppedDie(weapon?.damage?.die ?? null, entry.increasedDice) || null;
 
   const flat = damageAttribute(weapon, mods)
     + weaponSpecializationDamage(rank, specialization)
     + Number(entry.damageBonus ?? 0);
 
-  const formula = die
+  const base = die
     ? `${dice}${die}${flat ? (flat > 0 ? `+${flat}` : flat) : ''}`
     : (flat ? String(flat) : '');
+
+  // "2d6 plus 2d6 precision", the way `mapPathbuilder` writes it, so an
+  // imported sheet and a derived one say the same sentence.
+  const extra = (Array.isArray(entry.extraDamage) ? entry.extraDamage : [])
+    .filter(Boolean).map(String);
+  const formula = [base, ...extra].filter(Boolean).join(' plus ');
 
   // Runes and a custom name are the player's; the base weapon is the
   // catalogue's. Both are shown, because "+1 striking longsword" is what they
@@ -328,6 +351,8 @@ export function customWeapon(custom) {
     name: named(custom, 'Custom weapon'),
     itemType: 'weapon',
     category: oneOf(custom.category, WEAPON_CATEGORIES, 'simple'),
+    /** Null unless somebody said; see `attackAttribute`. */
+    attackAttribute: oneOf(custom.attackAttribute, ['str', 'dex'], null),
     group: null,
     level: 0,
     bulk: clamp(custom.bulk, 0, 100, 0),

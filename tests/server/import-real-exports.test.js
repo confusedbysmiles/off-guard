@@ -202,3 +202,118 @@ describe('a ranger with a familiar', () => {
     expect(sheet.strikes).toEqual([]);
   });
 });
+
+/**
+ * A monk, which is the first character here who fights with their hands.
+ *
+ * There is no Fist in the catalogue -- upstream treats it as a system attack
+ * rather than an item, and the five unarmed records we have are all magical
+ * handwraps. Pathbuilder's weapon rows carry no traits of their own, so an
+ * unresolved weapon arrives with none, falls through to Strength, and this
+ * character attacks with Dexterity.
+ */
+describe('a monk who attacks with their hands', () => {
+  const FILE = load('monk-5-unarmed');
+
+  it('uses the attribute the file used, not the one the traits imply', async () => {
+    const sheet = await applied(FILE);
+    const byName = Object.fromEntries(sheet.strikes.map((s) => [s.name, s]));
+
+    // Dex 18, unarmed expert at level 5: 4 + 9. Strength would make it 10,
+    // which is what it was.
+    expect(byName.Fist.mod).toBe(13);
+    expect(byName.Fist.components.attribute).toBe('dex');
+
+    // The stance attack is an unarmed strike the catalogue has never heard of
+    // either, and it gets the same answer.
+    expect(byName['Special Unarmed Stumbling Swing'].mod).toBe(13);
+
+    // And the weapons it does know are unaffected: both are ranged, so
+    // Dexterity was never in doubt for them.
+    expect(byName['Hand Crossbow'].mod).toBe(13);
+    expect(byName.Dart.mod).toBe(13);
+  });
+
+  it('matches every attack and damage the file states', async () => {
+    const { builder } = await preview(FILE);
+    expect(builder.differences).toEqual([]);
+  });
+
+  it('derives unarmoured defence, and the Speed a monk is given', async () => {
+    const sheet = await applied(FILE);
+    // acTotal in the file is 23: 10 + 4 Dex + 9 expert, no armour and no item.
+    expect(sheet.ac.rank).toBe('expert');
+    expect(sheet.ac.dexCap).toBe(null);
+    // Incredible Movement, which Pathbuilder states as a speed bonus.
+    expect(sheet.speed).toBe(35);
+  });
+
+  it('keeps the feat the background awarded', async () => {
+    const slots = await slotsAfter(FILE);
+    const awarded = slots.find((s) => s.filled === 'feat:specialty-crafting');
+    expect(awarded).toBeTruthy();
+    expect(awarded.granted).toBe(true);
+  });
+});
+
+/**
+ * What the check is for.
+ *
+ * It existed to catch a reconstruction that disagreed with the file, and it
+ * never looked at a strike -- so a barbarian's bow reading three points high
+ * and a monk's fist reading three points low were both imported in silence.
+ */
+describe('the check the import runs against itself', () => {
+  it('reports a strike whose attack it cannot account for', async () => {
+    const json = structuredClone(load('monk-5-unarmed'));
+    // +20 on a Fist, which no attribute and no proficiency can produce.
+    json.build.weapons.find((w) => w.name === 'Fist').attack = 20;
+
+    const { builder } = await preview(json);
+    // Nothing matched, so the ordinary rule stood -- Strength, 1 + 9 -- and
+    // the difference is stated rather than quietly split.
+    expect(builder.differences).toContainEqual(expect.objectContaining({
+      path: 'strikes.2.mod', imported: 20, derived: 10,
+    }));
+  });
+
+  it('says nothing about the strikes of a file it can account for', async () => {
+    const { builder } = await preview(load('rogue-6'));
+    expect(builder.differences).toEqual([]);
+  });
+});
+
+/**
+ * The two things a rune does to a damage die, both of which the build has to
+ * store rather than re-derive: it does not know what runes a character owns,
+ * only what the file says they roll.
+ */
+describe('runes that change the dice', () => {
+  const FILE = load('barbarian-5-automaton');
+
+  it('reads greater and major striking, which are spelled with a capital S', async () => {
+    // `String(str).includes('striking')` looked like it read these and did
+    // not: Pathbuilder writes `greaterStriking`, so every weapon above a
+    // plain striking rune came through as no rune at all and lost two dice.
+    for (const [rune, dice] of [['striking', 2], ['greaterStriking', 3], ['majorStriking', 4]]) {
+      const json = structuredClone(FILE);
+      json.build.weapons[0].str = rune;
+      const sheet = await applied(json);
+      expect(sheet.strikes[0].damage, rune).toBe(`${dice}d10+4`);
+    }
+  });
+
+  it('steps the die up when the file says the dice are increased', async () => {
+    const json = structuredClone(FILE);
+    json.build.weapons[0].increasedDice = true;    // d10 -> d12
+    const sheet = await applied(json);
+    expect(sheet.strikes[0].damage).toBe('2d12+4');
+  });
+
+  it('keeps the damage a class feature adds, which nothing here derives', async () => {
+    // A rogue's sneak attack arrives as free text. Derived, it vanished, and
+    // the sheet said 2d6 where the file said 2d6 plus 2d6 precision.
+    const sheet = await applied(load('rogue-6'));
+    expect(sheet.strikes[0].damage).toContain('plus 2d6 precision');
+  });
+});

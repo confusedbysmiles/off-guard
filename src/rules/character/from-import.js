@@ -25,6 +25,8 @@ import {
 } from './attributes.js';
 import { SKILLS } from './derive.js';
 import { damageAttribute } from './equipment.js';
+import { proficiencyBonus } from '../proficiency.js';
+import { strikingSteps } from '../../shared/pathbuilder.js';
 
 const RANK_ORDER = ['untrained', 'trained', 'expert', 'master', 'legendary'];
 const RANK_BY_BONUS = { 0: 'untrained', 2: 'trained', 4: 'expert', 6: 'master', 8: 'legendary' };
@@ -263,11 +265,33 @@ function armorFrom(pb, sheet, find) {
  * Pathbuilder's own name wins for display: a player calls it "+1 Striking War
  * Flail". The catalogue supplies the mechanics underneath.
  */
-function weaponsFrom(pb, sheet, find) {
+/**
+ * Which attribute Pathbuilder used for an attack roll, read back out of it.
+ *
+ * Only for a weapon the catalogue cannot identify. For one it can, the record's
+ * traits are the answer and this is not consulted -- a disagreement there is
+ * worth reporting, not papering over.
+ *
+ * Pathbuilder states the total. Take the proficiency and the potency rune off
+ * it and what is left is the attribute modifier it used, so the question
+ * becomes which attribute has that modifier. Accepted only when exactly one
+ * does: with anything else in the number -- a feat, an item bonus the file
+ * does not break out -- nothing matches and the ordinary rule stands, and the
+ * strike check below reports the difference rather than guessing at it.
+ */
+function attributeBehind(weapon, { rank, level, potency, mods }) {
+  if (!rank) return null;
+  const left = Number(weapon.attack ?? 0) - proficiencyBonus(rank, level) - potency;
+  const matches = ['str', 'dex'].filter((key) => Number(mods[key] ?? 0) === left);
+  return matches.length === 1 ? matches[0] : null;
+}
+
+function weaponsFrom(pb, sheet, find, ranks = {}) {
   const byName = new Map((sheet?.strikes ?? []).map((strike) => [strike.name, strike]));
   const mods = Object.fromEntries(ATTRIBUTES.map(
     (a) => [a, Math.floor((Number(pb.abilities?.[a] ?? 10) - 10) / 2)],
   ));
+  const level = whole(pb.level, 1, 20, 1);
   return (pb.weapons ?? []).filter((w) => w?.name).map((w) => {
     const strike = byName.get(w.display) ?? byName.get(w.name) ?? null;
     const potency = whole(w.pot, 0, 4, 0);
@@ -280,9 +304,37 @@ function weaponsFrom(pb, sheet, find) {
         die: w.die ?? 'd6',
         damageType: DAMAGE_LETTER[w.damageType] ?? 'bludgeoning',
         traits: Array.isArray(w.traits) ? w.traits : [],
+        // Only when the catalogue has nothing to read traits from.
+        ...(record ? {} : {
+          attackAttribute: attributeBehind(w, {
+            rank: ranks.attacks?.[w.prof ?? 'simple'] ?? null,
+            level,
+            potency,
+            mods,
+          }),
+        }),
       },
       potency,
-      striking: String(w.str ?? '').includes('striking') ? 1 : 0,
+      striking: strikingSteps(w.str),
+      /**
+       * On the entry rather than in `custom`, for the same reason the extra
+       * damage is: a weapon the catalogue knows takes its die from the record
+       * and never reads `custom`, so a stepped-up die stored there was lost
+       * on every weapon that resolved -- which is most of them.
+       */
+      increasedDice: Boolean(w.increasedDice),
+      /**
+       * Sneak attack, and anything else the file adds as free text.
+       *
+       * On the entry rather than in `custom`, because it belongs to this
+       * character's strike and not to the kind of weapon -- a kukri does not
+       * have precision damage, a rogue does. Carried rather than derived:
+       * what adds it is a class feature this does not model, and a rogue
+       * whose sheet read "2d6" where their file read "2d6 plus 2d6 precision"
+       * had lost the thing their class is about.
+       */
+      extraDamage: (Array.isArray(w.extraDamage) ? w.extraDamage : [])
+        .filter(Boolean).map((part) => String(part).slice(0, 40)).slice(0, 4),
       // Pathbuilder's `damageBonus` is the *whole* flat bonus, attribute
       // included; the build's field means whatever is left on top of the
       // attribute. Writing one into the other added Strength twice, so a war
@@ -552,7 +604,7 @@ export function buildFromImport(exported, { find = () => null, sheet = {} } = {}
       equipment: {
         armor: armorFrom(pb, sheet, find),
         shield: shieldEntryFrom(pb, find),
-        weapons: weaponsFrom(pb, sheet, find),
+        weapons: weaponsFrom(pb, sheet, find, statedRanks),
         gear: (sheet?.gear ?? []).map((row) => ({
           custom: { name: row.name },
           quantity: row.quantity ?? 1,
@@ -612,6 +664,28 @@ export function checkAgainst(imported = {}, derived = {}) {
   for (const skill of SKILLS) {
     compare(skill, `skills.${skill}.rank`,
       imported.skills?.[skill]?.rank, derived.skills?.[skill]?.rank);
+  }
+
+  /**
+   * The numbers the player actually rolls.
+   *
+   * This check existed to catch a reconstruction that disagreed with the file
+   * and it never looked at a strike -- so every bug in this area has been
+   * silent. A barbarian's bow read three points high and a monk's fist read
+   * three points low, and both imports reported that everything matched.
+   *
+   * Compared by position, because both lists are the file's `weapons` array in
+   * its own order: one through `mapPathbuilder`, one through the build. The
+   * name is for the label only, since the two spell runes differently.
+   */
+  const importedStrikes = imported.strikes ?? [];
+  const derivedStrikes = derived.strikes ?? [];
+  for (const [index, strike] of importedStrikes.entries()) {
+    const against = derivedStrikes[index];
+    if (!against) continue;
+    const name = strike.name || `Strike ${index + 1}`;
+    compare(`${name} attack`, `strikes.${index}.mod`, strike.mod, against.mod);
+    compare(`${name} damage`, `strikes.${index}.damage`, strike.damage, against.damage);
   }
 
   return differences;

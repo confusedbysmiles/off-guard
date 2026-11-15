@@ -18,6 +18,8 @@
  * section, never a thrown error mid-import.
  */
 
+import { steppedDie } from './damage-expression.js';
+
 /** Paths the mapper can produce but must never overwrite on a re-import. */
 export const PLAY_STATE_PATHS = new Set([
   'hp.current', 'hp.temp', 'conditions', 'heroPoints',
@@ -233,16 +235,24 @@ function profFromAc(build, ac) {
  * A striking rune adds dice rather than a bonus, so a level 6 character's
  * longsword is 2d8, not 1d8 -- getting this wrong halves everyone's damage.
  */
-const STRIKING_DICE = {
+export const STRIKING_DICE = {
   '': 1, striking: 2, greaterStriking: 3, majorStriking: 4,
 };
 
-/** One step up the damage die ladder, for `increasedDice`. */
-const NEXT_DIE = { d4: 'd6', d6: 'd8', d8: 'd10', d10: 'd12', d12: 'd12' };
+/**
+ * The same rune as a number of steps, which is how a build document stores it.
+ *
+ * Exported so the two readings of one file cannot drift: `mapWeapon` below
+ * turns `greaterStriking` into three dice, and the build's `striking: 2` has
+ * to mean the same thing. A `String(str).includes('striking')` test looked
+ * like it did and did not -- Pathbuilder writes `greaterStriking` with a
+ * capital S, so every greater and major striking weapon came through as no
+ * rune at all and lost two dice of damage in silence.
+ */
+export const strikingSteps = (value) => (STRIKING_DICE[String(value ?? '')] ?? 1) - 1;
 
 function mapWeapon(weapon) {
-  let die = weapon.die ? String(weapon.die) : '';
-  if (die && weapon.increasedDice) die = NEXT_DIE[die] ?? die;
+  const die = steppedDie(weapon.die, weapon.increasedDice);
 
   const count = STRIKING_DICE[String(weapon.str ?? '')] ?? 1;
   const bonus = Number(weapon.damageBonus ?? 0);

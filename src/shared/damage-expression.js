@@ -140,3 +140,21 @@ export function adjustDamageParts(parts, delta) {
   if (!delta) return parts;
   return parts.map((p) => ({ ...p, formula: adjustFormulaFlat(p.formula, delta) }));
 }
+
+
+/**
+ * One step up the damage die ladder.
+ *
+ * A striking rune adds dice; a few effects step the die instead, and
+ * Pathbuilder states that as `increasedDice`. Kept here rather than in either
+ * reader, because the sheet's own derivation and the import both have to walk
+ * the same ladder or they disagree about what a weapon rolls.
+ */
+export const NEXT_DIE = { d4: 'd6', d6: 'd8', d8: 'd10', d10: 'd12', d12: 'd12' };
+
+/** The die actually rolled, after anything that steps it up. */
+export const steppedDie = (die, increased) => {
+  const base = die ? String(die) : '';
+  if (!base || !increased) return base;
+  return NEXT_DIE[base] ?? base;
+};
