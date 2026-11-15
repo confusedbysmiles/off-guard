@@ -52,12 +52,40 @@ const seen = (iso) => {
 };
 
 /**
+ * How many devices a list shows before it starts folded away.
+ *
+ * The case this panel was built for is a link opened from a phone and a
+ * laptop, so an ordinary list stays exactly where it was. A link that has
+ * collected a hundred and sixty is not saying anything the count above it does
+ * not already say, and its rows are then only in the way of the next link.
+ */
+const FOLD_ABOVE = 4;
+
+/**
+ * Which lists the GM has opened or closed by hand.
+ *
+ * Module level, because the dashboard rebuilds this whole panel after every
+ * action -- and forgetting a device is the obvious thing to do with the list
+ * open, so a disclosure that forgot itself each time would have to be reopened
+ * once per device.
+ *
+ * A Map rather than a Set, so "closed on purpose" is a different answer from
+ * "never touched". That is what lets a short list stay open by default without
+ * reopening itself under a GM who shut it.
+ */
+const opened = new Map();
+
+/**
  * Which devices have opened this link.
  *
  * The question worth asking of a link is "has anybody else opened this", and
  * until now nothing in the application could answer it. A player's link should
  * show one device; two is either a phone and a laptop, which the GM knows
  * about, or it is not, which they would want to.
+ *
+ * The count answers that by itself, which is why the count is what carries the
+ * disclosure: the list below it is the detail you go looking for once the
+ * number is the surprising part.
  *
  * Locking is the second half and is off by default on every link. It is
  * offered here rather than somewhere safer because the decision only makes
@@ -67,25 +95,32 @@ function devices(token, { actions, subject }) {
   if (!token) return null;
   const list = token.devices ?? [];
   const locked = Boolean(token.lockedAt);
+  const open = opened.get(token.id) ?? (list.length <= FOLD_ABOVE);
 
   return el('div', { class: `link-devices${locked ? ' link-devices--locked' : ''}` },
     el('div', { class: 'link-devices__head' },
-      el('span', { class: 'faint' },
-        list.length
-          ? `${list.length} device${list.length === 1 ? '' : 's'}${locked ? ', locked to them' : ''}`
-          : 'not opened yet'),
+      list.length
+        ? el('button', {
+          class: 'link-devices__toggle', type: 'button',
+          'aria-expanded': String(open),
+          title: open ? 'Hide this list' : 'Show this list',
+          html: `<span>${list.length} device${list.length === 1 ? '' : 's'}`
+            + `${locked ? ', locked to them' : ''}</span>${icon('chevronDown')}`,
+          onclick: () => { opened.set(token.id, !open); actions.refresh(); },
+        })
+        : el('span', { class: 'faint' }, 'not opened yet'),
       list.length
         ? el('button', {
           class: 'btn btn--quiet', type: 'button',
           html: `${icon(locked ? 'eye' : 'shield')}<span>${locked ? 'Unlock' : 'Lock to these'}</span>`,
           title: locked
             ? 'Accept any device again, and keep recording them'
-            : 'Refuse every device except the ones below',
+            : 'Refuse every device except the ones it has already seen',
           onclick: () => actions.setLinkLocked(token.id, !locked, subject),
         })
         : null),
 
-    list.length
+    open && list.length
       ? el('ul', { class: 'link-devices__list' }, ...list.map((device) => el('li', {},
         el('span', {}, device.label || 'Unknown device'),
         el('span', { class: 'faint' },

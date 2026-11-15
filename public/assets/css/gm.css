@@ -1403,6 +1403,24 @@
   font-size: var(--step--1);
 }
 
+/* The count is also the control that folds the list away: one target, and the
+   thing it hides is named by the thing you press. */
+.link-devices__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--ink-faint);
+  font: inherit;
+  font-size: var(--step--1);
+  cursor: pointer;
+}
+
+.link-devices__toggle svg { transition: transform 120ms ease; }
+.link-devices__toggle[aria-expanded='false'] svg { transform: rotate(-90deg); }
+
 .link-devices__list {
   list-style: none;
   margin: var(--sp-2) 0 0;

@@ -100,6 +100,16 @@ export function createActions({
     creatureNames,
     get searchQuery() { return searchQuery; },
 
+    /**
+     * Draw the dashboard again.
+     *
+     * For a view that keeps a scrap of its own interface state -- which
+     * device list is folded open -- and needs the panel rebuilt to show it.
+     * Everything else in here calls `refresh` after a request; this is the
+     * same call, offered to a view that has nothing to request.
+     */
+    refresh,
+
     /** The dialog, so a view can open a stat block it already has in hand. */
     showStatBlock,
 
